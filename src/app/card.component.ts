@@ -21,7 +21,7 @@ import { CommonModule } from '@angular/common';
   <!-- card background -->
   <rect [attr.x]="orientation==='portrait'?2:2" [attr.y]="orientation==='portrait'?2:2"
     [attr.width]="orientation==='portrait'?116:176" [attr.height]="orientation==='portrait'?176:116"
-    rx="8" ry="8" fill="#fff" stroke="#ccc" [attr.filter]="selected ? 'url(#card-shadow)' : null" />
+    rx="8" ry="8" fill="#fff" stroke="#d1d5db" stroke-width="1.4" filter="url(#card-shadow)" />
 
   <!-- highlight border when selected -->
   <rect *ngIf="selected" [attr.x]="orientation==='portrait'?1:1" [attr.y]="orientation==='portrait'?1:1"

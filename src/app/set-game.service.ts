@@ -8,65 +8,92 @@ import { findSet } from './game.utils';
 export class SetGameService {
   private stateSubject: BehaviorSubject<GameState>;
   public state$: Observable<GameState>;
-  // simple in-memory map for card colors (id -> hex)
+
+  // Per-card colour overrides (id -> hex)
   private cardColors: Record<string, string> = {};
 
+  // Palette for numeric colour attribute (index 1..3). Always exactly 3 entries.
+  private palette: string[] = ['#cc0000', '#0aa64a', '#5a2ea6'];
+
   constructor() {
-    // initialize with a fresh game
     const initial = core.initGame();
     this.stateSubject = new BehaviorSubject<GameState>(initial);
     this.state$ = this.stateSubject.asObservable();
   }
 
-  // Helper to get current snapshot
   getStateSnapshot(): GameState {
     return this.stateSubject.getValue();
   }
 
-  // Start a new game
   startNewGame(): void {
     const s = core.initGame();
     this.stateSubject.next(s);
   }
 
-  // Select or deselect a card; pushes next state
   selectCard(card: Card): void {
-    const current = this.getStateSnapshot();
-    const next = core.selectCard(current, card);
+    const next = core.selectCard(this.getStateSnapshot(), card);
     this.stateSubject.next(next);
   }
 
-  // Apply a set (useful if UI has identified a set)
-  // Apply a set; validates first. Returns true if applied, false otherwise.
   applySet(selected: Card[]): boolean {
-    const current = this.getStateSnapshot();
     try {
-      const next = core.applySet(current, selected);
+      const next = core.applySet(this.getStateSnapshot(), selected);
       this.stateSubject.next(next);
       return true;
-    } catch (e) {
-      // invalid set - do not change state
+    } catch {
       return false;
     }
   }
 
-  // Expose a helper to find a set on the current board
   findSetOnBoard(): [number, number, number] | null {
-    const board = this.getStateSnapshot().board;
-    return findSet(board);
+    return findSet(this.getStateSnapshot().board);
   }
 
-  // Allow updating a color for a specific card id, or a global color when id is undefined.
   updateCardColor(color: string, cardId?: string): void {
-    if (cardId) this.cardColors[cardId] = color;
-    else {
-      // apply to all known cards on board
-      const board = this.getStateSnapshot().board;
-      board.forEach((c) => (this.cardColors[c.id] = color));
+    if (cardId) {
+      this.cardColors[cardId] = color;
+    } else {
+      this.getStateSnapshot().board.forEach((c) => (this.cardColors[c.id] = color));
     }
   }
 
   getCardColor(cardId: string): string | undefined {
     return this.cardColors[cardId];
+  }
+
+  // ── Palette API ──────────────────────────────────────────────────────────────
+
+  getPalette(): string[] {
+    return this.palette.slice(0, 3);
+  }
+
+  getPaletteColor(index: number): string {
+    if (!index || index < 1) return this.palette[0];
+    return this.palette[(index - 1) % 3] || this.palette[0];
+  }
+
+  /**
+   * Update palette slot `index` (1-based) to `color`.
+   * If the colour already exists in another slot the two slots are swapped,
+   * keeping all three values distinct.
+   */
+  updatePaletteColor(index: number, color: string): void {
+    if (!index || index < 1 || index > 3) return;
+
+    const normalized = (color || '').toLowerCase();
+    const pos = index - 1;
+
+    if (this.palette[pos] === normalized) return;
+
+    // Swap if the colour is already used elsewhere
+    const other = this.palette.findIndex((c, i) => i !== pos && c === normalized);
+    if (other >= 0) {
+      const tmp = this.palette[other];
+      this.palette[other] = this.palette[pos];
+      this.palette[pos] = tmp;
+      return;
+    }
+
+    this.palette[pos] = normalized;
   }
 }
