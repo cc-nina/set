@@ -38,11 +38,12 @@ import { CommonModule } from '@angular/common';
             -->
             <ellipse *ngIf="shape === 'oval'" cx="0" cy="0" [attr.rx]="orientation==='portrait'?24:10" [attr.ry]="orientation==='portrait'?10:24" />
 
-            <!-- diamond -->
-            <polygon *ngIf="shape === 'diamond'" points="0,-16 14,0 0,16 -14,0" />
+            <!-- diamond: make length match oval major axis (half-length 24) and orient per card -->
+            <polygon *ngIf="shape === 'diamond'"
+                     [attr.points]="orientation === 'portrait' ? '-24,0 0,-10 24,0 0,10' : '0,-24 10,0 0,24 -10,0'" />
 
-            <!-- squiggle (simplified, centered) -->
-            <path *ngIf="shape === 'squiggle'" d="M-14 -14 C -8 -28, 8 -28, 14 -14 C 8 -6, -8 -6, -14 -14 Z" />
+            <!-- squiggle (simplified). Provide two variants so the long axis matches ovals (48px total length) -->
+            <path *ngIf="shape === 'squiggle'" [attr.d]="orientation === 'portrait' ? squiggleHorizontal : squiggleVertical" />
           </g>
         </ng-container>
       </g>
@@ -95,5 +96,16 @@ export class CardComponent {
     if (this.shading === 'outline') return this.color;
     // for solid/striped, also stroke in same color for better visibility
     return this.color;
+  }
+
+  // squiggle paths sized to match oval major axis (~48px length)
+  get squiggleHorizontal(): string {
+    // horizontal squiggle: wider than tall (for portrait cards)
+    return 'M -24 0 C -18 -12, -6 -12, 0 0 C 6 12, 18 12, 24 0 C 18 6, 6 6, 0 0 C -6 -6, -18 -6, -24 0 Z';
+  }
+
+  get squiggleVertical(): string {
+    // vertical squiggle: taller than wide (for landscape cards)
+    return 'M 0 -24 C -12 -18, -12 -6, 0 0 C 12 6, 12 18, 0 24 C -6 18, -6 6, 0 0 C 6 -6, 6 -18, 0 -24 Z';
   }
 }

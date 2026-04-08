@@ -79,13 +79,24 @@ export function applySet(state: GameState, selected: Card[]): GameState {
 
   // We'll operate on copies
   const deck = state.deck.slice();
-  let board = state.board.slice();
+  const board = state.board.slice();
 
-  // Remove selected cards by id
+  // Replace each selected card in-place with the next card from the deck (if available).
+  // This preserves board indices so the UI can just update those specific cards.
   const selectedIds = new Set(selected.map((c) => c.id));
-  board = board.filter((c) => !selectedIds.has(c.id));
+  for (let i = 0; i < board.length; i++) {
+    if (selectedIds.has(board[i].id)) {
+      if (deck.length > 0) {
+        board[i] = deck.shift() as Card;
+      } else {
+        // No more cards to draw: remove the card (leave board shorter)
+        board.splice(i, 1);
+        i--; // adjust index after splice
+      }
+    }
+  }
 
-  // Draw cards to fill up to INITIAL_BOARD_SIZE if possible
+  // If board is shorter than INITIAL_BOARD_SIZE and deck still has cards, append to end
   while (board.length < INITIAL_BOARD_SIZE && deck.length > 0) {
     board.push(deck.shift() as Card);
   }
