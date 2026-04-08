@@ -16,7 +16,10 @@ import { CardComponent } from './card.component';
 import { SetGameService } from './set-game.service';
 
 /** How long (ms) the set-match highlight stays visible before cards are replaced. */
-const SET_MATCH_DISPLAY_MS = 700;
+const SET_MATCH_DISPLAY_MS = 250;
+
+/** Gap between cards as a fraction of card width. */
+const GAP_RATIO = 0.1;
 
 @Component({
   selector: 'app-game-board',
@@ -282,7 +285,7 @@ const SET_MATCH_DISPLAY_MS = 700;
     <!-- ── Main board ──────────────────────────────────────────────────── -->
     <div class="flex flex-col gap-3 items-center w-full max-w-4xl mx-auto">
 
-      <div class="w-full flex justify-end px-2">
+      <div class="w-full flex justify-end" [style.padding]="cardGap + 'px'">
         <button class="open-palette-btn" (click)="openPaletteModal()">
           <div class="palette-dots-preview">
             <div *ngFor="let p of palette" class="palette-dot-sm" [style.background]="p"></div>
@@ -328,6 +331,8 @@ export class GameBoardComponent implements AfterViewInit {
   gridClasses = 'grid-cols-3';
   /** Inline style object for the card grid — sets gap to half shape-width. */
   gridStyle: Record<string, string> = {};
+  /** Current card gap in px — used to match toolbar padding to card spacing. */
+  cardGap = 0;
 
   showPaletteModal = false;
   /**
@@ -442,15 +447,16 @@ export class GameBoardComponent implements AfterViewInit {
 
       // Fit by width: boardWidth = min(w-16, 896)
       const boardWidth = Math.min(w - 16, 896);
-      const cardWFromWidth = boardWidth / (cols + 0.2 * (cols - 1));
+      const cardWFromWidth = boardWidth / (cols + GAP_RATIO * (cols - 1));
 
       // Fit by height: allow ~56px for the toolbar row above the board
       const boardHeight = h - 56;
-      const cardHFromHeight = boardHeight / (rows + 0.2 * (rows - 1));
+      const cardHFromHeight = boardHeight / (rows + GAP_RATIO * (rows - 1));
       const cardWFromHeight = cardHFromHeight * cardAspect;
 
       const cardWidth = Math.floor(Math.min(cardWFromWidth, cardWFromHeight));
-      const gap = Math.round(0.2 * cardWidth);
+      const gap = Math.round(GAP_RATIO * cardWidth);
+      this.cardGap = gap;
 
       this.gridStyle = {
         gap: `${gap}px`,
@@ -466,15 +472,16 @@ export class GameBoardComponent implements AfterViewInit {
 
       // Fit by width
       const boardWidth = w - 16;
-      const cardWFromWidth = boardWidth / (cols + 0.2 * (cols - 1));
+      const cardWFromWidth = boardWidth / (cols + GAP_RATIO * (cols - 1));
 
       // Fit by height: allow ~56px for the toolbar row above the board
       const boardHeight = h - 56;
-      const cardHFromHeight = boardHeight / (rows + 0.2 * (rows - 1));
+      const cardHFromHeight = boardHeight / (rows + GAP_RATIO * (rows - 1));
       const cardWFromHeight = cardHFromHeight * cardAspect;
 
       const cardWidth = Math.floor(Math.min(cardWFromWidth, cardWFromHeight));
-      const gap = Math.round(0.2 * cardWidth);
+      const gap = Math.round(GAP_RATIO * cardWidth);
+      this.cardGap = gap;
 
       this.gridStyle = {
         gap: `${gap}px`,

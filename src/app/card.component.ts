@@ -1,6 +1,11 @@
 import { Component, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
+/** Half-length (major axis) of each shape in SVG units. Increase to make shapes longer. */
+const SL = 27;
+/** Half-width (minor axis) of each shape in SVG units. */
+const SW = 13;
+
 @Component({
   selector: 'app-card',
   standalone: true,
@@ -55,22 +60,41 @@ import { CommonModule } from '@angular/common';
                 - portrait cards (vertical): blobs are horizontal (wider than tall)
             -->
             <ellipse *ngIf="shape === 'oval'" cx="0" cy="0"
-              [attr.rx]="orientation==='portrait'?24:10"
-              [attr.ry]="orientation==='portrait'?10:24" />
+              [attr.rx]="orientation==='portrait'?shapeSL:shapeSW"
+              [attr.ry]="orientation==='portrait'?shapeSW:shapeSL" />
 
-            <!-- diamond: half-lengths match oval major axis (24) and minor axis (10) -->
+            <!-- diamond: half-lengths match oval major axis and minor axis -->
             <polygon *ngIf="shape === 'diamond'"
-                     [attr.points]="orientation === 'portrait' ? '-24,0 0,-10 24,0 0,10' : '0,-24 10,0 0,24 -10,0'" />
-
-            <!--
-              squiggle: same bounding box as oval (48×20 for portrait, 20×48 for landscape).
-              The path is drawn to fill that box properly with visible width.
-            -->
-            <path *ngIf="shape === 'squiggle'"
-              [attr.d]="orientation === 'portrait' ? squiggleHorizontal : squiggleVertical" />
+                     [attr.points]="orientation === 'portrait' ? diamondPortrait : diamondLandscape" />
           </g>
         </ng-container>
       </g>
+
+      <!-- squiggle: rendered as a thick open stroke so ends are naturally round -->
+      <ng-container *ngIf="shape === 'squiggle'">
+        <ng-container *ngFor="let i of shapePositions()">
+          <g [attr.transform]="orientation === 'landscape' ? ('translate(' + i + ',60)') : ('translate(60,' + i + ')')">
+            <!-- border layer: slightly wider stroke in the shape colour, drawn first -->
+            <path
+              [attr.d]="orientation === 'portrait' ? squiggleHorizontal : squiggleVertical"
+              fill="none"
+              [attr.stroke]="strokeForShading()"
+              [attr.stroke-width]="squiggleStrokeWidth + 4"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+            <!-- fill layer: SW-wide stroke on top -->
+            <path
+              [attr.d]="orientation === 'portrait' ? squiggleHorizontal : squiggleVertical"
+              fill="none"
+              [attr.stroke]="shading === 'outline' ? 'white' : shading === 'striped' ? 'url(#' + patternId + ')' : strokeForShading()"
+              [attr.stroke-width]="squiggleStrokeWidth"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </g>
+        </ng-container>
+      </ng-container>
 
     </svg>
   `,
@@ -78,13 +102,12 @@ import { CommonModule } from '@angular/common';
     /* Set-match pulse animation */
     @keyframes setMatchPulse {
       0%   { transform: scale(1);    filter: brightness(1); }
-      30%  { transform: scale(1.08); filter: brightness(1.12); }
-      60%  { transform: scale(0.97); filter: brightness(1.05); }
+      40%  { transform: scale(1.04); filter: brightness(1.07); }
       100% { transform: scale(1);    filter: brightness(1); }
     }
 
     svg.card-set-match {
-      animation: setMatchPulse 0.55s cubic-bezier(.22,1,.36,1) both;
+      animation: setMatchPulse 0.24s cubic-bezier(.22,1,.36,1) both;
       transform-origin: center;
     }
   `],
@@ -110,16 +133,18 @@ export class CardComponent {
 
   shapePositions(): number[] {
     const n = Math.max(1, Math.min(3, Math.floor(this.number || 1)));
+    // Center-to-center spacing: full shape width (2*SW) + half shape width (SW) = 3*SW
+    const spacing = 3 * SW;
     if (this.orientation === 'landscape') {
       const midX = 90;
       if (n === 1) return [midX];
-      if (n === 2) return [midX - 20, midX + 20];
-      return [midX - 30, midX, midX + 30];
+      if (n === 2) return [midX - spacing / 2, midX + spacing / 2];
+      return [midX - spacing, midX, midX + spacing];
     } else {
       const midY = 90;
       if (n === 1) return [midY];
-      if (n === 2) return [midY - 20, midY + 20];
-      return [midY - 30, midY, midY + 30];
+      if (n === 2) return [midY - spacing / 2, midY + spacing / 2];
+      return [midY - spacing, midY, midY + spacing];
     }
   }
 
@@ -133,35 +158,47 @@ export class CardComponent {
     return this.color;
   }
 
-  /**
-   * Squiggle horizontal (portrait card): spans ±24 in X, ±10 in Y.
-   * Uses a closed S-curve with enough thickness to look like the other shapes.
-   */
-  get squiggleHorizontal(): string {
-    return [
-      'M -24,-4',
-      'C -16,-10  -8,-10   0,-4',
-      'C  8,  2  16,  2  24,-4',
-      'L  24, 4',
-      'C  16, 10   8, 10   0, 4',
-      'C  -8, -2 -16, -2 -24, 4',
-      'Z',
-    ].join(' ');
+  /** Exposes SL to the template for oval rx/ry bindings. */
+  get shapeSL(): number { return SL; }
+  /** Exposes SW to the template for oval rx/ry bindings. */
+  get shapeSW(): number { return SW; }
+
+  /** Diamond points string for portrait orientation. */
+  get diamondPortrait(): string {
+    return `-${SL},0 0,-${SW} ${SL},0 0,${SW}`;
+  }
+  /** Diamond points string for landscape orientation. */
+  get diamondLandscape(): string {
+    return `0,-${SL} ${SW},0 0,${SL} -${SW},0`;
   }
 
   /**
-   * Squiggle vertical (landscape card): spans ±10 in X, ±24 in Y.
-   * Rotated version of the horizontal squiggle.
+   * Stroke width for the squiggle, sized to match the visual thickness of
+   * the oval/diamond (minor axis = SW). The open-stroke approach means the
+   * rendered band is stroke-width wide, so we use SW directly.
+   */
+  get squiggleStrokeWidth(): number { return SW; }
+
+  /**
+   * Squiggle horizontal (portrait): open S-curve centreline, ±SL in X.
+   * Rendered as a thick stroke with round caps — no closed path needed.
+   */
+  get squiggleHorizontal(): string {
+    const l = SL, w = SW;
+    const t1 = +(l * 0.33).toFixed(1);
+    const t2 = +(l * 0.67).toFixed(1);
+    // Single S-curve: starts at left, peaks up, crosses centre, peaks down, ends at right
+    return `M -${l},0 C -${t2},-${w} -${t1},-${w} 0,0 C ${t1},${w} ${t2},${w} ${l},0`;
+  }
+
+  /**
+   * Squiggle vertical (landscape): open S-curve centreline, ±SL in Y.
+   * Rotated 90° version of horizontal.
    */
   get squiggleVertical(): string {
-    return [
-      'M -4,-24',
-      'C -10,-16 -10, -8  -4,  0',
-      'C   2,  8   2, 16  -4, 24',
-      'L   4, 24',
-      'C  10, 16  10,  8   4,  0',
-      'C  -2, -8  -2,-16   4,-24',
-      'Z',
-    ].join(' ');
+    const l = SL, w = SW;
+    const t1 = +(l * 0.33).toFixed(1);
+    const t2 = +(l * 0.67).toFixed(1);
+    return `M 0,-${l} C -${w},-${t2} -${w},-${t1} 0,0 C ${w},${t1} ${w},${t2} 0,${l}`;
   }
 }
