@@ -15,6 +15,9 @@ import { FormsModule } from '@angular/forms';
 import { CardComponent } from './card.component';
 import { SetGameService } from './set-game.service';
 
+/** How long (ms) the set-match highlight stays visible before cards are replaced. */
+const SET_MATCH_DISPLAY_MS = 700;
+
 @Component({
   selector: 'app-game-board',
   standalone: true,
@@ -57,12 +60,12 @@ import { SetGameService } from './set-game.service';
     }
     .close-btn:hover { background:#e0e0e0; }
 
-    /* ── Three swatches ────────────────────────────────────────────── */
-    .swatch-row { display:flex; gap:16px; align-items:flex-start; }
+    /* ── Swatch rows ────────────────────────────────────────────────── */
+    .swatch-row { display:flex; gap:12px; align-items:flex-start; }
     .swatch-col { display:flex; flex-direction:column; align-items:center; gap:8px; flex:1; }
 
     .swatch-well {
-      width:68px; height:68px; border-radius:14px;
+      width:56px; height:56px; border-radius:14px;
       border:2px solid transparent;
       cursor:pointer;
       transition:transform 0.12s, border-color 0.12s;
@@ -70,7 +73,17 @@ import { SetGameService } from './set-game.service';
     .swatch-well:hover { transform:scale(1.06); }
     .swatch-well.active { border-color:#111; }
 
-    .swatch-label { font-size:11px; color:#888; }
+    /* The highlight swatch gets a special ring so black-on-white is still visible */
+    .swatch-well.highlight-swatch {
+      box-shadow: inset 0 0 0 1.5px #ccc;
+    }
+
+    .swatch-label { font-size:10px; color:#888; text-align:center; }
+
+    /* Divider between card colours and highlight colour */
+    .swatch-divider {
+      width:1px; background:#e8e8e8; align-self:stretch; margin: 0 2px;
+    }
 
     /* ── Custom colour picker panel ────────────────────────────────── */
     .picker-panel {
@@ -116,6 +129,7 @@ import { SetGameService } from './set-game.service';
     }
     .hex-preview {
       width:32px; height:32px; border-radius:8px; flex-shrink:0;
+      box-shadow: inset 0 0 0 1px rgba(0,0,0,0.12);
     }
     .hex-input {
       flex:1; font-size:12px; font-family:monospace;
@@ -138,6 +152,7 @@ import { SetGameService } from './set-game.service';
       width:24px; height:24px; border-radius:50%;
       border:2px solid transparent;
       cursor:pointer; transition:transform 0.1s;
+      box-shadow: inset 0 0 0 1px rgba(0,0,0,0.10);
     }
     .preset-dot:hover { transform:scale(1.2); }
     .preset-dot.selected-preset { border-color:#111; }
@@ -161,8 +176,15 @@ import { SetGameService } from './set-game.service';
     .open-palette-btn:hover { background:#f7f7f7; border-color:#ccc; }
     .open-palette-btn:active { transform:scale(0.97); }
 
-    .palette-dots-preview { display:flex; gap:4px; }
+    .palette-dots-preview { display:flex; gap:4px; align-items:center; }
     .palette-dot-sm { width:12px; height:12px; border-radius:50%; }
+    /* Small preview of highlight colour — shown as a ring */
+    .palette-highlight-sm {
+      width:12px; height:12px; border-radius:50%;
+      box-shadow: inset 0 0 0 1px rgba(0,0,0,0.15);
+      border: 2.5px solid;
+      background: transparent;
+    }
   `],
   template: `
     <!-- ── Palette modal ──────────────────────────────────────────────── -->
@@ -171,18 +193,34 @@ import { SetGameService } from './set-game.service';
         <button class="close-btn" (click)="closePaletteModal()" aria-label="Close">✕</button>
 
         <div class="modal-title">Card colours</div>
-        <div class="modal-subtitle">Pick three distinct colours for the game cards</div>
+        <div class="modal-subtitle">Pick three card colours and a selection highlight</div>
 
-        <!-- Three swatch tiles -->
+        <!-- Swatch row: 3 card colours | divider | 1 highlight colour -->
         <div class="swatch-row">
-          <div class="swatch-col" *ngFor="let p of palette; let idx = index">
+          <ng-container *ngFor="let p of palette; let idx = index">
+            <div class="swatch-col">
+              <div
+                class="swatch-well"
+                [class.active]="activeSwatchIdx === idx"
+                [style.background]="p"
+                (click)="activateSwatch(idx)"
+              ></div>
+              <span class="swatch-label">Colour {{idx + 1}}</span>
+            </div>
+          </ng-container>
+
+          <!-- Divider -->
+          <div class="swatch-divider"></div>
+
+          <!-- Highlight colour (index 3 in our all-swatches array) -->
+          <div class="swatch-col">
             <div
-              class="swatch-well"
-              [class.active]="activeSwatchIdx === idx"
-              [style.background]="p"
-              (click)="activateSwatch(idx)"
+              class="swatch-well highlight-swatch"
+              [class.active]="activeSwatchIdx === 3"
+              [style.background]="highlightColor"
+              (click)="activateSwatch(3)"
             ></div>
-            <span class="swatch-label">Colour {{idx + 1}}</span>
+            <span class="swatch-label">Selection</span>
           </div>
         </div>
 
@@ -207,11 +245,11 @@ import { SetGameService } from './set-game.service';
 
           <!-- Hex row -->
           <div class="hex-row">
-            <div class="hex-preview" [style.background]="palette[activeSwatchIdx]"></div>
+            <div class="hex-preview" [style.background]="currentSwatchColor"></div>
             <input
               class="hex-input"
               [class.invalid]="hexInvalid"
-              [value]="palette[activeSwatchIdx]"
+              [value]="currentSwatchColor"
               maxlength="7"
               (input)="onHexInput($event)"
               (blur)="onHexBlur($event)"
@@ -231,7 +269,7 @@ import { SetGameService } from './set-game.service';
             <div
               *ngFor="let pc of presetColors"
               class="preset-dot"
-              [class.selected-preset]="palette[activeSwatchIdx] === pc"
+              [class.selected-preset]="currentSwatchColor === pc"
               [style.background]="pc"
               [title]="pc"
               (click)="applyPreset(pc)"
@@ -248,6 +286,8 @@ import { SetGameService } from './set-game.service';
         <button class="open-palette-btn" (click)="openPaletteModal()">
           <div class="palette-dots-preview">
             <div *ngFor="let p of palette" class="palette-dot-sm" [style.background]="p"></div>
+            <!-- Highlight preview as a ring -->
+            <div class="palette-highlight-sm" [style.border-color]="highlightColor"></div>
           </div>
           Colours
         </button>
@@ -264,6 +304,8 @@ import { SetGameService } from './set-game.service';
               [number]="c.number"
               [shading]="shadingFor(c)"
               [selected]="selectedIds.has(c.id)"
+              [setMatch]="setMatchIds.has(c.id)"
+              [highlightColor]="highlightColor"
             ></app-card>
           </div>
         </div>
@@ -276,12 +318,20 @@ export class GameBoardComponent implements AfterViewInit {
   board: any[] = [];
   palette: string[] = [];
   selectedIds: Set<string> = new Set();
+  /** Cards that were just identified as a valid set — show match animation. */
+  setMatchIds: Set<string> = new Set();
+  /** Colour used for the selection border ring. Stored locally (UI-only). */
+  highlightColor: string = '#000000';
+
   isBrowser = true;
   showBoard = false;
   orientation: 'portrait' | 'landscape' = 'portrait';
   gridClasses = 'grid-cols-3';
 
   showPaletteModal = false;
+  /**
+   * 0–2 → card palette slots; 3 → highlight colour.
+   */
   activeSwatchIdx = 0;
   hexInvalid = false;
 
@@ -296,6 +346,7 @@ export class GameBoardComponent implements AfterViewInit {
     '#cc0000', '#e05c00', '#d4a017',
     '#0aa64a', '#1a7fc4', '#5a2ea6',
     '#c4307a', '#16a3a3', '#2c2c2c',
+    '#000000', '#ffffff', '#808080',
   ];
 
   constructor(
@@ -306,16 +357,53 @@ export class GameBoardComponent implements AfterViewInit {
   ) {
     this.isBrowser = isPlatformBrowser(this.platformId);
     let first = true;
+    let prevSelectedIds = new Set<string>();
+
     this.game.state$.subscribe((s) => {
-      this.board = s.board;
-      this.selectedIds = new Set(s.selected.map((c: any) => c.id));
+      const newBoard = s.board;
+      const newSelectedIds = new Set(s.selected.map((c: any) => c.id));
+
+      // Detect a valid set completion:
+      // Previously 2 cards selected → now 0 selected AND board changed (cards replaced).
+      // We capture the IDs that *were* selected and check if they formed a set.
+      if (prevSelectedIds.size === 2 && newSelectedIds.size === 0) {
+        // The 3rd card that completed the set isn't in newSelectedIds (already cleared),
+        // but we can detect it by seeing which selected IDs from state are now gone
+        // because game.service clears selection on a correct set.
+        // We get the last confirmed selected IDs from the board subscription:
+        // Compare the old board to the new board to find removed cards.
+        const oldBoardIds = new Set(this.board.map((c: any) => c.id));
+        const newBoardIds = new Set(newBoard.map((c: any) => c.id));
+        const removedIds = [...oldBoardIds].filter(id => !newBoardIds.has(id));
+
+        // Union: cards that were selected + any removed cards = the set
+        const matchSet = new Set([...prevSelectedIds, ...removedIds]);
+        if (matchSet.size === 3) {
+          this.setMatchIds = matchSet;
+          setTimeout(() => {
+            this.setMatchIds = new Set();
+            this.board = newBoard;
+            try { this.cdr.detectChanges(); } catch {}
+          }, SET_MATCH_DISPLAY_MS);
+
+          // Don't update board yet — keep old cards visible during animation
+          this.selectedIds = newSelectedIds;
+          prevSelectedIds = newSelectedIds;
+          if (first) { first = false; this._showBoard(); }
+          try { this.cdr.detectChanges(); } catch {}
+          return;
+        }
+      }
+
+      this.board = newBoard;
+      this.selectedIds = newSelectedIds;
+      prevSelectedIds = newSelectedIds;
+
       if (first) {
         first = false;
-        setTimeout(() => {
-          this.showBoard = true;
-          try { this.cdr.detectChanges(); } catch {}
-        }, 50);
+        this._showBoard();
       }
+      try { this.cdr.detectChanges(); } catch {}
     });
 
     if (this.isBrowser) {
@@ -323,6 +411,13 @@ export class GameBoardComponent implements AfterViewInit {
       window.addEventListener('resize', () => this.updateLayout());
       this.palette = this.game.getPalette();
     }
+  }
+
+  private _showBoard(): void {
+    setTimeout(() => {
+      this.showBoard = true;
+      try { this.cdr.detectChanges(); } catch {}
+    }, 50);
   }
 
   ngAfterViewInit(): void {
@@ -348,7 +443,7 @@ export class GameBoardComponent implements AfterViewInit {
   openPaletteModal(): void {
     this.showPaletteModal = true;
     this.activeSwatchIdx = 0;
-    this.syncHsvFromPalette(0);
+    this.syncHsvFromColor(this.palette[0]);
     setTimeout(() => this.drawSvCanvas(), 0);
   }
 
@@ -366,9 +461,15 @@ export class GameBoardComponent implements AfterViewInit {
   activateSwatch(idx: number): void {
     this.activeSwatchIdx = idx;
     this.hexInvalid = false;
-    this.syncHsvFromPalette(idx);
+    this.syncHsvFromColor(this.currentSwatchColor);
     this.drawSvCanvas();
     try { this.cdr.detectChanges(); } catch {}
+  }
+
+  /** The colour of whichever swatch is currently active (0-2 = palette, 3 = highlight). */
+  get currentSwatchColor(): string {
+    if (this.activeSwatchIdx === 3) return this.highlightColor;
+    return this.palette[this.activeSwatchIdx] || '#cc0000';
   }
 
   // ── Canvas drawing ────────────────────────────────────────────────────────
@@ -384,14 +485,12 @@ export class GameBoardComponent implements AfterViewInit {
     canvas.width  = W;
     canvas.height = H;
 
-    // Hue base → white overlay (left to right)
     const gH = ctx.createLinearGradient(0, 0, W, 0);
     gH.addColorStop(0, '#fff');
     gH.addColorStop(1, `hsl(${this.hue},100%,50%)`);
     ctx.fillStyle = gH;
     ctx.fillRect(0, 0, W, H);
 
-    // Transparent-to-black overlay (top to bottom)
     const gV = ctx.createLinearGradient(0, 0, 0, H);
     gV.addColorStop(0, 'rgba(0,0,0,0)');
     gV.addColorStop(1, '#000');
@@ -481,8 +580,8 @@ export class GameBoardComponent implements AfterViewInit {
     this.applyColor(this.activeSwatchIdx, hex);
   }
 
-  private syncHsvFromPalette(idx: number): void {
-    const [h, s, v] = this.hexToHsv(this.palette[idx] || '#cc0000');
+  private syncHsvFromColor(hex: string): void {
+    const [h, s, v] = this.hexToHsv(hex || '#000000');
     this.hue = h;
     this.svX = s;
     this.svY = v;
@@ -519,7 +618,7 @@ export class GameBoardComponent implements AfterViewInit {
     if (/^#[0-9a-fA-F]{6}$/.test(val)) {
       this.hexInvalid = false;
       this.applyColor(this.activeSwatchIdx, val);
-      this.syncHsvFromPalette(this.activeSwatchIdx);
+      this.syncHsvFromColor(val);
       this.drawSvCanvas();
     } else {
       this.hexInvalid = true;
@@ -529,7 +628,7 @@ export class GameBoardComponent implements AfterViewInit {
   onHexBlur(event: Event): void {
     const input = event.target as HTMLInputElement;
     if (!/^#[0-9a-fA-F]{6}$/.test(input.value)) {
-      input.value = this.palette[this.activeSwatchIdx];
+      input.value = this.currentSwatchColor;
       this.hexInvalid = false;
     }
   }
@@ -538,15 +637,23 @@ export class GameBoardComponent implements AfterViewInit {
 
   applyPreset(color: string): void {
     this.applyColor(this.activeSwatchIdx, color);
-    this.syncHsvFromPalette(this.activeSwatchIdx);
+    this.syncHsvFromColor(color);
     this.drawSvCanvas();
   }
 
   // ── Core colour apply ─────────────────────────────────────────────────────
 
+  /**
+   * Apply a colour to a swatch slot.
+   * Slots 0–2 → card palette; slot 3 → selection highlight.
+   */
   private applyColor(idx: number, color: string): void {
-    this.game.updatePaletteColor(idx + 1, color.toLowerCase());
-    this.palette = this.game.getPalette();
+    if (idx === 3) {
+      this.highlightColor = color.toLowerCase();
+    } else {
+      this.game.updatePaletteColor(idx + 1, color.toLowerCase());
+      this.palette = this.game.getPalette();
+    }
     try { this.cdr.detectChanges(); } catch {}
   }
 
