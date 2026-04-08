@@ -1,3 +1,14 @@
-/* You can add global styles to this file, and also import other style files */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-@import 'tailwindcss';
+html, body {
+	height: 100%;
+}
+
+/* Use explicit CSS here to avoid editor/tooling errors with @apply in some setups */
+body {
+	background-color: #F9FAFB; /* Tailwind gray-50 */
+	color: #111827; /* Tailwind gray-900 */
+	-webkit-font-smoothing: antialiased;
+}

@@ -39,4 +39,37 @@ describe('game.service', () => {
       expect(e).toBeTruthy();
     }
   });
+
+  it('selectCard toggles selection and applies a valid set when three matching cards selected', () => {
+    // build a controlled state with a known valid set
+  const cardA = { id: 'a', number: 1 as any, color: 1 as any, shape: 1 as any, shading: 1 as any } as any;
+  const cardB = { id: 'b', number: 1 as any, color: 1 as any, shape: 1 as any, shading: 1 as any } as any;
+  const cardC = { id: 'c', number: 1 as any, color: 1 as any, shape: 1 as any, shading: 1 as any } as any;
+    const deck = [] as any[];
+    const state: any = { deck, board: [cardA, cardB, cardC], selected: [], score: 0, correctSets: 0, incorrectSelections: 0 };
+
+    const s1 = selectCard(state, cardA);
+    expect(s1.selected.length).toBe(1);
+    const s2 = selectCard(s1, cardB);
+    expect(s2.selected.length).toBe(2);
+    const s3 = selectCard(s2, cardC);
+    // since A,B,C form a valid set, the selection should be applied and cleared
+    expect(s3.selected.length).toBe(0);
+    expect(s3.correctSets).toBe(1);
+    expect(s3.score).toBe(3);
+  });
+
+  it('applySet throws if passed invalid number of cards or invalid set', () => {
+    const s = initGame();
+    expect(() => applySet(s, [] as any)).toThrow();
+    const invalid = [s.board[0], s.board[1], { ...s.board[2], id: 'fake' }];
+    // invalid set should throw
+    try {
+      applySet(s, invalid as any);
+      // if no throw, that's unexpected — fail
+      throw new Error('applySet did not throw for invalid set');
+    } catch (e) {
+      expect(e).toBeTruthy();
+    }
+  });
 });

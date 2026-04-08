@@ -8,6 +8,8 @@ import { findSet } from './game.utils';
 export class SetGameService {
   private stateSubject: BehaviorSubject<GameState>;
   public state$: Observable<GameState>;
+  // simple in-memory map for card colors (id -> hex)
+  private cardColors: Record<string, string> = {};
 
   constructor() {
     // initialize with a fresh game
@@ -52,5 +54,19 @@ export class SetGameService {
   findSetOnBoard(): [number, number, number] | null {
     const board = this.getStateSnapshot().board;
     return findSet(board);
+  }
+
+  // Allow updating a color for a specific card id, or a global color when id is undefined.
+  updateCardColor(color: string, cardId?: string): void {
+    if (cardId) this.cardColors[cardId] = color;
+    else {
+      // apply to all known cards on board
+      const board = this.getStateSnapshot().board;
+      board.forEach((c) => (this.cardColors[c.id] = color));
+    }
+  }
+
+  getCardColor(cardId: string): string | undefined {
+    return this.cardColors[cardId];
   }
 }
