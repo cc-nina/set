@@ -9,8 +9,7 @@ import { CommonModule } from '@angular/common';
   <svg
     preserveAspectRatio="xMidYMid meet"
     [attr.viewBox]="orientation === 'portrait' ? '0 0 120 180' : '0 0 180 120'"
-    [attr.width]="orientation === 'portrait' ? 120 : 160"
-    [attr.height]="orientation === 'portrait' ? 180 : 120"
+    [style]="orientation === 'portrait' ? 'width:100%;aspect-ratio:120/180;display:block;' : 'width:100%;aspect-ratio:180/120;display:block;'"
     [class.card-set-match]="setMatch"
     aria-role="img"
   >
@@ -89,6 +88,7 @@ import { CommonModule } from '@angular/common';
       transform-origin: center;
     }
   `],
+  host: { style: 'display:block;width:100%;' },
 })
 export class CardComponent {
   @Input() color: string = '#c00';

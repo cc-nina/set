@@ -167,7 +167,7 @@ const SET_MATCH_DISPLAY_MS = 700;
     /* ── Open button ────────────────────────────────────────────────── */
     .open-palette-btn {
       display:inline-flex; align-items:center; gap:8px;
-      padding:8px 14px; border-radius:10px;
+      padding:10px 18px; border-radius:8px;
       border:1.5px solid #e0e0e0; background:#fff; color:#333;
       font-size:13px; font-weight:500; cursor:pointer;
       transition:background 0.12s, border-color 0.12s, transform 0.1s;
@@ -192,8 +192,8 @@ const SET_MATCH_DISPLAY_MS = 700;
       <div class="palette-modal" (click)="$event.stopPropagation()">
         <button class="close-btn" (click)="closePaletteModal()" aria-label="Close">✕</button>
 
-        <div class="modal-title">Card colours</div>
-        <div class="modal-subtitle">Pick three card colours and a selection highlight</div>
+  <div class="modal-title">Colours</div>
+  <div class="modal-subtitle">Pick three colours and a selection highlight</div>
 
         <!-- Swatch row: 3 card colours | divider | 1 highlight colour -->
         <div class="swatch-row">
@@ -294,10 +294,9 @@ const SET_MATCH_DISPLAY_MS = 700;
       </div>
 
       <div *ngIf="isBrowser && showBoard" class="board w-full flex justify-center">
-        <div class="grid gap-3" [ngClass]="gridClasses">
+        <div class="grid" [ngClass]="gridClasses" [ngStyle]="gridStyle">
           <div *ngFor="let c of board" (click)="onCardClick(c)" class="cursor-pointer">
             <app-card
-              class="mx-auto"
               [orientation]="orientation"
               [color]="colorFor(c)"
               [shape]="shapeFor(c)"
@@ -327,6 +326,8 @@ export class GameBoardComponent implements AfterViewInit {
   showBoard = false;
   orientation: 'portrait' | 'landscape' = 'portrait';
   gridClasses = 'grid-cols-3';
+  /** Inline style object for the card grid — sets gap to half shape-width. */
+  gridStyle: Record<string, string> = {};
 
   showPaletteModal = false;
   /**
@@ -428,13 +429,59 @@ export class GameBoardComponent implements AfterViewInit {
 
   private updateLayout(): void {
     const w = window.innerWidth;
-    if (w >= 768) {
+    const h = window.innerHeight;
+    const isWide = w >= 768;
+
+    if (isWide) {
+      // ── Desktop/landscape: 4 cols, landscape cards (viewBox 180×120, ratio 3:2) ──
       this.orientation = 'landscape';
       this.gridClasses = 'grid-cols-4';
+      const cols = 4;
+      const rows = 3;
+      const cardAspect = 180 / 120; // width / height = 1.5
+
+      // Fit by width: boardWidth = min(w-16, 896)
+      const boardWidth = Math.min(w - 16, 896);
+      const cardWFromWidth = boardWidth / (cols + 0.2 * (cols - 1));
+
+      // Fit by height: allow ~56px for the toolbar row above the board
+      const boardHeight = h - 56;
+      const cardHFromHeight = boardHeight / (rows + 0.2 * (rows - 1));
+      const cardWFromHeight = cardHFromHeight * cardAspect;
+
+      const cardWidth = Math.floor(Math.min(cardWFromWidth, cardWFromHeight));
+      const gap = Math.round(0.2 * cardWidth);
+
+      this.gridStyle = {
+        gap: `${gap}px`,
+        'grid-template-columns': `repeat(${cols}, ${cardWidth}px)`,
+      };
     } else {
+      // ── Mobile/portrait: 3 cols × 4 rows, portrait cards (viewBox 120×180, ratio 2:3) ──
       this.orientation = 'portrait';
       this.gridClasses = 'grid-cols-3';
+      const cols = 3;
+      const rows = 4;
+      const cardAspect = 120 / 180; // width / height = 0.667
+
+      // Fit by width
+      const boardWidth = w - 16;
+      const cardWFromWidth = boardWidth / (cols + 0.2 * (cols - 1));
+
+      // Fit by height: allow ~56px for the toolbar row above the board
+      const boardHeight = h - 56;
+      const cardHFromHeight = boardHeight / (rows + 0.2 * (rows - 1));
+      const cardWFromHeight = cardHFromHeight * cardAspect;
+
+      const cardWidth = Math.floor(Math.min(cardWFromWidth, cardWFromHeight));
+      const gap = Math.round(0.2 * cardWidth);
+
+      this.gridStyle = {
+        gap: `${gap}px`,
+        'grid-template-columns': `repeat(${cols}, ${cardWidth}px)`,
+      };
     }
+
     try { this.cdr.detectChanges(); } catch {}
   }
 
