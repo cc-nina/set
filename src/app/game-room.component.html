@@ -12,7 +12,13 @@
       <p class="overlay-sub">Share this room code with your opponent:</p>
       <div class="room-code-row">
         <span class="room-code">{{ roomCode }}</span>
-        <button class="btn-copy" (click)="copyRoomCode()" title="Copy to clipboard">⎘ Copy</button>
+        <button class="btn-copy"
+                [class.btn-copy--ok]="copyState === 'copied'"
+                [class.btn-copy--err]="copyState === 'failed'"
+                (click)="copyRoomCode()"
+                title="Copy to clipboard">
+          {{ copyState === 'copied' ? '✓ Copied' : copyState === 'failed' ? '✗ Failed' : '⎘ Copy' }}
+        </button>
       </div>
       <button class="btn-home" (click)="leaveRoom()">← Leave room</button>
     </div>

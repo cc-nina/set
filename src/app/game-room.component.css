@@ -90,6 +90,8 @@
   transition: background 0.15s;
 }
 .btn-copy:hover { background: #e0e0e0; }
+.btn-copy--ok  { background: #d4edda; border-color: #28a745; color: #155724; }
+.btn-copy--err { background: #f8d7da; border-color: #dc3545; color: #721c24; }
 
 /* ── Scoreboard ──────────────────────────────────────────────────────────── */
 .scoreboard {

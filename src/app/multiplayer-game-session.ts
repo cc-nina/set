@@ -230,12 +230,14 @@ export class MultiplayerGameSession implements GameSession, OnDestroy {
     if (msg.type === 'error') {
       console.error('[MultiplayerGameSession] Server error:', msg.message);
       // If the reconnect was rejected (room expired / player evicted), fall
-      // back to a fresh join so the player isn't stuck on a blank screen.
+      // back to a fresh room creation so the player isn't stuck on a blank
+      // screen.  Always use 'new' — the original room no longer exists, so
+      // retrying with the old roomId would just produce another error.
       if (msg.message.includes('not found') || msg.message.includes('Player not found')) {
         this.clearStoredSession();
         this.ws?.send(JSON.stringify({
           type: 'join',
-          roomId: connectArgs.roomId,
+          roomId: 'new',
           playerName: connectArgs.playerName,
           maxPlayers: connectArgs.maxPlayers,
         }));

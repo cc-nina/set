@@ -49,6 +49,9 @@ export class GameRoomComponent implements OnInit, OnDestroy {
    *  lastSetBy$ handler can look up names without creating a nested subscribe. */
   private latestPlayers: Player[] = [];
 
+  /** Tracks clipboard copy state for the "Copy" button label. */
+  copyState: 'idle' | 'copied' | 'failed' = 'idle';
+
   private subs = new Subscription();
 
   constructor(
@@ -136,7 +139,20 @@ export class GameRoomComponent implements OnInit, OnDestroy {
 
   copyRoomCode(): void {
     if (!isPlatformBrowser(this.platformId)) return;
-    navigator.clipboard.writeText(this.roomCode).catch(() => {});
+    navigator.clipboard.writeText(this.roomCode).then(
+      () => {
+        this.copyState = 'copied';
+        this.cdr.markForCheck();
+        setTimeout(() => { this.copyState = 'idle'; this.cdr.markForCheck(); }, 2000);
+      },
+      () => {
+        // Clipboard API denied (HTTP, permissions policy, etc.) — show the
+        // failure so the user knows to copy the code manually.
+        this.copyState = 'failed';
+        this.cdr.markForCheck();
+        setTimeout(() => { this.copyState = 'idle'; this.cdr.markForCheck(); }, 3000);
+      },
+    );
   }
 
   /**

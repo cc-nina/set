@@ -260,7 +260,8 @@ function applySelection(room: Room, playerId: PlayerId, cardId: string): void {
   if (selection.length < 3) return;
 
   const [a, b, c] = selection;
-  const player = st.players.find((p) => p.id === playerId)!;
+  const player = st.players.find((p) => p.id === playerId);
+  if (!player) return; // should never happen, but guard against stale state
 
   if (isSet(a, b, c)) {
     const setIds = new Set([a.id, b.id, c.id]);
@@ -332,6 +333,16 @@ function handleMessage(ws: GameSocket, raw: string): void {
     return;
   }
 
+  try {
+    handleParsedMessage(ws, msg);
+  } catch (err) {
+    console.error('[ws] Unhandled error in handleMessage', err);
+    send(ws, { type: 'error', message: 'Internal server error' });
+  }
+}
+
+/** Inner handler — separated so the outer function can catch any unexpected throws. */
+function handleParsedMessage(ws: GameSocket, msg: ClientMessage): void {
   // ── reconnect ──────────────────────────────────────────────────────────────
   if (msg.type === 'reconnect') {
     if (!msg.roomId || !msg.playerId) {
