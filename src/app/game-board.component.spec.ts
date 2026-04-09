@@ -3,6 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { PLATFORM_ID } from '@angular/core';
 import { GameBoardComponent } from './game-board.component';
 import { SetGameService } from './set-game.service';
+import { GAME_SESSION } from './game-session.interface';
 import { Card } from './game.types';
 
 describe('GameBoardComponent', () => {
@@ -11,7 +12,11 @@ describe('GameBoardComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [GameBoardComponent],
-      providers: [SetGameService, { provide: PLATFORM_ID, useValue: 'browser' }],
+      providers: [
+        SetGameService,
+        { provide: PLATFORM_ID, useValue: 'browser' },
+        { provide: GAME_SESSION, useExisting: SetGameService },
+      ],
     }).compileComponents();
 
     service = TestBed.inject(SetGameService);

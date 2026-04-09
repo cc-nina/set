@@ -1,18 +1,33 @@
 import { Injectable, Inject, PLATFORM_ID } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
-import { BehaviorSubject, Observable } from 'rxjs';
-import { Card, GameState } from './game.types';
+import { BehaviorSubject, Observable, of } from 'rxjs';
+import { Card, GameState, Player, PlayerId } from './game.types';
 import * as core from './game.service';
 import { findSet } from './game.utils';
 import { loadColorPrefs, saveColorPrefs } from './color-prefs.storage';
+import { GameSession } from './game-session.interface';
 
 const DEFAULT_PALETTE: [string, string, string] = ['#cc0000', '#0aa64a', '#5a2ea6'];
 const DEFAULT_HIGHLIGHT = '#000000';
 
 @Injectable({ providedIn: 'root' })
-export class SetGameService {
+export class SetGameService implements GameSession {
   private stateSubject: BehaviorSubject<GameState>;
   public state$: Observable<GameState>;
+
+  /**
+   * Single-player has no real opponent list.
+   * Emits a single anonymous local player so consumers never need to null-check.
+   */
+  readonly players$: Observable<Player[]> = of([
+    { id: 'local', name: 'You', score: 0, correctSets: 0 },
+  ]);
+
+  /**
+   * Single-player has no opponent set notifications — always null.
+   * MultiplayerGameSession will emit a real PlayerId here.
+   */
+  readonly lastSetBy$: Observable<PlayerId | null> = of(null);
 
   // Per-card colour overrides (id -> hex)
   private cardColors: Record<string, string> = {};

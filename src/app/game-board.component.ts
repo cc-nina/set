@@ -13,7 +13,7 @@ import { CommonModule } from '@angular/common';
 import { Subscription } from 'rxjs';
 import { CardComponent } from './card.component';
 import { PaletteModalComponent, PaletteChangeEvent } from './palette-modal.component';
-import { SetGameService } from './set-game.service';
+import { GameSession, GAME_SESSION } from './game-session.interface';
 import { Card } from './game.types';
 
 /** How long (ms) the set-match highlight stays visible before cards are replaced. */
@@ -54,7 +54,7 @@ export class GameBoardComponent implements AfterViewInit, OnDestroy {
   private stateSubscription!: Subscription;
 
   constructor(
-    private game: SetGameService,
+    @Inject(GAME_SESSION) private game: GameSession,
     @Inject(PLATFORM_ID) private platformId: object,
     private cdr: ChangeDetectorRef,
   ) {
