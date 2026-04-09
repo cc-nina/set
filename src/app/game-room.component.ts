@@ -15,7 +15,7 @@ import { Subscription } from 'rxjs';
 import { GameBoardComponent } from './game-board.component';
 import { MultiplayerGameSession } from './multiplayer-game-session';
 import { GAME_SESSION } from './game-session.interface';
-import { PlayerId } from './game.types';
+import { PlayerId, Player } from './game.types';
 
 @Component({
   selector: 'app-game-room',
@@ -45,6 +45,10 @@ export class GameRoomComponent implements OnInit, OnDestroy {
   /** Display name of whoever just found a set. */
   lastSetByName = '';
 
+  /** Cached player list — updated by the players$ subscription so the
+   *  lastSetBy$ handler can look up names without creating a nested subscribe. */
+  private latestPlayers: Player[] = [];
+
   private subs = new Subscription();
 
   constructor(
@@ -58,9 +62,9 @@ export class GameRoomComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     if (!isPlatformBrowser(this.platformId)) return;
 
-    // Restore or prompt for player name.
+    // Restore the saved name, or generate a neutral default on first visit.
     this.playerName =
-      sessionStorage.getItem('playerName') ?? this.promptName();
+      sessionStorage.getItem('playerName') ?? this.defaultName();
 
     const roomId = this.route.snapshot.paramMap.get('roomId') ?? 'new';
     // maxPlayers is passed as a query param when creating a room: /room/new?maxPlayers=4
@@ -90,14 +94,21 @@ export class GameRoomComponent implements OnInit, OnDestroy {
       }),
     );
 
+    // Keep latestPlayers in sync so the lastSetBy$ handler can do a simple
+    // array lookup rather than spawning a nested subscription.
+    this.subs.add(
+      this.session.players$.subscribe((players) => {
+        this.latestPlayers = players;
+      }),
+    );
+
     // "Player X found a set!" banner.
     this.subs.add(
       this.session.lastSetBy$.subscribe((id) => {
         this.lastSetBy = id;
         if (id) {
-          this.session.players$.subscribe((players) => {
-            this.lastSetByName = players.find((p) => p.id === id)?.name ?? 'Someone';
-          }).unsubscribe();
+          this.lastSetByName =
+            this.latestPlayers.find((p) => p.id === id)?.name ?? 'Someone';
         }
         this.cdr.markForCheck();
       }),
@@ -128,11 +139,17 @@ export class GameRoomComponent implements OnInit, OnDestroy {
     navigator.clipboard.writeText(this.roomCode).catch(() => {});
   }
 
-  private promptName(): string {
-    const name =
-      (isPlatformBrowser(this.platformId)
-        ? window.prompt('Enter your name') ?? ''
-        : '') || 'Player';
+  /**
+   * Generate a short anonymous name for first-time visitors.
+   * Avoids blocking `window.prompt()` while still giving each player a
+   * distinct identifier until they can set a real name.
+   */
+  private defaultName(): string {
+    const adjectives = ['Swift', 'Keen', 'Bold', 'Bright', 'Sharp'];
+    const nouns      = ['Fox', 'Hawk', 'Lynx', 'Wolf', 'Bear'];
+    const adj  = adjectives[Math.floor(Math.random() * adjectives.length)];
+    const noun = nouns[Math.floor(Math.random() * nouns.length)];
+    const name = `${adj}${noun}`;
     sessionStorage.setItem('playerName', name);
     return name;
   }

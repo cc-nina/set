@@ -12,6 +12,9 @@ import { FormsModule } from '@angular/forms';
 })
 export class HomeComponent {
   maxPlayers = 2;
+  /** Options rendered in the player-count selector. Defined here to avoid
+   *  allocating a new array on every change-detection cycle. */
+  readonly playerCountOptions = [2, 3, 4, 5, 6, 7, 8];
 
   constructor(private router: Router) {}
 

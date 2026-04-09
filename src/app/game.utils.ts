@@ -51,18 +51,18 @@ export function isSet(a: Card, b: Card, c: Card): boolean {
   );
 }
 
-export function isValidAttr(x: any): x is Attr {
+export function isValidAttr(x: unknown): x is Attr {
   return x === 1 || x === 2 || x === 3;
 }
 
-export function isValidCard(c: any): c is Card {
+export function isValidCard(c: unknown): c is Card {
+  if (c == null || typeof c !== 'object') return false;
+  const r = c as Record<string, unknown>;
   return (
-    c != null &&
-    typeof c === 'object' &&
-    isValidAttr(c.number) &&
-    isValidAttr(c.color) &&
-    isValidAttr(c.shape) &&
-    isValidAttr(c.shading)
+    isValidAttr(r['number']) &&
+    isValidAttr(r['color']) &&
+    isValidAttr(r['shape']) &&
+    isValidAttr(r['shading'])
   );
 }
 

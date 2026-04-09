@@ -16,7 +16,7 @@ const SW = 13;
     [attr.viewBox]="orientation === 'portrait' ? '0 0 120 180' : '0 0 180 120'"
     [style]="orientation === 'portrait' ? 'width:100%;aspect-ratio:120/180;display:block;' : 'width:100%;aspect-ratio:180/120;display:block;'"
     [class.card-set-match]="setMatch"
-    aria-role="img"
+    role="img"
   >
       <defs>
         <!-- striped pattern (horizontal lines); id depends on color to allow multiple patterns -->

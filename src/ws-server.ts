@@ -65,6 +65,9 @@ const EMPTY_ROOM_TTL_MS = 30_000; // 30 seconds
 type GameSocket = WebSocket & {
   playerId?: PlayerId;
   roomId?: string;
+  /** Set to true when the player voluntarily left — prevents handleClose from
+   *  arming a reconnect timer for an already-evicted player. */
+  intentionalClose?: boolean;
 };
 
 /** Everything the server needs to know about a room. */
@@ -331,6 +334,10 @@ function handleMessage(ws: GameSocket, raw: string): void {
 
   // ── reconnect ──────────────────────────────────────────────────────────────
   if (msg.type === 'reconnect') {
+    if (!msg.roomId || !msg.playerId) {
+      send(ws, { type: 'error', message: 'reconnect requires roomId and playerId' });
+      return;
+    }
     const room = rooms.get(msg.roomId);
     if (!room) {
       send(ws, { type: 'error', message: `Room ${msg.roomId} not found or expired` });
@@ -364,6 +371,12 @@ function handleMessage(ws: GameSocket, raw: string): void {
   // ── join ───────────────────────────────────────────────────────────────────
   if (msg.type === 'join') {
     const { roomId, playerName } = msg;
+
+    if (!roomId) {
+      send(ws, { type: 'error', message: 'join requires roomId' });
+      return;
+    }
+
     const maxPlayers = Math.min(
       Math.max(Math.floor(msg.maxPlayers ?? MIN_PLAYERS_TO_START), MIN_PLAYERS_TO_START),
       MAX_PLAYERS_LIMIT,
@@ -412,6 +425,7 @@ function handleMessage(ws: GameSocket, raw: string): void {
 
   // ── leave ──────────────────────────────────────────────────────────────────
   if (msg.type === 'leave') {
+    ws.intentionalClose = true; // prevent handleClose from re-processing this socket
     evictPlayer(room, ws.playerId);
     ws.close();
     if (room.state.players.length > 0) {
@@ -422,6 +436,10 @@ function handleMessage(ws: GameSocket, raw: string): void {
 
   // ── select_card ────────────────────────────────────────────────────────────
   if (msg.type === 'select_card') {
+    if (!msg.cardId) {
+      send(ws, { type: 'error', message: 'select_card requires cardId' });
+      return;
+    }
     applySelection(room, ws.playerId, msg.cardId);
     broadcast(room, { type: 'room_state', state: room.state });
     return;
@@ -444,6 +462,9 @@ function handleMessage(ws: GameSocket, raw: string): void {
 
 function handleClose(ws: GameSocket): void {
   if (!ws.roomId || !ws.playerId) return;
+  // If the socket was closed as part of a deliberate leave(), evictPlayer()
+  // has already run — do nothing (no reconnect timer, no ghost broadcast).
+  if (ws.intentionalClose) return;
 
   const room = rooms.get(ws.roomId);
   if (!room) return;

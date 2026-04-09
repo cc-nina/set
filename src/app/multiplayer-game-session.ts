@@ -178,7 +178,9 @@ export class MultiplayerGameSession implements GameSession, OnDestroy {
    * closes the socket and clears stored credentials.
    */
   leave(): void {
-    this.ws?.send(JSON.stringify({ type: 'leave' }));
+    if (this.ws?.readyState === WebSocket.OPEN) {
+      this.ws.send(JSON.stringify({ type: 'leave' }));
+    }
     this.clearStoredSession();
     this.ws?.close();
     this.ws = null;
