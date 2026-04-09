@@ -1,0 +1,42 @@
+<!-- ── Palette modal ──────────────────────────────────────────────── -->
+<app-palette-modal
+  *ngIf="showPaletteModal"
+  #paletteModal
+  [palette]="palette"
+  [highlightColor]="highlightColor"
+  (colorChange)="onPaletteColorChange($event)"
+  (close)="closePaletteModal()"
+></app-palette-modal>
+
+<!-- ── Main board ──────────────────────────────────────────────────── -->
+<div class="flex flex-col gap-3 items-center w-full max-w-4xl mx-auto">
+
+  <div class="w-full flex justify-end" [style.padding]="cardGap + 'px'">
+    <button class="open-palette-btn" (click)="openPaletteModal()">
+      <div class="palette-dots-preview">
+        <div *ngFor="let p of palette" class="palette-dot-sm" [style.background]="p"></div>
+        <!-- Highlight preview as a ring -->
+        <div class="palette-highlight-sm" [style.border-color]="highlightColor"></div>
+      </div>
+      Colours
+    </button>
+  </div>
+
+  <div *ngIf="isBrowser && showBoard" class="board w-full flex justify-center">
+    <div class="grid" [ngClass]="gridClasses" [ngStyle]="gridStyle">
+      <div *ngFor="let c of board" (click)="onCardClick(c)" class="cursor-pointer">
+        <app-card
+          [orientation]="orientation"
+          [color]="colorFor(c)"
+          [shape]="shapeFor(c)"
+          [number]="c.number"
+          [shading]="shadingFor(c)"
+          [selected]="selectedIds.has(c.id)"
+          [setMatch]="setMatchIds.has(c.id)"
+          [highlightColor]="highlightColor"
+        ></app-card>
+      </div>
+    </div>
+  </div>
+
+</div>

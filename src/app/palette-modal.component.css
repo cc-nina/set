@@ -1,0 +1,140 @@
+/* ── Overlay & modal ───────────────────────────────────────────── */
+.palette-modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.35);
+  z-index: 100;
+  display: flex; align-items: center; justify-content: center;
+  animation: fadeIn 0.15s ease;
+}
+@keyframes fadeIn { from { opacity:0 } to { opacity:1 } }
+
+.palette-modal {
+  background: #fff;
+  border-radius: 20px;
+  padding: 28px 28px 24px;
+  width: 320px;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.18);
+  animation: slideUp 0.18s cubic-bezier(.22,1,.36,1);
+  position: relative;
+}
+@keyframes slideUp {
+  from { opacity:0; transform:translateY(16px) }
+  to   { opacity:1; transform:translateY(0) }
+}
+
+.modal-title    { font-size:16px; font-weight:600; color:#111; margin-bottom:4px; }
+.modal-subtitle { font-size:12px; color:#888; margin-bottom:24px; }
+
+.close-btn {
+  position:absolute; top:16px; right:16px;
+  width:28px; height:28px; border-radius:50%;
+  border:none; background:#f0f0f0; color:#555;
+  font-size:16px; cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+  transition:background 0.12s;
+}
+.close-btn:hover { background:#e0e0e0; }
+
+/* ── Swatch rows ────────────────────────────────────────────────── */
+.swatch-row { display:flex; gap:12px; align-items:flex-start; }
+.swatch-col { display:flex; flex-direction:column; align-items:center; gap:8px; flex:1; }
+
+.swatch-well {
+  width:56px; height:56px; border-radius:14px;
+  border:2px solid transparent;
+  cursor:pointer;
+  transition:transform 0.12s, border-color 0.12s;
+}
+.swatch-well:hover { transform:scale(1.06); }
+.swatch-well.active { border-color:#111; }
+
+/* The highlight swatch gets a special ring so black-on-white is still visible */
+.swatch-well.highlight-swatch {
+  box-shadow: inset 0 0 0 1.5px #ccc;
+}
+
+.swatch-label { font-size:10px; color:#888; text-align:center; }
+
+/* Divider between card colours and highlight colour */
+.swatch-divider {
+  width:1px; background:#e8e8e8; align-self:stretch; margin: 0 2px;
+}
+
+/* ── Custom colour picker panel ────────────────────────────────── */
+.picker-panel {
+  margin-top:20px;
+  display:flex; flex-direction:column; gap:12px;
+}
+
+/* SV (saturation/value) canvas */
+.sv-canvas-wrap {
+  position:relative; width:100%; height:160px;
+  border-radius:10px; overflow:hidden; cursor:crosshair;
+  user-select:none;
+}
+#sv-canvas { display:block; width:100%; height:100%; }
+.sv-cursor {
+  position:absolute;
+  width:14px; height:14px; border-radius:50%;
+  border:2.5px solid #fff;
+  box-shadow:0 0 0 1.5px rgba(0,0,0,0.35);
+  transform:translate(-50%,-50%);
+  pointer-events:none;
+}
+
+/* Hue slider */
+.hue-wrap { position:relative; height:14px; border-radius:7px; cursor:pointer; user-select:none; }
+.hue-track {
+  width:100%; height:100%; border-radius:7px;
+  background:linear-gradient(to right,
+    #f00,#ff0,#0f0,#0ff,#00f,#f0f,#f00);
+}
+.hue-thumb {
+  position:absolute; top:50%;
+  width:18px; height:18px; border-radius:50%;
+  border:2.5px solid #fff;
+  box-shadow:0 0 0 1.5px rgba(0,0,0,0.3);
+  transform:translate(-50%,-50%);
+  pointer-events:none;
+}
+
+/* Hex input + current swatch */
+.hex-row {
+  display:flex; align-items:center; gap:10px;
+}
+.hex-preview {
+  width:32px; height:32px; border-radius:8px; flex-shrink:0;
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,0.12);
+}
+.hex-input {
+  flex:1; font-size:12px; font-family:monospace;
+  text-align:center;
+  border:1px solid #e0e0e0; border-radius:8px;
+  padding:6px 8px; background:#fafafa; color:#111;
+  transition:border-color 0.12s;
+}
+.hex-input:focus { outline:none; border-color:#aaa; background:#fff; }
+.hex-input.invalid { border-color:#e24b4a; }
+
+/* ── Presets ────────────────────────────────────────────────────── */
+.presets-section { margin-top:4px; }
+.presets-label {
+  font-size:11px; color:#888; margin-bottom:10px;
+  letter-spacing:0.04em; text-transform:uppercase;
+}
+.presets-grid { display:flex; flex-wrap:wrap; gap:8px; }
+.preset-dot {
+  width:24px; height:24px; border-radius:50%;
+  border:2px solid transparent;
+  cursor:pointer; transition:transform 0.1s;
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,0.10);
+}
+.preset-dot:hover { transform:scale(1.2); }
+.preset-dot.selected-preset { border-color:#111; }
+
+/* ── Conflict warning ───────────────────────────────────────────── */
+.conflict-warning {
+  font-size:11px; color:#b03030; background:#fff0f0;
+  border-radius:8px; padding:6px 10px;
+  display:flex; align-items:center; gap:6px;
+}

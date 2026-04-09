@@ -1,0 +1,90 @@
+<div class="palette-modal-overlay" (click)="onOverlayClick($event)">
+  <div class="palette-modal" (click)="$event.stopPropagation()">
+    <button class="close-btn" (click)="close.emit()" aria-label="Close">✕</button>
+
+    <div class="modal-title">Colours</div>
+    <div class="modal-subtitle">Pick three colours and a selection highlight</div>
+
+    <!-- Swatch row: 3 card colours | divider | 1 highlight colour -->
+    <div class="swatch-row">
+      <ng-container *ngFor="let p of palette; let idx = index">
+        <div class="swatch-col">
+          <div
+            class="swatch-well"
+            [class.active]="activeSwatchIdx === idx"
+            [style.background]="p"
+            (click)="activateSwatch(idx)"
+          ></div>
+          <span class="swatch-label">Colour {{ idx + 1 }}</span>
+        </div>
+      </ng-container>
+
+      <!-- Divider -->
+      <div class="swatch-divider"></div>
+
+      <!-- Highlight colour (index 3) -->
+      <div class="swatch-col">
+        <div
+          class="swatch-well highlight-swatch"
+          [class.active]="activeSwatchIdx === 3"
+          [style.background]="highlightColor"
+          (click)="activateSwatch(3)"
+        ></div>
+        <span class="swatch-label">Selection</span>
+      </div>
+    </div>
+
+    <!-- Custom picker -->
+    <div class="picker-panel">
+
+      <!-- SV canvas -->
+      <div class="sv-canvas-wrap"
+           (mousedown)="onSvMouseDown($event)"
+           (touchstart)="onSvTouch($event)">
+        <canvas #svCanvas id="sv-canvas"></canvas>
+        <div class="sv-cursor" [style.left.%]="svX * 100" [style.top.%]="(1 - svY) * 100"></div>
+      </div>
+
+      <!-- Hue slider -->
+      <div class="hue-wrap"
+           (mousedown)="onHueMouseDown($event)"
+           (touchstart)="onHueTouch($event)">
+        <div class="hue-track"></div>
+        <div class="hue-thumb" [style.left.%]="hue / 360 * 100"></div>
+      </div>
+
+      <!-- Hex row -->
+      <div class="hex-row">
+        <div class="hex-preview" [style.background]="currentSwatchColor"></div>
+        <input
+          class="hex-input"
+          [class.invalid]="hexInvalid"
+          [value]="currentSwatchColor"
+          maxlength="7"
+          (input)="onHexInput($event)"
+          (blur)="onHexBlur($event)"
+          aria-label="Hex colour"
+        />
+      </div>
+    </div>
+
+    <div *ngIf="hasConflict" class="conflict-warning" style="margin-top:12px;">
+      <span>⚠</span> Two colours are very similar — they may be hard to tell apart.
+    </div>
+
+    <!-- Presets -->
+    <div class="presets-section" style="margin-top:16px;">
+      <div class="presets-label">Quick picks</div>
+      <div class="presets-grid">
+        <div
+          *ngFor="let pc of presetColors"
+          class="preset-dot"
+          [class.selected-preset]="currentSwatchColor === pc"
+          [style.background]="pc"
+          [title]="pc"
+          (click)="applyPreset(pc)"
+        ></div>
+      </div>
+    </div>
+  </div>
+</div>
