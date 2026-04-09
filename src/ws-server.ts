@@ -243,8 +243,6 @@ function applySelection(room: Room, playerId: PlayerId, cardId: string): void {
   const card = st.board.find((c) => c.id === cardId);
   if (!card) return;
 
-  st.lastSetBy = null;
-
   const alreadyIdx = selection.findIndex((c) => c.id === cardId);
   if (alreadyIdx >= 0) {
     selection.splice(alreadyIdx, 1);
@@ -459,8 +457,8 @@ function handleParsedMessage(ws: GameSocket, msg: ClientMessage): void {
   // ── new_game ───────────────────────────────────────────────────────────────
   if (msg.type === 'new_game') {
     const activeCount = connectedCount(room);
-    if (activeCount < 1) {
-      send(ws, { type: 'error', message: 'No connected players to start a new game' });
+    if (activeCount < MIN_PLAYERS_TO_START) {
+      send(ws, { type: 'error', message: `Need at least ${MIN_PLAYERS_TO_START} connected players to start a new game` });
       return;
     }
     resetRoom(room);
