@@ -1,8 +1,13 @@
-import { Injectable } from '@angular/core';
+import { Injectable, Inject, PLATFORM_ID } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { Card, GameState } from './game.types';
 import * as core from './game.service';
 import { findSet } from './game.utils';
+import { loadColorPrefs, saveColorPrefs } from './color-prefs.storage';
+
+const DEFAULT_PALETTE: [string, string, string] = ['#cc0000', '#0aa64a', '#5a2ea6'];
+const DEFAULT_HIGHLIGHT = '#000000';
 
 @Injectable({ providedIn: 'root' })
 export class SetGameService {
@@ -13,12 +18,29 @@ export class SetGameService {
   private cardColors: Record<string, string> = {};
 
   // Palette for numeric colour attribute (index 1..3). Always exactly 3 entries.
-  private palette: string[] = ['#cc0000', '#0aa64a', '#5a2ea6'];
+  private palette: [string, string, string];
 
-  constructor() {
+  /** Persisted highlight colour — loaded at boot, kept in sync by the component. */
+  highlightColor: string;
+
+  constructor(@Inject(PLATFORM_ID) private platformId: object) {
+    // ── Load persisted colour prefs ─────────────────────────────────────────
+    const saved = isPlatformBrowser(this.platformId) ? loadColorPrefs() : null;
+    this.palette = saved ? [...saved.palette] as [string, string, string] : [...DEFAULT_PALETTE] as [string, string, string];
+    this.highlightColor = saved?.highlightColor ?? DEFAULT_HIGHLIGHT;
+
     const initial = core.initGame();
     this.stateSubject = new BehaviorSubject<GameState>(initial);
     this.state$ = this.stateSubject.asObservable();
+  }
+
+  /** Persist the current palette + highlight colour to localStorage. */
+  private savePrefs(): void {
+    if (!isPlatformBrowser(this.platformId)) return;
+    saveColorPrefs({
+      palette: [...this.palette] as [string, string, string],
+      highlightColor: this.highlightColor,
+    });
   }
 
   getStateSnapshot(): GameState {
@@ -91,9 +113,16 @@ export class SetGameService {
       const tmp = this.palette[other];
       this.palette[other] = this.palette[pos];
       this.palette[pos] = tmp;
-      return;
+    } else {
+      this.palette[pos] = normalized;
     }
 
-    this.palette[pos] = normalized;
+    this.savePrefs();
+  }
+
+  /** Update the selection highlight colour and persist. */
+  updateHighlightColor(color: string): void {
+    this.highlightColor = color.toLowerCase();
+    this.savePrefs();
   }
 }

@@ -107,6 +107,7 @@ export class GameBoardComponent implements AfterViewInit, OnDestroy {
     if (this.isBrowser) {
       this.updateLayout();
       this.palette = this.game.getPalette();
+      this.highlightColor = this.game.highlightColor;
     }
   }
 
@@ -199,6 +200,7 @@ export class GameBoardComponent implements AfterViewInit, OnDestroy {
   onPaletteColorChange(event: PaletteChangeEvent): void {
     if (event.index === 3) {
       this.highlightColor = event.color;
+      this.game.updateHighlightColor(event.color);
     } else {
       this.game.updatePaletteColor(event.index + 1, event.color);
       this.palette = this.game.getPalette();
