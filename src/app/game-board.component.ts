@@ -52,6 +52,7 @@ export class GameBoardComponent implements AfterViewInit, OnDestroy {
   @ViewChild('paletteModal') paletteModalRef?: PaletteModalComponent;
 
   private stateSubscription!: Subscription;
+  private lastSetBySubscription!: Subscription;
 
   constructor(
     @Inject(GAME_SESSION) private game: GameSession,
@@ -61,47 +62,50 @@ export class GameBoardComponent implements AfterViewInit, OnDestroy {
     this.isBrowser = isPlatformBrowser(this.platformId);
 
     let first = true;
-    let prevSelectedIds = new Set<string>();
+    // Snapshot of the board from the previous state$ emission — used by the
+    // lastSetBy$ subscriber to diff which cards were removed.
+    let prevBoard: Card[] = [];
 
     this.stateSubscription = this.game.state$.subscribe((s) => {
-      const newBoard = s.board;
-      const newSelectedIds = new Set(s.selected.map((c) => c.id));
-
-      // Detect a valid set completion:
-      // Previously 2 cards selected → now 0 selected (service cleared on correct set).
-      if (prevSelectedIds.size === 2 && newSelectedIds.size === 0) {
-        const oldBoardIds = new Set(this.board.map((c) => c.id));
-        const newBoardIds = new Set(newBoard.map((c) => c.id));
-        const removedIds = [...oldBoardIds].filter((id) => !newBoardIds.has(id));
-
-        // Union of the two previously selected cards + the card that was just removed = the set
-        const matchSet = new Set([...prevSelectedIds, ...removedIds]);
-        if (matchSet.size === 3) {
-          this.setMatchIds = matchSet;
-          setTimeout(() => {
-            this.setMatchIds = new Set();
-            this.board = newBoard;
-            this.cdr.markForCheck();
-          }, SET_MATCH_DISPLAY_MS);
-
-          // Keep old cards visible during animation; only update selection state
-          this.selectedIds = newSelectedIds;
-          prevSelectedIds = newSelectedIds;
-          if (first) { first = false; this.scheduleShowBoard(); }
-          this.cdr.markForCheck();
-          return;
-        }
-      }
-
-      this.board = newBoard;
-      this.selectedIds = newSelectedIds;
-      prevSelectedIds = newSelectedIds;
+      prevBoard = this.board; // capture BEFORE overwriting
+      this.board = s.board;
+      this.selectedIds = new Set(s.selected.map((c) => c.id));
 
       if (first) {
         first = false;
         this.scheduleShowBoard();
       }
       this.cdr.markForCheck();
+    });
+
+    // Use the authoritative lastSetBy$ signal to trigger the match animation.
+    // This is correct for both single-player (SetGameService always emits null,
+    // so animation never fires) and multiplayer (server sets lastSetBy to the
+    // finder's id in the same broadcast as the board update).
+    //
+    // By the time this subscriber runs, state$ has already updated this.board
+    // to the new board and prevBoard holds the board before the set was removed.
+    // We diff them to find the three cards that were taken off the board.
+    this.lastSetBySubscription = this.game.lastSetBy$.subscribe((id) => {
+      if (id === null) return;
+
+      const newBoardIds = new Set(this.board.map((c) => c.id));
+      const removedCards = prevBoard.filter((c) => !newBoardIds.has(c.id));
+
+      if (removedCards.length !== 3) return; // safety guard
+
+      this.setMatchIds = new Set(removedCards.map((c) => c.id));
+      // Temporarily restore the old board so the matched cards are visible
+      // during the flash animation, then switch to the real new board.
+      const newBoard = this.board.slice();
+      this.board = prevBoard.slice();
+      this.cdr.markForCheck();
+
+      setTimeout(() => {
+        this.setMatchIds = new Set();
+        this.board = newBoard;
+        this.cdr.markForCheck();
+      }, SET_MATCH_DISPLAY_MS);
     });
 
     if (this.isBrowser) {
@@ -118,6 +122,7 @@ export class GameBoardComponent implements AfterViewInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.stateSubscription.unsubscribe();
+    this.lastSetBySubscription.unsubscribe();
   }
 
   // ── Layout ────────────────────────────────────────────────────────────────

@@ -173,3 +173,40 @@
   background: #ffd700;
   color: #1a1a2e;
 }
+
+.score-chip--offline {
+  opacity: 0.45;
+}
+
+.chip-offline-dot {
+  color: #ff6b6b;
+  font-size: 0.65rem;
+}
+
+/* ── Badge used in finished scoreboard ──────────────────────────────────── */
+.badge-offline {
+  display: inline-block;
+  color: #ff6b6b;
+  font-size: 0.6rem;
+  vertical-align: middle;
+  margin-left: 0.25rem;
+}
+
+/* ── Leave button in scorebar ────────────────────────────────────────────── */
+.btn-leave {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 9999px;
+  color: #ccc;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.2rem 0.75rem;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  margin-left: auto;
+}
+.btn-leave:hover {
+  background: rgba(255, 107, 107, 0.25);
+  color: #ff6b6b;
+  border-color: #ff6b6b;
+}

@@ -30,6 +30,13 @@
       <h2 class="mode-title">Multiplayer</h2>
       <p class="mode-desc">Race a friend to find SETs. First to spot one scores — both players see every find in real time.</p>
 
+      <div class="players-row">
+        <label class="players-label" for="maxPlayers">Players:</label>
+        <select id="maxPlayers" class="players-select" [(ngModel)]="maxPlayers">
+          <option *ngFor="let n of [2,3,4,5,6,7,8]" [value]="n">{{ n }}</option>
+        </select>
+      </div>
+
       <button class="btn btn-primary" (click)="createRoom()">Create room</button>
 
       <div class="join-row">

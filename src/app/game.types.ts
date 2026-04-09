@@ -29,6 +29,8 @@ export interface Player {
   name: string;
   score: number;
   correctSets: number;
+  /** False while the player's WebSocket is closed but within the reconnect window. */
+  connected: boolean;
 }
 
 export type RoomStatus =
@@ -43,7 +45,7 @@ export interface RoomState {
    * All players in the room. Index 0 is always the room creator.
    * Length ranges from 1 (waiting) up to maxPlayers (active/finished).
    */
-  players: readonly Player[];
+  players: Player[];
   /** Maximum number of players allowed in this room (set by the creator, default 2). */
   maxPlayers: number;
   board: Card[];
@@ -66,8 +68,10 @@ export interface RoomState {
 /** Messages sent from a browser client to the server. */
 export type ClientMessage =
   | { type: 'join';        roomId: string; playerName: string; maxPlayers?: number }
+  | { type: 'reconnect';   roomId: string; playerId: PlayerId }
   | { type: 'select_card'; cardId: string }
-  | { type: 'new_game' };
+  | { type: 'new_game' }
+  | { type: 'leave' };
 
 /** Messages sent from the server to a browser client. */
 export type ServerMessage =

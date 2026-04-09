@@ -6,7 +6,7 @@
   </div>
 
   <!-- ── Waiting overlay ───────────────────────────────────────────────── -->
-  <div *ngIf="roomStatus === 'waiting'" class="overlay">
+  <div *ngIf="roomStatus === 'waiting' && roomCode" class="overlay">
     <div class="overlay-card">
       <p class="overlay-title">Waiting for players…</p>
       <p class="overlay-sub">Share this room code with your opponent:</p>
@@ -14,7 +14,7 @@
         <span class="room-code">{{ roomCode }}</span>
         <button class="btn-copy" (click)="copyRoomCode()" title="Copy to clipboard">⎘ Copy</button>
       </div>
-      <button class="btn-home" (click)="goHome()">← Back to home</button>
+      <button class="btn-home" (click)="leaveRoom()">← Leave room</button>
     </div>
   </div>
 
@@ -25,13 +25,16 @@
       <!-- Scoreboard -->
       <ul class="scoreboard">
         <li *ngFor="let p of session.players$ | async" class="score-row">
-          <span class="score-name">{{ p.name }}</span>
+          <span class="score-name">
+            {{ p.name }}
+            <span *ngIf="!p.connected" class="badge-offline" title="Disconnected">●</span>
+          </span>
           <span class="score-val">{{ p.score }} pts ({{ p.correctSets }} sets)</span>
         </li>
       </ul>
       <div class="overlay-actions">
         <button class="btn-primary" (click)="session.startNewGame()">Play again</button>
-        <button class="btn-home" (click)="goHome()">← Home</button>
+        <button class="btn-home" (click)="leaveRoom()">← Leave</button>
       </div>
     </div>
   </div>
@@ -48,10 +51,16 @@
   <!-- ── Scorebar (visible while active) ───────────────────────────────── -->
   <div *ngIf="roomStatus === 'active'" class="scorebar">
     <ng-container *ngFor="let p of session.players$ | async">
-      <span class="score-chip" [class.score-chip--highlight]="p.id === lastSetBy">
-        {{ p.name }}: {{ p.score }}
+      <span
+        class="score-chip"
+        [class.score-chip--highlight]="p.id === lastSetBy"
+        [class.score-chip--offline]="!p.connected"
+        [title]="p.connected ? '' : p.name + ' disconnected'"
+      >
+        {{ p.name }}<span *ngIf="!p.connected" class="chip-offline-dot" aria-label="offline"> ●</span>: {{ p.score }}
       </span>
     </ng-container>
+    <button class="btn-leave" (click)="leaveRoom()" title="Leave room">✕ Leave</button>
   </div>
 
   <!-- ── Game board ────────────────────────────────────────────────────── -->

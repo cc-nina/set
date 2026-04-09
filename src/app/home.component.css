@@ -179,3 +179,34 @@
 }
 
 .join-input::placeholder { color: #9ca3af; }
+
+/* ── Player count picker ────────────────────────────────────────────── */
+.players-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  justify-content: center;
+}
+
+.players-label {
+  font-size: 0.875rem;
+  color: #555;
+  font-weight: 600;
+}
+
+.players-select {
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1.5px solid #d1d5db;
+  font-size: 0.875rem;
+  color: #111827;
+  background: #fff;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.12s;
+}
+
+.players-select:focus {
+  border-color: #5a2ea6;
+  box-shadow: 0 0 0 3px rgba(90,46,166,0.12);
+}

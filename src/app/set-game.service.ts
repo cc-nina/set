@@ -1,6 +1,6 @@
 import { Injectable, Inject, PLATFORM_ID } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
-import { BehaviorSubject, Observable, of } from 'rxjs';
+import { BehaviorSubject, Observable, of, Subject, merge, map, delay } from 'rxjs';
 import { Card, GameState, Player, PlayerId } from './game.types';
 import * as core from './game.service';
 import { findSet } from './game.utils';
@@ -9,6 +9,9 @@ import { GameSession } from './game-session.interface';
 
 const DEFAULT_PALETTE: [string, string, string] = ['#cc0000', '#0aa64a', '#5a2ea6'];
 const DEFAULT_HIGHLIGHT = '#000000';
+
+/** How long (ms) the set-match highlight stays visible before cards are replaced. */
+const LAST_SET_BANNER_MS = 2000;
 
 @Injectable({ providedIn: 'root' })
 export class SetGameService implements GameSession {
@@ -20,14 +23,18 @@ export class SetGameService implements GameSession {
    * Emits a single anonymous local player so consumers never need to null-check.
    */
   readonly players$: Observable<Player[]> = of([
-    { id: 'local', name: 'You', score: 0, correctSets: 0 },
+    { id: 'local', name: 'You', score: 0, correctSets: 0, connected: true },
   ]);
 
   /**
-   * Single-player has no opponent set notifications — always null.
-   * MultiplayerGameSession will emit a real PlayerId here.
+   * Emits 'local' immediately after a correct set is found, then null after
+   * the banner window.  Drives the same match animation used in multiplayer.
    */
-  readonly lastSetBy$: Observable<PlayerId | null> = of(null);
+  private lastSetBySource = new Subject<PlayerId>();
+  readonly lastSetBy$: Observable<PlayerId | null> = merge(
+    this.lastSetBySource.pipe(map((id): PlayerId | null => id)),
+    this.lastSetBySource.pipe(delay(LAST_SET_BANNER_MS), map((): PlayerId | null => null)),
+  );
 
   // Per-card colour overrides (id -> hex)
   private cardColors: Record<string, string> = {};
@@ -68,8 +75,13 @@ export class SetGameService implements GameSession {
   }
 
   selectCard(card: Card): void {
-    const next = core.selectCard(this.getStateSnapshot(), card);
+    const prev = this.getStateSnapshot();
+    const next = core.selectCard(prev, card);
     this.stateSubject.next(next);
+    // Fire the match signal when a correct set was just applied.
+    if (next.correctSets > prev.correctSets) {
+      this.lastSetBySource.next('local');
+    }
   }
 
   applySet(selected: Card[]): boolean {

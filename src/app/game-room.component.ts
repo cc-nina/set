@@ -63,6 +63,12 @@ export class GameRoomComponent implements OnInit, OnDestroy {
       sessionStorage.getItem('playerName') ?? this.promptName();
 
     const roomId = this.route.snapshot.paramMap.get('roomId') ?? 'new';
+    // maxPlayers is passed as a query param when creating a room: /room/new?maxPlayers=4
+    // Clamp to [2, 8] and fall back to 2 for absent / non-numeric / out-of-range values.
+    const rawMax = Number(this.route.snapshot.queryParamMap.get('maxPlayers'));
+    const maxPlayers = Number.isFinite(rawMax) && rawMax >= 2 && rawMax <= 8
+      ? Math.floor(rawMax)
+      : 2;
 
     // Track the server-assigned room ID (needed when URL was 'new').
     this.subs.add(
@@ -89,8 +95,6 @@ export class GameRoomComponent implements OnInit, OnDestroy {
       this.session.lastSetBy$.subscribe((id) => {
         this.lastSetBy = id;
         if (id) {
-          const player = this.session.getStateSnapshot();
-          // Look up name from players$ snapshot.
           this.session.players$.subscribe((players) => {
             this.lastSetByName = players.find((p) => p.id === id)?.name ?? 'Someone';
           }).unsubscribe();
@@ -99,11 +103,20 @@ export class GameRoomComponent implements OnInit, OnDestroy {
       }),
     );
 
-    this.session.connect(roomId, this.playerName);
+    this.session.connect(roomId, this.playerName, maxPlayers);
   }
 
   ngOnDestroy(): void {
     this.subs.unsubscribe();
+    // Do NOT call leave() here — just silently close the socket so the server
+    // keeps the player slot alive for the reconnect grace period.
+    this.session.disconnect();
+  }
+
+  /** Permanently leave the room and go home. Clears the stored session. */
+  leaveRoom(): void {
+    this.session.leave();
+    this.router.navigate(['/']);
   }
 
   goHome(): void {

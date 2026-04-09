@@ -8,12 +8,14 @@
  * Lifecycle:
  *   1. GameRoomComponent creates this service in its providers array.
  *   2. GameRoomComponent calls connect(roomId, playerName, maxPlayers).
- *   3. Service opens ws://…/ws, sends { type:'join', … }.
+ *   3. On open the service checks sessionStorage for a saved (roomId, playerId).
+ *      - If found and roomId matches → sends { type:'reconnect', ... }
+ *      - Otherwise → sends { type:'join', ... }
  *   4. Server replies with 'joined' then 'room_state' messages.
  *   5. Every subsequent 'room_state' is mapped to a GameState and emitted on state$.
  *   6. GameBoardComponent subscribes to state$ and renders cards normally.
  *   7. When the user clicks a card, selectCard() sends { type:'select_card' } to the server.
- *   8. GameRoomComponent calls disconnect() on ngOnDestroy.
+ *   8. GameRoomComponent calls disconnect() / leave() on ngOnDestroy.
  */
 
 import { Injectable, Inject, PLATFORM_ID, OnDestroy } from '@angular/core';
@@ -22,7 +24,6 @@ import {
   BehaviorSubject,
   Subject,
   Observable,
-  of,
   distinctUntilChanged,
   map,
   delay,
@@ -38,6 +39,10 @@ const DEFAULT_HIGHLIGHT = '#000000';
 
 /** How long (ms) the "Player X found a set!" banner stays visible. */
 const LAST_SET_BANNER_MS = 2000;
+
+// sessionStorage keys for reconnection
+const SS_PLAYER_ID = 'mp_playerId';
+const SS_ROOM_ID   = 'mp_roomId';
 
 /** Empty GameState used as a placeholder before the server deals the board. */
 function emptyState(): GameState {
@@ -56,7 +61,7 @@ function roomStateToGameState(rs: RoomState, playerId: PlayerId): GameState {
     selected: rs.selections[playerId] ?? [],
     score: me?.score ?? 0,
     correctSets: me?.correctSets ?? 0,
-    incorrectSelections: 0, // server doesn't track this per-player yet
+    incorrectSelections: 0,
   };
 }
 
@@ -73,7 +78,6 @@ export class MultiplayerGameSession implements GameSession, OnDestroy {
   private lastSetBySource = new Subject<PlayerId>();
   /**
    * Emits a PlayerId when a set is found, then null after LAST_SET_BANNER_MS.
-   * GameBoardComponent (and GameRoomComponent) subscribe to show a banner.
    */
   readonly lastSetBy$: Observable<PlayerId | null> = merge(
     this.lastSetBySource.pipe(map((id): PlayerId | null => id)),
@@ -84,16 +88,11 @@ export class MultiplayerGameSession implements GameSession, OnDestroy {
 
   private playerId: PlayerId = '';
   private roomIdValue: string = '';
-  /** The room ID assigned by the server (may differ from the URL when URL is 'new'). */
   get roomId(): string { return this.roomIdValue; }
 
-  /** Emits the assigned room ID once the server confirms the join. */
   private roomIdSubject = new BehaviorSubject<string>('');
-  readonly roomId$: Observable<string> = this.roomIdSubject.pipe(
-    distinctUntilChanged(),
-  );
+  readonly roomId$: Observable<string> = this.roomIdSubject.pipe(distinctUntilChanged());
 
-  /** Current room status — useful for showing a "Waiting for players…" overlay. */
   private roomStatusSubject = new BehaviorSubject<string>('connecting');
   readonly roomStatus$: Observable<string> = this.roomStatusSubject.asObservable();
 
@@ -101,7 +100,7 @@ export class MultiplayerGameSession implements GameSession, OnDestroy {
 
   private ws: WebSocket | null = null;
 
-  // ── Colour prefs (same logic as SetGameService) ───────────────────────────
+  // ── Colour prefs ──────────────────────────────────────────────────────────
 
   private palette: [string, string, string];
   highlightColor: string;
@@ -118,10 +117,10 @@ export class MultiplayerGameSession implements GameSession, OnDestroy {
   // ── Connection ────────────────────────────────────────────────────────────
 
   /**
-   * Open the WebSocket and join (or create) a room.
-   * @param roomId  The room ID from the URL, or 'new' to create a fresh room.
+   * Open the WebSocket and join (or reconnect to) a room.
+   * @param roomId      The room ID from the URL, or 'new' to create a fresh room.
    * @param playerName  Display name chosen by the local player.
-   * @param maxPlayers  Only used when roomId === 'new'. Default 2.
+   * @param maxPlayers  Only used when creating a new room. Default 2.
    */
   connect(roomId: string, playerName: string, maxPlayers = 2): void {
     if (!isPlatformBrowser(this.platformId)) return;
@@ -132,19 +131,33 @@ export class MultiplayerGameSession implements GameSession, OnDestroy {
     this.ws = new WebSocket(url);
 
     this.ws.onopen = () => {
-      this.roomStatusSubject.next('waiting');
-      this.ws!.send(JSON.stringify({
-        type: 'join',
-        roomId,
-        playerName,
-        maxPlayers,
-      }));
+      this.roomStatusSubject.next('connecting');
+
+      // Attempt reconnection only when the URL room ID exactly matches the
+      // stored room ID.  A 'new' URL must always create a fresh room.
+      const savedRoomId   = sessionStorage.getItem(SS_ROOM_ID);
+      const savedPlayerId = sessionStorage.getItem(SS_PLAYER_ID);
+
+      if (savedRoomId && savedPlayerId && roomId === savedRoomId) {
+        this.ws!.send(JSON.stringify({
+          type: 'reconnect',
+          roomId: savedRoomId,
+          playerId: savedPlayerId,
+        }));
+      } else {
+        this.ws!.send(JSON.stringify({
+          type: 'join',
+          roomId,
+          playerName,
+          maxPlayers,
+        }));
+      }
     };
 
     this.ws.onmessage = (event: MessageEvent) => {
       try {
         const msg = JSON.parse(event.data as string) as ServerMessage;
-        this.handleServerMessage(msg);
+        this.handleServerMessage(msg, { roomId, playerName, maxPlayers });
       } catch {
         console.error('[MultiplayerGameSession] Failed to parse server message', event.data);
       }
@@ -160,6 +173,21 @@ export class MultiplayerGameSession implements GameSession, OnDestroy {
     };
   }
 
+  /**
+   * Graceful leave: tells the server to permanently remove this player, then
+   * closes the socket and clears stored credentials.
+   */
+  leave(): void {
+    this.ws?.send(JSON.stringify({ type: 'leave' }));
+    this.clearStoredSession();
+    this.ws?.close();
+    this.ws = null;
+  }
+
+  /**
+   * Silent disconnect (e.g. navigation away, browser close).
+   * Credentials are kept so the player can reconnect within the grace period.
+   */
   disconnect(): void {
     this.ws?.close();
     this.ws = null;
@@ -171,11 +199,17 @@ export class MultiplayerGameSession implements GameSession, OnDestroy {
 
   // ── Server message handler ────────────────────────────────────────────────
 
-  private handleServerMessage(msg: ServerMessage): void {
+  private handleServerMessage(
+    msg: ServerMessage,
+    connectArgs: { roomId: string; playerName: string; maxPlayers: number },
+  ): void {
     if (msg.type === 'joined') {
       this.playerId = msg.playerId;
       this.roomIdValue = msg.roomId;
       this.roomIdSubject.next(msg.roomId);
+      // Persist for reconnection.
+      sessionStorage.setItem(SS_PLAYER_ID, msg.playerId);
+      sessionStorage.setItem(SS_ROOM_ID, msg.roomId);
       return;
     }
 
@@ -185,9 +219,6 @@ export class MultiplayerGameSession implements GameSession, OnDestroy {
       this.playersSubject.next([...rs.players] as Player[]);
       this.stateSubject.next(roomStateToGameState(rs, this.playerId));
 
-      // Only fire the banner when lastSetBy is explicitly set in this message.
-      // The server clears it to null on the next card interaction, so a non-null
-      // value here means this broadcast IS the "set found" event.
       if (rs.lastSetBy !== null) {
         this.lastSetBySource.next(rs.lastSetBy);
       }
@@ -196,7 +227,24 @@ export class MultiplayerGameSession implements GameSession, OnDestroy {
 
     if (msg.type === 'error') {
       console.error('[MultiplayerGameSession] Server error:', msg.message);
+      // If the reconnect was rejected (room expired / player evicted), fall
+      // back to a fresh join so the player isn't stuck on a blank screen.
+      if (msg.message.includes('not found') || msg.message.includes('Player not found')) {
+        this.clearStoredSession();
+        this.ws?.send(JSON.stringify({
+          type: 'join',
+          roomId: connectArgs.roomId,
+          playerName: connectArgs.playerName,
+          maxPlayers: connectArgs.maxPlayers,
+        }));
+      }
     }
+  }
+
+  private clearStoredSession(): void {
+    if (!isPlatformBrowser(this.platformId)) return;
+    sessionStorage.removeItem(SS_PLAYER_ID);
+    sessionStorage.removeItem(SS_ROOM_ID);
   }
 
   // ── GameSession actions ───────────────────────────────────────────────────

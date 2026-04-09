@@ -1,15 +1,18 @@
 import { Component } from '@angular/core';
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 
 @Component({
   selector: 'app-home',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, FormsModule],
   templateUrl: './home.component.html',
   styleUrls: ['./home.component.css'],
 })
 export class HomeComponent {
+  maxPlayers = 2;
+
   constructor(private router: Router) {}
 
   startSinglePlayer(): void {
@@ -17,8 +20,9 @@ export class HomeComponent {
   }
 
   createRoom(): void {
-    // Navigates to /room/new — the GameRoomComponent will handle room creation.
-    this.router.navigate(['/room', 'new']);
+    this.router.navigate(['/room', 'new'], {
+      queryParams: { maxPlayers: this.maxPlayers },
+    });
   }
 
   joinRoom(roomId: string): void {
