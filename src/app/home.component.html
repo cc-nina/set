@@ -1,0 +1,51 @@
+<main class="home-shell">
+
+  <!-- ── Logo / title ───────────────────────────────────────────────── -->
+  <header class="home-header">
+    <div class="logo-dots">
+      <span class="dot dot-red"></span>
+      <span class="dot dot-green"></span>
+      <span class="dot dot-purple"></span>
+    </div>
+    <h1 class="home-title">SET</h1>
+    <p class="home-subtitle">The card-matching game</p>
+  </header>
+
+  <!-- ── Mode cards ─────────────────────────────────────────────────── -->
+  <div class="mode-grid">
+
+    <!-- Single-player -->
+    <section class="mode-card" (click)="startSinglePlayer()" role="button" tabindex="0"
+             (keydown.enter)="startSinglePlayer()"
+             (keydown.space)="$event.preventDefault(); startSinglePlayer()">
+      <div class="mode-icon" aria-hidden="true">🃏</div>
+      <h2 class="mode-title">Solo</h2>
+      <p class="mode-desc">Play against yourself. Find as many SETs as you can before the deck runs out.</p>
+      <span class="mode-cta">Play Solo →</span>
+    </section>
+
+    <!-- Multiplayer -->
+    <section class="mode-card mode-card--multi">
+      <div class="mode-icon" aria-hidden="true">🤝</div>
+      <h2 class="mode-title">Multiplayer</h2>
+      <p class="mode-desc">Race a friend to find SETs. First to spot one scores — both players see every find in real time.</p>
+
+      <button class="btn btn-primary" (click)="createRoom()">Create room</button>
+
+      <div class="join-row">
+        <input
+          #roomInput
+          class="join-input"
+          type="text"
+          placeholder="Room code"
+          maxlength="12"
+          (keydown.enter)="joinRoom(roomInput.value)"
+          aria-label="Room code"
+        />
+        <button class="btn btn-secondary" (click)="joinRoom(roomInput.value)">Join</button>
+      </div>
+    </section>
+
+  </div>
+
+</main>

@@ -1,12 +1,24 @@
 import { Routes } from '@angular/router';
-import { GameBoardComponent } from './game-board.component';
 
 export const routes: Routes = [
-  // Default route — redirect bare "/" to the single-player game for now.
-  // Once the HomeComponent exists this will become the mode-selection screen.
-  { path: '',      redirectTo: 'game', pathMatch: 'full' },
-  { path: 'game',  component: GameBoardComponent },
-  // Future routes added here:
-  //   { path: '',              component: HomeComponent },
-  //   { path: 'room/:roomId',  component: GameRoomComponent },
+  {
+    path: '',
+    loadComponent: () =>
+      import('./home.component').then((m) => m.HomeComponent),
+  },
+  {
+    path: 'game',
+    loadComponent: () =>
+      import('./game-board.component').then((m) => m.GameBoardComponent),
+  },
+  {
+    // GameRoomComponent is added in step 8.
+    // Declaring the route now means the router knows the shape of /room/:roomId
+    // and HomeComponent can navigate to it without 404s.
+    path: 'room/:roomId',
+    loadComponent: () =>
+      import('./game-board.component').then((m) => m.GameBoardComponent),
+  },
+  // Catch-all: redirect unknown paths to home.
+  { path: '**', redirectTo: '' },
 ];

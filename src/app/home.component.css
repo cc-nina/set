@@ -1,0 +1,181 @@
+/* ── Shell ─────────────────────────────────────────────────────────── */
+.home-shell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100dvh;
+  padding: 2rem 1rem;
+  box-sizing: border-box;
+  gap: 2.5rem;
+}
+
+/* ── Header ────────────────────────────────────────────────────────── */
+.home-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  user-select: none;
+}
+
+.logo-dots {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.dot {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+}
+.dot-red    { background: #cc0000; }
+.dot-green  { background: #0aa64a; }
+.dot-purple { background: #5a2ea6; }
+
+.home-title {
+  font-size: 3.5rem;
+  font-weight: 800;
+  letter-spacing: 0.25em;
+  color: #111827;
+  margin: 0;
+  line-height: 1;
+}
+
+.home-subtitle {
+  font-size: 1rem;
+  color: #6b7280;
+  margin: 0;
+}
+
+/* ── Mode grid ─────────────────────────────────────────────────────── */
+.mode-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.25rem;
+  width: 100%;
+  max-width: 640px;
+}
+
+@media (min-width: 560px) {
+  .mode-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* ── Mode card ─────────────────────────────────────────────────────── */
+.mode-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1.5rem;
+  border-radius: 14px;
+  border: 1.5px solid #e5e7eb;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  cursor: pointer;
+  transition: box-shadow 0.15s, border-color 0.15s, transform 0.1s;
+  outline-offset: 3px;
+}
+
+.mode-card:hover,
+.mode-card:focus-visible {
+  box-shadow: 0 4px 16px rgba(0,0,0,0.10);
+  border-color: #d1d5db;
+}
+
+.mode-card:active {
+  transform: scale(0.98);
+}
+
+/* Multiplayer card is not itself a click target — only its buttons are */
+.mode-card--multi {
+  cursor: default;
+}
+.mode-card--multi:active {
+  transform: none;
+}
+
+.mode-icon {
+  font-size: 2rem;
+  line-height: 1;
+}
+
+.mode-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #111827;
+  margin: 0;
+}
+
+.mode-desc {
+  font-size: 0.875rem;
+  color: #6b7280;
+  line-height: 1.5;
+  margin: 0;
+  flex: 1;
+}
+
+.mode-cta {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #5a2ea6;
+  margin-top: auto;
+}
+
+/* ── Buttons ───────────────────────────────────────────────────────── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 9px 18px;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1.5px solid transparent;
+  transition: background 0.12s, border-color 0.12s, transform 0.1s;
+}
+
+.btn:active { transform: scale(0.97); }
+
+.btn-primary {
+  background: #5a2ea6;
+  color: #fff;
+  border-color: #5a2ea6;
+}
+.btn-primary:hover { background: #4a2490; border-color: #4a2490; }
+
+.btn-secondary {
+  background: #fff;
+  color: #374151;
+  border-color: #d1d5db;
+}
+.btn-secondary:hover { background: #f9fafb; border-color: #9ca3af; }
+
+/* ── Join row ──────────────────────────────────────────────────────── */
+.join-row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.join-input {
+  flex: 1;
+  padding: 9px 12px;
+  border-radius: 8px;
+  border: 1.5px solid #d1d5db;
+  font-size: 0.875rem;
+  color: #111827;
+  background: #fff;
+  outline: none;
+  transition: border-color 0.12s;
+  min-width: 0;
+}
+
+.join-input:focus {
+  border-color: #5a2ea6;
+  box-shadow: 0 0 0 3px rgba(90,46,166,0.12);
+}
+
+.join-input::placeholder { color: #9ca3af; }
