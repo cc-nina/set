@@ -169,6 +169,11 @@ function applySelection(room: Room, playerId: PlayerId, cardId: string): void {
   const card = st.board.find((c) => c.id === cardId);
   if (!card) return;
 
+  // Any new card interaction clears the previous "found a set" marker so the
+  // banner is only shown in the single broadcast that immediately follows a
+  // correct set — not in every subsequent broadcast.
+  st.lastSetBy = null;
+
   // Toggle off if already selected.
   const alreadyIdx = selection.findIndex((c) => c.id === cardId);
   if (alreadyIdx >= 0) {

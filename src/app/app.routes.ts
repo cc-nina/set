@@ -12,12 +12,9 @@ export const routes: Routes = [
       import('./game-board.component').then((m) => m.GameBoardComponent),
   },
   {
-    // GameRoomComponent is added in step 8.
-    // Declaring the route now means the router knows the shape of /room/:roomId
-    // and HomeComponent can navigate to it without 404s.
     path: 'room/:roomId',
     loadComponent: () =>
-      import('./game-board.component').then((m) => m.GameBoardComponent),
+      import('./game-room.component').then((m) => m.GameRoomComponent),
   },
   // Catch-all: redirect unknown paths to home.
   { path: '**', redirectTo: '' },
