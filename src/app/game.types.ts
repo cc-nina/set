@@ -32,18 +32,20 @@ export interface Player {
 }
 
 export type RoomStatus =
-  | 'waiting'   // room created, waiting for the second player to join
-  | 'active'    // both players connected, game in progress
-  | 'finished'; // deck exhausted or a player disconnected permanently
+  | 'waiting'   // room created, not yet enough players to start
+  | 'active'    // enough players connected, game in progress
+  | 'finished'; // deck exhausted or too many players disconnected
 
 export interface RoomState {
   roomId: string;
   status: RoomStatus;
   /**
-   * Exactly 1 player (creator waiting) or 2 players (game active/finished).
-   * Index 0 is always the room creator.
+   * All players in the room. Index 0 is always the room creator.
+   * Length ranges from 1 (waiting) up to maxPlayers (active/finished).
    */
-  players: readonly [Player] | readonly [Player, Player];
+  players: readonly Player[];
+  /** Maximum number of players allowed in this room (set by the creator, default 2). */
+  maxPlayers: number;
   board: Card[];
   deck: Card[];
   /**
@@ -63,7 +65,7 @@ export interface RoomState {
 
 /** Messages sent from a browser client to the server. */
 export type ClientMessage =
-  | { type: 'join';        roomId: string; playerName: string }
+  | { type: 'join';        roomId: string; playerName: string; maxPlayers?: number }
   | { type: 'select_card'; cardId: string }
   | { type: 'new_game' };
 

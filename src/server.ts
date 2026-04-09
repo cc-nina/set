@@ -5,7 +5,9 @@ import {
   writeResponseToNodeResponse,
 } from '@angular/ssr/node';
 import express from 'express';
+import { createServer } from 'node:http';
 import { join } from 'node:path';
+import { attachWebSocketServer } from './ws-server.js';
 
 const browserDistFolder = join(import.meta.dirname, '../browser');
 
@@ -53,12 +55,15 @@ app.use((req, res, next) => {
  */
 if (isMainModule(import.meta.url) || process.env['pm_id']) {
   const port = process.env['PORT'] || 4000;
-  app.listen(port, (error) => {
-    if (error) {
-      throw error;
-    }
 
+  // Wrap Express in a plain http.Server so we can upgrade WebSocket connections
+  // on the same port — no second port needed.
+  const httpServer = createServer(app);
+  attachWebSocketServer(httpServer);
+
+  httpServer.listen(port, () => {
     console.log(`Node Express server listening on http://localhost:${port}`);
+    console.log(`WebSocket server ready on  ws://localhost:${port}/ws`);
   });
 }
 
