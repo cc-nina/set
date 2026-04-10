@@ -16,6 +16,7 @@ import { GameBoardComponent } from './game-board.component';
 import { MultiplayerGameSession } from './multiplayer-game-session';
 import { GAME_SESSION } from './game-session.interface';
 import { PlayerId, Player } from './game.types';
+import { generateDefaultPlayerName } from './game.utils';
 
 @Component({
   selector: 'app-game-room',
@@ -67,7 +68,7 @@ export class GameRoomComponent implements OnInit, OnDestroy {
 
     // Restore the saved name, or generate a neutral default on first visit.
     this.playerName =
-      sessionStorage.getItem('playerName') ?? this.defaultName();
+      sessionStorage.getItem('playerName') ?? generateDefaultPlayerName();
 
     const roomId = this.route.snapshot.paramMap.get('roomId') ?? 'new';
     // maxPlayers is passed as a query param when creating a room: /room/new?maxPlayers=4
@@ -153,20 +154,5 @@ export class GameRoomComponent implements OnInit, OnDestroy {
         setTimeout(() => { this.copyState = 'idle'; this.cdr.markForCheck(); }, 3000);
       },
     );
-  }
-
-  /**
-   * Generate a short anonymous name for first-time visitors.
-   * Avoids blocking `window.prompt()` while still giving each player a
-   * distinct identifier until they can set a real name.
-   */
-  private defaultName(): string {
-    const adjectives = ['Swift', 'Keen', 'Bold', 'Bright', 'Sharp'];
-    const nouns      = ['Fox', 'Hawk', 'Lynx', 'Wolf', 'Bear'];
-    const adj  = adjectives[Math.floor(Math.random() * adjectives.length)];
-    const noun = nouns[Math.floor(Math.random() * nouns.length)];
-    const name = `${adj}${noun}`;
-    sessionStorage.setItem('playerName', name);
-    return name;
   }
 }

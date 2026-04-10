@@ -119,3 +119,52 @@ export function findSet(board: Card[]): [number, number, number] | null {
   }
   return null;
 }
+
+const INITIAL_BOARD_SIZE = 12;
+
+/**
+ * Shuffle the full deck and deal an initial board, adding extra cards one at
+ * a time (per official rules) until a valid set is present or the deck runs out.
+ *
+ * Returns the dealt board and the remaining deck.
+ * Used by both `initGame()` (single-player) and the WebSocket server.
+ */
+export function dealInitialBoard(): { board: Card[]; deck: Card[] } {
+  const full = shuffle(generateDeck());
+  const board = full.slice(0, INITIAL_BOARD_SIZE);
+  const deck  = full.slice(INITIAL_BOARD_SIZE);
+  while (findSet(board) === null && deck.length > 0) {
+    board.push(deck.shift()!);
+  }
+  return { board, deck };
+}
+
+// ── Presentation helpers ───────────────────────────────────────────────────
+
+const SHAPES   = ['oval', 'diamond', 'squiggle'] as const;
+const SHADINGS = ['solid', 'striped', 'outline'] as const;
+
+/** Map a card's numeric shape attribute (1–3) to its display name. */
+export function shapeFor(c: Card): string {
+  return SHAPES[c.shape - 1] ?? 'oval';
+}
+
+/** Map a card's numeric shading attribute (1–3) to its display name. */
+export function shadingFor(c: Card): string {
+  return SHADINGS[c.shading - 1] ?? 'solid';
+}
+
+/**
+ * Generate a short anonymous display name for first-time visitors and persist
+ * it to sessionStorage so the same name is shown on refresh.
+ * Safe to call only in a browser context (sessionStorage is not available on the server).
+ */
+export function generateDefaultPlayerName(): string {
+  const adjectives = ['Swift', 'Keen', 'Bold', 'Bright', 'Sharp'];
+  const nouns      = ['Fox', 'Hawk', 'Lynx', 'Wolf', 'Bear'];
+  const adj  = adjectives[Math.floor(Math.random() * adjectives.length)];
+  const noun = nouns[Math.floor(Math.random() * nouns.length)];
+  const name = `${adj}${noun}`;
+  try { sessionStorage.setItem('playerName', name); } catch { /* SSR / private-mode no-op */ }
+  return name;
+}

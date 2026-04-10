@@ -1,20 +1,11 @@
 import { Card, GameState } from './game.types';
-import { generateDeck, shuffle, isSet, findSet } from './game.utils';
-
-const INITIAL_BOARD_SIZE = 12;
+import { dealInitialBoard, isSet, findSet } from './game.utils';
 
 // Initializes a fresh game state
 export function initGame(): GameState {
-  const deck = shuffle(generateDeck());
-  const board: Card[] = deck.slice(0, INITIAL_BOARD_SIZE);
-  let remaining = deck.slice(INITIAL_BOARD_SIZE);
-  // Per official rules: if no set exists, deal one extra card at a time until
-  // a set is present or the deck runs out.
-  while (findSet(board) === null && remaining.length > 0) {
-    board.push(remaining.shift()!);
-  }
+  const { board, deck } = dealInitialBoard();
   return {
-    deck: remaining,
+    deck,
     board,
     selected: [],
     score: 0,

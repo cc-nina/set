@@ -17,6 +17,13 @@ export interface Card {
  */
 export const CALL_SET_SECONDS = 5;
 
+/**
+ * How long (ms) the "found a set!" banner/highlight stays visible.
+ * Used by both SetGameService and MultiplayerGameSession to auto-clear
+ * the lastSetBy$ signal, and by GameBoardComponent to time the match animation.
+ */
+export const LAST_SET_BANNER_MS = 2000;
+
 // ── Single-player state ────────────────────────────────────────────────────────
 
 export interface GameState {

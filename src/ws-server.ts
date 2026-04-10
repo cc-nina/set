@@ -29,7 +29,7 @@
 import WebSocket, { WebSocketServer } from 'ws';
 import type { Server as HttpServer } from 'node:http';
 import { randomBytes } from 'node:crypto';
-import { generateDeck, shuffle, isSet, findSet } from './app/game.utils.js';
+import { isSet, findSet, dealInitialBoard } from './app/game.utils.js';
 import type {
   Card,
   Player,
@@ -111,18 +111,6 @@ function broadcast(room: Room, msg: ServerMessage): void {
   }
 }
 
-function dealInitial(): { board: Card[]; deck: Card[] } {
-  const full = shuffle(generateDeck());
-  const board = full.slice(0, BOARD_SIZE);
-  const deck = full.slice(BOARD_SIZE);
-  // Per official rules: if no set exists, deal one extra card at a time until
-  // a set is present or the deck runs out.
-  while (findSet(board) === null && deck.length > 0) {
-    board.push(deck.shift()!);
-  }
-  return { board, deck };
-}
-
 /** Count players whose connected flag is true. */
 function connectedCount(room: Room): number {
   return room.state.players.filter((p) => p.connected).length;
@@ -191,7 +179,7 @@ function joinRoom(room: Room, joinerSocket: GameSocket, playerName: string): voi
   // Start once the room reaches maxPlayers.
   if (st.players.length >= st.maxPlayers) {
     st.status = 'active';
-    const { board, deck } = dealInitial();
+    const { board, deck } = dealInitialBoard();
     st.board = board;
     st.deck = deck;
   }
@@ -388,7 +376,7 @@ function resetRoom(room: Room): void {
     return;
   }
 
-  const { board, deck } = dealInitial();
+  const { board, deck } = dealInitialBoard();
   st.board = board;
   st.deck = deck;
   st.status = 'active';

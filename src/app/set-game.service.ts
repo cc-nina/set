@@ -1,13 +1,10 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable, of, Subject, merge, map, delay } from 'rxjs';
-import { Card, GameState, Player, PlayerId } from './game.types';
+import { Card, GameState, Player, PlayerId, LAST_SET_BANNER_MS } from './game.types';
 import * as core from './game.service';
 import { findSet } from './game.utils';
 import { GameSession } from './game-session.interface';
 import { ColorPrefsService } from './color-prefs.service';
-
-/** How long (ms) the set-match highlight stays visible before cards are replaced. */
-const LAST_SET_BANNER_MS = 2000;
 
 @Injectable({ providedIn: 'root' })
 export class SetGameService implements GameSession {

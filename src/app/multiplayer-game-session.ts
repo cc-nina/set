@@ -29,13 +29,10 @@ import {
   delay,
   merge,
 } from 'rxjs';
-import { Card, GameState, Player, PlayerId, RoomState, ServerMessage } from './game.types';
+import { Card, GameState, Player, PlayerId, RoomState, ServerMessage, LAST_SET_BANNER_MS } from './game.types';
 import { findSet } from './game.utils';
 import { GameSession } from './game-session.interface';
 import { ColorPrefsService } from './color-prefs.service';
-
-/** How long (ms) the "Player X found a set!" banner stays visible. */
-const LAST_SET_BANNER_MS = 2000;
 
 // sessionStorage keys for reconnection
 const SS_PLAYER_ID = 'mp_playerId';

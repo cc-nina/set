@@ -15,6 +15,7 @@ import { CardComponent } from './card.component';
 import { PaletteModalComponent, PaletteChangeEvent } from './palette-modal.component';
 import { GameSession, GAME_SESSION } from './game-session.interface';
 import { Card, CALL_SET_SECONDS } from './game.types';
+import { shapeFor, shadingFor } from './game.utils';
 
 /** How long (ms) the set-match highlight stays visible before cards are replaced. */
 const SET_MATCH_DISPLAY_MS = 250;
@@ -340,25 +341,27 @@ export class GameBoardComponent implements AfterViewInit, OnDestroy {
     // check whether a valid set was applied (selected resets to []) and close
     // the call window. In multiplayer the server is authoritative — the
     // callerLockId$ subscriber handles clearing callingSet when it gets null.
-    // clearSelectionOnCancel() is a no-op in multiplayer, so the snapshot check
-    // below is harmless there (selected.length will never reset to 0 synchronously).
-    const snapshot = this.game.getStateSnapshot();
-    if (snapshot.selected.length === 0 && this.callingSet) {
-      if (this.countdownInterval !== null) {
-        clearInterval(this.countdownInterval);
-        this.countdownInterval = null;
+    // We guard this block with isMultiplayer so the async WS path never
+    // incorrectly closes the call window on the first click.
+    if (!this.isMultiplayer) {
+      const snapshot = this.game.getStateSnapshot();
+      if (snapshot.selected.length === 0 && this.callingSet) {
+        if (this.countdownInterval !== null) {
+          clearInterval(this.countdownInterval);
+          this.countdownInterval = null;
+        }
+        this.callingSet = false;
+        this.cdr.markForCheck();
       }
-      this.callingSet = false;
-      this.cdr.markForCheck();
     }
   }
 
   shapeFor(c: Card): string {
-    return (['oval', 'diamond', 'squiggle'])[c.shape - 1] ?? 'oval';
+    return shapeFor(c);
   }
 
   shadingFor(c: Card): string {
-    return (['solid', 'striped', 'outline'])[c.shading - 1] ?? 'solid';
+    return shadingFor(c);
   }
 
   colorFor(c: Card): string {

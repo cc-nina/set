@@ -5,6 +5,14 @@
     🎉 {{ lastSetByName }} found a SET!
   </div>
 
+  <!-- ── Connecting overlay ────────────────────────────────────────────── -->
+  <div *ngIf="roomStatus === 'connecting'" class="overlay">
+    <div class="overlay-card">
+      <p class="overlay-title">Connecting…</p>
+      <p class="overlay-sub">Setting up your room, just a moment.</p>
+    </div>
+  </div>
+
   <!-- ── Waiting overlay ───────────────────────────────────────────────── -->
   <div *ngIf="roomStatus === 'waiting' && roomCode" class="overlay">
     <div class="overlay-card">
