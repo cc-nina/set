@@ -82,7 +82,6 @@ export class GameBoardComponent implements AfterViewInit, OnDestroy {
   get lockedByOther(): boolean {
     return this.serverCallerLockId !== null && !this.callingSet;
   }
-
   @ViewChild('paletteModal') paletteModalRef?: PaletteModalComponent;
 
   private stateSubscription!: Subscription;
@@ -220,9 +219,6 @@ export class GameBoardComponent implements AfterViewInit, OnDestroy {
     if (this.lockedByOther) return;
     // Notify the service (no-op for single-player; sends call_set WS msg for multiplayer).
     this.game.callSet();
-    // Clear any previous selection before starting the window.
-    const snapshot = this.game.getStateSnapshot();
-    snapshot.selected.forEach(c => this.game.selectCard(c)); // deselect all
     this.callingSet = true;
     this.callTimeLeft = CALL_SET_SECONDS;
     this.cdr.markForCheck();
@@ -242,9 +238,13 @@ export class GameBoardComponent implements AfterViewInit, OnDestroy {
       this.countdownInterval = null;
     }
     this.callingSet = false;
-    // Clear any partial selection when time runs out.
-    const snapshot = this.game.getStateSnapshot();
-    snapshot.selected.forEach(c => this.game.selectCard(c));
+    // In single-player: clear any partial selection by toggling selected cards.
+    // In multiplayer: the server clears selections on timeout/neg via room_state
+    // broadcast — sending extra select_card messages here would double-toggle.
+    if (!this.game.isMultiplayer) {
+      const snapshot = this.game.getStateSnapshot();
+      snapshot.selected.forEach(c => this.game.selectCard(c));
+    }
     this.cdr.markForCheck();
   }
 
@@ -340,16 +340,20 @@ export class GameBoardComponent implements AfterViewInit, OnDestroy {
   onCardClick(card: Card): void {
     if (!this.callingSet) return; // must call SET first
     this.game.selectCard(card);
-    // If this click completed a valid set, end the call window.
-    const snapshot = this.game.getStateSnapshot();
-    if (snapshot.selected.length === 0 && this.callingSet) {
-      // selected was cleared by the service — a valid set was applied.
-      if (this.countdownInterval !== null) {
-        clearInterval(this.countdownInterval);
-        this.countdownInterval = null;
+    // Single-player only: selectCard() is synchronous, so we can immediately
+    // check whether a valid set was applied (selected resets to []) and close
+    // the call window. In multiplayer the server is authoritative — the
+    // callerLockId$ subscriber handles clearing callingSet when it gets null.
+    if (!this.game.isMultiplayer) {
+      const snapshot = this.game.getStateSnapshot();
+      if (snapshot.selected.length === 0 && this.callingSet) {
+        if (this.countdownInterval !== null) {
+          clearInterval(this.countdownInterval);
+          this.countdownInterval = null;
+        }
+        this.callingSet = false;
+        this.cdr.markForCheck();
       }
-      this.callingSet = false;
-      this.cdr.markForCheck();
     }
   }
 

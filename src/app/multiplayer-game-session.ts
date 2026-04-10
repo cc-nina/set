@@ -69,6 +69,8 @@ function roomStateToGameState(rs: RoomState, playerId: PlayerId): GameState {
 export class MultiplayerGameSession implements GameSession, OnDestroy {
   // ── Public streams ────────────────────────────────────────────────────────
 
+  readonly isMultiplayer = true;
+
   private stateSubject = new BehaviorSubject<GameState>(emptyState());
   readonly state$: Observable<GameState> = this.stateSubject.asObservable();
 

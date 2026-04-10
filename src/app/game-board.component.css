@@ -131,8 +131,9 @@
   font-size: 12px; font-weight: 700; color: #c00; min-width: 30px;
 }
 
-/* ── Inactive cards (before SET is called) ──────────────────────── */
-.card-inactive {
-  opacity: 0.72;
+/* ── Cards locked out (another player called SET) ───────────────── */
+.card-locked-out {
+  opacity: 0.45;
+  pointer-events: none;
   transition: opacity 0.2s;
 }

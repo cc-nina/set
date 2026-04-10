@@ -17,6 +17,8 @@ export class SetGameService implements GameSession {
   private stateSubject: BehaviorSubject<GameState>;
   public state$: Observable<GameState>;
 
+  readonly isMultiplayer = false;
+
   /**
    * Single-player has no real opponent list.
    * Emits a single anonymous local player so consumers never need to null-check.

@@ -11,6 +11,14 @@ import { Card, GameState, Player, PlayerId } from './game.types';
  * perspective.
  */
 export interface GameSession {
+  // ── Session metadata ──────────────────────────────────────────────────────
+  /**
+   * True for MultiplayerGameSession, false for SetGameService (single-player).
+   * Used by GameBoardComponent to decide whether to manage state locally or
+   * defer to the server for things like selection clearing on timeout.
+   */
+  readonly isMultiplayer: boolean;
+
   // ── State stream ──────────────────────────────────────────────────────────
   /**
    * Emits the latest GameState whenever anything changes.

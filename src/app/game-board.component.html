@@ -69,7 +69,11 @@
 
   <div *ngIf="isBrowser && showBoard" class="board w-full flex justify-center">
     <div class="grid" [ngClass]="gridClasses" [ngStyle]="gridStyle">
-      <div *ngFor="let c of board" (click)="onCardClick(c)" [class.cursor-pointer]="callingSet" [class.cursor-default]="!callingSet" [class.card-inactive]="!callingSet || lockedByOther">
+      <div *ngFor="let c of board" (click)="onCardClick(c)"
+        [class.cursor-pointer]="callingSet"
+        [class.cursor-default]="!callingSet"
+        [class.card-locked-out]="lockedByOther"
+      >
         <app-card
           [orientation]="orientation"
           [color]="colorFor(c)"
