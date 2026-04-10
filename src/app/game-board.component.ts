@@ -341,10 +341,10 @@ export class GameBoardComponent implements AfterViewInit, OnDestroy {
   // ── Card helpers ──────────────────────────────────────────────────────────
 
   onCardClick(card: Card): void {
-    // In multiplayer, only the caller can select cards.
-    if (this.isMultiplayer && !this.callingSet) {
-      return;
-    }
+    // Cards are only selectable while the local countdown is running.
+    // In multiplayer: only the player who called SET holds the lock.
+    // In single-player: same — must press "Call SET" first.
+    if (!this.callingSet) return;
     this.game.selectCard(card);
   }
 

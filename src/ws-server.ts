@@ -60,9 +60,10 @@ const CALL_SET_LOCK_MS = CALL_SET_SECONDS * 1000;
 const RECONNECT_GRACE_MS = 5 * 60_000; // 5 minutes
 /**
  * How long (ms) an empty room (all sockets gone) is kept alive before deletion.
- * Covers the case where the last player's socket drops and they re-open the tab.
+ * Must be at least as long as RECONNECT_GRACE_MS so a solo player who closes
+ * the tab can still rejoin within the full reconnect window.
  */
-const EMPTY_ROOM_TTL_MS = 60_000; // 1 minute
+const EMPTY_ROOM_TTL_MS = RECONNECT_GRACE_MS;
 
 // ── In-memory store ──────────────────────────────────────────────────────────
 
@@ -329,8 +330,8 @@ function applySelection(room: Room, playerId: PlayerId, cardId: string): void {
       }
     }
 
-    player.score = player.correctSets + 1 - player.incorrectSelections;
     player.correctSets += 1;
+    player.score = player.correctSets - player.incorrectSelections;
     st.lastSetBy = playerId;
     broadcastEvent(room, 'set', player);
 
@@ -624,9 +625,8 @@ function handleClose(ws: GameSocket): void {
   const timer = setTimeout(() => {
     room.reconnectTimers.delete(playerId);
     evictPlayer(room, playerId);
-    if (room.state.players.length === 0) {
-      rooms.delete(room.state.roomId);
-    }
+    // evictPlayer already calls scheduleEmptyRoomDeletion if the room is
+    // now empty — no need to call rooms.delete() here directly.
   }, RECONNECT_GRACE_MS);
   room.reconnectTimers.set(playerId, timer);
 
