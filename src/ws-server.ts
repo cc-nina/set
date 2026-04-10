@@ -27,8 +27,9 @@
  */
 
 import WebSocket, { WebSocketServer } from 'ws';
-import type { Server as HttpServer } from 'node:http';
+import { createServer, type Server as HttpServer } from 'node:http';
 import { randomBytes } from 'node:crypto';
+import { fileURLToPath } from 'node:url';
 import { isSet, findSet, dealInitialBoard } from './app/game.utils.js';
 import type {
   Card,
@@ -645,5 +646,41 @@ export function attachWebSocketServer(httpServer: HttpServer): void {
   wss.on('connection', (ws) => {
     ws.on('message', (msg) => handleMessage(ws as GameSocket, msg.toString()));
     ws.on('close', () => handleClose(ws as GameSocket));
+  });
+}
+
+// ── Standalone mode ──────────────────────────────────────────────────────────
+// When this file is the main entry point (e.g. `node ws-server.mjs`), spin up
+// a lightweight HTTP + WebSocket server without Angular SSR / Express.
+
+const isMain =
+  typeof process !== 'undefined' &&
+  process.argv[1] &&
+  fileURLToPath(import.meta.url) === process.argv[1];
+
+if (isMain || process.env['WS_STANDALONE'] === '1') {
+  const PORT = Number(process.env['PORT']) || 3000;
+
+  const httpServer = createServer((req, res) => {
+    // CORS headers so the Vercel-hosted frontend can reach this server.
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+    if (req.method === 'OPTIONS') {
+      res.writeHead(204);
+      res.end();
+      return;
+    }
+
+    res.writeHead(200, { 'Content-Type': 'text/plain' });
+    res.end('SET Game — WebSocket server is running');
+  });
+
+  attachWebSocketServer(httpServer);
+
+  httpServer.listen(PORT, '0.0.0.0', () => {
+    console.log(`🚀 Standalone WS server listening on 0.0.0.0:${PORT}`);
+    console.log(`   External: ws://34.44.229.168:${PORT}`);
   });
 }

@@ -139,8 +139,7 @@ export class MultiplayerGameSession implements GameSession, OnDestroy {
   connect(roomId: string, playerName: string, maxPlayers = 2): void {
     if (!isPlatformBrowser(this.platformId)) return;
 
-    const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const url = `${protocol}//${location.host}/ws`;
+    const url = `ws://34.44.229.168:3000`;
 
     this.ws = new WebSocket(url);
 
