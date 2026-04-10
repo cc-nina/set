@@ -3,15 +3,16 @@ import { generateDeck, shuffle, isSet, findSet } from './game.utils';
 
 const INITIAL_BOARD_SIZE = 12;
 
-// Scoring constants
-export const SCORE_CORRECT = 3;
-export const SCORE_INCORRECT = -1;
-
 // Initializes a fresh game state
 export function initGame(): GameState {
   const deck = shuffle(generateDeck());
   const board: Card[] = deck.slice(0, INITIAL_BOARD_SIZE);
-  const remaining = deck.slice(INITIAL_BOARD_SIZE);
+  let remaining = deck.slice(INITIAL_BOARD_SIZE);
+  // Per official rules: if no set exists, deal one extra card at a time until
+  // a set is present or the deck runs out.
+  while (findSet(board) === null && remaining.length > 0) {
+    board.push(remaining.shift()!);
+  }
   return {
     deck: remaining,
     board,
@@ -19,6 +20,7 @@ export function initGame(): GameState {
     score: 0,
     correctSets: 0,
     incorrectSelections: 0,
+    status: 'active',
   };
 }
 
@@ -32,6 +34,7 @@ export function selectCard(state: GameState, card: Card): GameState {
     score: state.score,
     correctSets: state.correctSets,
     incorrectSelections: state.incorrectSelections,
+    status: state.status,
   };
 
   const idx = newState.selected.findIndex((c) => c.id === card.id);
@@ -42,8 +45,7 @@ export function selectCard(state: GameState, card: Card): GameState {
   }
 
   if (newState.selected.length >= 3) {
-    // reset selection and add the new one
-    newState.selected = [card];
+    // Already have 3 selected — ignore further clicks until evaluated.
     return newState;
   }
 
@@ -56,8 +58,8 @@ export function selectCard(state: GameState, card: Card): GameState {
       return applySet(newState, newState.selected);
     } else {
       // penalize and clear selection
-      newState.score = Math.max(0, newState.score + SCORE_INCORRECT);
       newState.incorrectSelections += 1;
+      newState.score = newState.correctSets - newState.incorrectSelections;
       newState.selected = [];
       return newState;
     }
@@ -81,23 +83,24 @@ export function applySet(state: GameState, selected: Card[]): GameState {
   const deck = state.deck.slice();
   const board = state.board.slice();
 
-  // Replace each selected card in-place with the next card from the deck (if available).
-  // This preserves board indices so the UI can just update those specific cards.
   const selectedIds = new Set(selected.map((c) => c.id));
   for (let i = 0; i < board.length; i++) {
     if (selectedIds.has(board[i].id)) {
       if (deck.length > 0) {
+        // Deck has cards — replace in-place so the layout stays stable.
         board[i] = deck.shift() as Card;
       } else {
-        // No more cards to draw: remove the card (leave board shorter)
+        // Deck is empty — remove the card. Remaining cards stay in position,
+        // just like a real game where empty spaces are left on the table.
         board.splice(i, 1);
-        i--; // adjust index after splice
+        i--;
       }
     }
   }
 
-  // If board is shorter than INITIAL_BOARD_SIZE and deck still has cards, append to end
-  while (board.length < INITIAL_BOARD_SIZE && deck.length > 0) {
+  // Per official rules: if no set exists after removing the found set,
+  // deal one extra card at a time until a set is present or the deck runs out.
+  while (findSet(board) === null && deck.length > 0) {
     board.push(deck.shift() as Card);
   }
 
@@ -105,8 +108,10 @@ export function applySet(state: GameState, selected: Card[]): GameState {
     deck,
     board,
     selected: [],
-    score: state.score + SCORE_CORRECT,
+    score: state.correctSets + 1 - state.incorrectSelections,
     correctSets: state.correctSets + 1,
     incorrectSelections: state.incorrectSelections,
+    // Game is finished when no valid set remains and the deck is exhausted.
+    status: deck.length === 0 && findSet(board) === null ? 'finished' : 'active',
   };
 }

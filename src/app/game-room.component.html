@@ -35,7 +35,7 @@
             {{ p.name }}
             <span *ngIf="!p.connected" class="badge-offline" title="Disconnected">●</span>
           </span>
-          <span class="score-val">{{ p.score }} pts ({{ p.correctSets }} sets)</span>
+          <span class="score-val">{{ p.correctSets }} sets &mdash; {{ p.incorrectSelections }} negs &mdash; {{ p.score }} pts</span>
         </li>
       </ul>
       <div class="overlay-actions">

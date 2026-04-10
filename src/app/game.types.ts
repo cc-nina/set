@@ -17,6 +17,8 @@ export interface GameState {
   score: number;
   correctSets: number; // number of correctly found sets
   incorrectSelections: number; // number of incorrect selection attempts
+  /** 'active' while the game is in progress; 'finished' when no moves remain. */
+  status: 'active' | 'finished';
 }
 
 // ── Multiplayer types ──────────────────────────────────────────────────────────
@@ -29,6 +31,7 @@ export interface Player {
   name: string;
   score: number;
   correctSets: number;
+  incorrectSelections: number;
   /** False while the player's WebSocket is closed but within the reconnect window. */
   connected: boolean;
 }
@@ -61,6 +64,14 @@ export interface RoomState {
    * finder's name in both players' UIs.
    */
   lastSetBy: PlayerId | null;
+  /**
+   * The id of the player who has currently called SET and holds the selection
+   * lock, or null if nobody has called. While non-null, only this player may
+   * select cards; all other players' Call SET buttons are disabled.
+   * Cleared when the caller successfully finds a set, is penalised, or the
+   * call window expires on the server.
+   */
+  callerLockId: PlayerId | null;
 }
 
 // ── WebSocket message protocol ─────────────────────────────────────────────────
@@ -69,6 +80,7 @@ export interface RoomState {
 export type ClientMessage =
   | { type: 'join';        roomId: string; playerName: string; maxPlayers?: number }
   | { type: 'reconnect';   roomId: string; playerId: PlayerId }
+  | { type: 'call_set' }
   | { type: 'select_card'; cardId: string }
   | { type: 'new_game' }
   | { type: 'leave' };

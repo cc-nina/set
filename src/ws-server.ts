@@ -29,7 +29,7 @@
 import WebSocket, { WebSocketServer } from 'ws';
 import type { Server as HttpServer } from 'node:http';
 import { randomBytes } from 'node:crypto';
-import { generateDeck, shuffle, isSet } from './app/game.utils.js';
+import { generateDeck, shuffle, isSet, findSet } from './app/game.utils.js';
 import type {
   Card,
   Player,
@@ -42,22 +42,25 @@ import type {
 // ── Constants ────────────────────────────────────────────────────────────────
 
 const BOARD_SIZE = 12;
-const SCORE_CORRECT = 3;
-const SCORE_INCORRECT = -1;
 /** Minimum players required to START a game (creator alone can wait). */
 const MIN_PLAYERS_TO_START = 2;
 /** Hard ceiling — one deck supports up to 8 comfortably. */
 const MAX_PLAYERS_LIMIT = 8;
 /**
+ * How long (ms) a player has to pick 3 cards after calling SET.
+ * Must stay in sync with CALL_SET_SECONDS in game-board.component.ts.
+ */
+const CALL_SET_LOCK_MS = 5_000;
+/**
  * How long (ms) a disconnected player's slot is held open for reconnection.
  * After this the player is permanently removed from the room.
  */
-const RECONNECT_GRACE_MS = 60_000; // 1 minute
+const RECONNECT_GRACE_MS = 5 * 60_000; // 5 minutes
 /**
  * How long (ms) an empty room (all sockets gone) is kept alive before deletion.
  * Covers the case where the last player's socket drops and they re-open the tab.
  */
-const EMPTY_ROOM_TTL_MS = 30_000; // 30 seconds
+const EMPTY_ROOM_TTL_MS = 60_000; // 1 minute
 
 // ── In-memory store ──────────────────────────────────────────────────────────
 
@@ -79,6 +82,8 @@ interface Room {
   reconnectTimers: Map<PlayerId, ReturnType<typeof setTimeout>>;
   /** Handle for the empty-room deletion timer, if armed */
   emptyTimer: ReturnType<typeof setTimeout> | null;
+  /** Handle for the call-SET expiry timer, if a player has called */
+  callLockTimer: ReturnType<typeof setTimeout> | null;
 }
 
 const rooms = new Map<string, Room>();
@@ -107,13 +112,14 @@ function broadcast(room: Room, msg: ServerMessage): void {
 
 function dealInitial(): { board: Card[]; deck: Card[] } {
   const full = shuffle(generateDeck());
-  return { board: full.slice(0, BOARD_SIZE), deck: full.slice(BOARD_SIZE) };
-}
-
-function refillBoard(board: Card[], deck: Card[]): void {
-  while (board.length < BOARD_SIZE && deck.length > 0) {
+  const board = full.slice(0, BOARD_SIZE);
+  const deck = full.slice(BOARD_SIZE);
+  // Per official rules: if no set exists, deal one extra card at a time until
+  // a set is present or the deck runs out.
+  while (findSet(board) === null && deck.length > 0) {
     board.push(deck.shift()!);
   }
+  return { board, deck };
 }
 
 /** Count players whose connected flag is true. */
@@ -135,6 +141,7 @@ function createRoom(creatorSocket: GameSocket, playerName: string, maxPlayers: n
     name: playerName,
     score: 0,
     correctSets: 0,
+    incorrectSelections: 0,
     connected: true,
   };
 
@@ -147,6 +154,7 @@ function createRoom(creatorSocket: GameSocket, playerName: string, maxPlayers: n
     deck: [],
     selections: { [playerId]: [] },
     lastSetBy: null,
+    callerLockId: null,
   };
 
   const room: Room = {
@@ -154,6 +162,7 @@ function createRoom(creatorSocket: GameSocket, playerName: string, maxPlayers: n
     sockets: new Map([[playerId, creatorSocket]]),
     reconnectTimers: new Map(),
     emptyTimer: null,
+    callLockTimer: null,
   };
   rooms.set(roomId, room);
   return room;
@@ -169,6 +178,7 @@ function joinRoom(room: Room, joinerSocket: GameSocket, playerName: string): voi
     name: playerName,
     score: 0,
     correctSets: 0,
+    incorrectSelections: 0,
     connected: true,
   };
   const st = room.state;
@@ -208,6 +218,9 @@ function evictPlayer(room: Room, playerId: PlayerId): void {
 
   if (st.lastSetBy === playerId) st.lastSetBy = null;
 
+  // If this player held the call lock, release it so others can call.
+  if (st.callerLockId === playerId) clearCallLock(room);
+
   // Room is now empty — schedule deletion.
   if (st.players.length === 0) {
     scheduleEmptyRoomDeletion(room);
@@ -234,11 +247,27 @@ function cancelEmptyRoomDeletion(room: Room): void {
   }
 }
 
+/**
+ * Clear the call-SET lock without broadcasting — callers are responsible for
+ * broadcasting after this if needed.
+ */
+function clearCallLock(room: Room): void {
+  if (room.callLockTimer !== null) {
+    clearTimeout(room.callLockTimer);
+    room.callLockTimer = null;
+  }
+  room.state.callerLockId = null;
+}
+
 function applySelection(room: Room, playerId: PlayerId, cardId: string): void {
   const st = room.state;
   const selection = st.selections[playerId];
   if (!selection) return;
   if (st.status !== 'active') return;
+
+  // ── Lock enforcement ────────────────────────────────────────────────────
+  // Only the player who called SET may select cards.
+  if (st.callerLockId !== playerId) return;
 
   const card = st.board.find((c) => c.id === cardId);
   if (!card) return;
@@ -250,7 +279,7 @@ function applySelection(room: Room, playerId: PlayerId, cardId: string): void {
   }
 
   if (selection.length >= 3) {
-    st.selections[playerId] = [card];
+    // Already have 3 selected — ignore further clicks until the selection is evaluated.
     return;
   }
 
@@ -264,28 +293,59 @@ function applySelection(room: Room, playerId: PlayerId, cardId: string): void {
   if (isSet(a, b, c)) {
     const setIds = new Set([a.id, b.id, c.id]);
     const deck = st.deck.slice();
-    const board = st.board
-      .map((boardCard) => {
-        if (setIds.has(boardCard.id) && deck.length > 0) return deck.shift()!;
-        return setIds.has(boardCard.id) ? null : boardCard;
-      })
-      .filter((bc): bc is Card => bc !== null);
 
-    refillBoard(board, deck);
+    // Replace found cards in-place if the deck has cards, otherwise remove them.
+    // Cards stay in their positions — no compacting — just like a real game.
+    const board: Card[] = [];
+    for (const boardCard of st.board) {
+      if (setIds.has(boardCard.id)) {
+        if (deck.length > 0) {
+          board.push(deck.shift()!); // replace in-place
+        }
+        // else: deck empty — slot is simply dropped (board shrinks by 1)
+      } else {
+        board.push(boardCard);
+      }
+    }
+
+    // Per official rules: if no set exists on the remaining board,
+    // deal one extra card at a time until a set is present or the deck runs out.
+    while (findSet(board) === null && deck.length > 0) {
+      board.push(deck.shift()!);
+    }
 
     st.board = board;
     st.deck = deck;
     st.selections[playerId] = [];
-    player.score = Math.max(0, player.score + SCORE_CORRECT);
+
+    // Remove any cards no longer on the board from other players' selections
+    // so they don't hold ghost references that would cause unfair penalties.
+    const boardIds = new Set(board.map((bc) => bc.id));
+    for (const pid of Object.keys(st.selections)) {
+      if (pid !== playerId) {
+        st.selections[pid] = st.selections[pid].filter((sc) => boardIds.has(sc.id));
+      }
+    }
+
+    player.score = player.correctSets + 1 - player.incorrectSelections;
     player.correctSets += 1;
     st.lastSetBy = playerId;
 
-    if (st.board.length === 0 && st.deck.length === 0) {
+    // Release the call lock — set found successfully.
+    clearCallLock(room);
+
+    // If no set exists now, the game is over.
+    if (findSet(st.board) === null) {
       st.status = 'finished';
     }
   } else {
     st.selections[playerId] = [];
-    player.score = Math.max(0, player.score + SCORE_INCORRECT);
+    player.incorrectSelections += 1;
+    player.score = player.correctSets - player.incorrectSelections;
+    st.lastSetBy = null;
+
+    // Release the call lock — player was penalised.
+    clearCallLock(room);
   }
 }
 
@@ -307,17 +367,30 @@ function resetRoom(room: Room): void {
 
   st.players = st.players.filter((p) => p.connected);
 
-  const { board, deck } = dealInitial();
-  st.board = board;
-  st.deck = deck;
-  st.status = 'active';
   st.lastSetBy = null;
+  // Release any active call lock before the new game starts.
+  clearCallLock(room);
 
   for (const p of st.players) {
     p.score = 0;
     p.correctSets = 0;
+    p.incorrectSelections = 0;
     st.selections[p.id] = [];
   }
+
+  // A single connected player can play alone — only fall back to waiting
+  // if literally nobody is connected.
+  if (st.players.length < 1) {
+    st.board = [];
+    st.deck = [];
+    st.status = 'waiting';
+    return;
+  }
+
+  const { board, deck } = dealInitial();
+  st.board = board;
+  st.deck = deck;
+  st.status = 'active';
 }
 
 // ── Message handler ──────────────────────────────────────────────────────────
@@ -386,8 +459,9 @@ function handleParsedMessage(ws: GameSocket, msg: ClientMessage): void {
       return;
     }
 
+    const rawMax = Number(msg.maxPlayers);
     const maxPlayers = Math.min(
-      Math.max(Math.floor(msg.maxPlayers ?? MIN_PLAYERS_TO_START), MIN_PLAYERS_TO_START),
+      Math.max(Number.isFinite(rawMax) ? Math.floor(rawMax) : MIN_PLAYERS_TO_START, MIN_PLAYERS_TO_START),
       MAX_PLAYERS_LIMIT,
     );
 
@@ -443,6 +517,41 @@ function handleParsedMessage(ws: GameSocket, msg: ClientMessage): void {
     return;
   }
 
+  // ── call_set ───────────────────────────────────────────────────────────────
+  if (msg.type === 'call_set') {
+    const st = room.state;
+    if (st.status !== 'active') {
+      send(ws, { type: 'error', message: 'Cannot call SET when game is not active' });
+      return;
+    }
+    if (st.callerLockId !== null) {
+      send(ws, { type: 'error', message: 'Another player already called SET' });
+      return;
+    }
+
+    const playerId = ws.playerId!;
+    st.callerLockId = playerId;
+    // Clear any stale selection for the caller before they start picking.
+    st.selections[playerId] = [];
+
+    // Arm the server-side expiry timer. When it fires, penalise and unlock.
+    room.callLockTimer = setTimeout(() => {
+      room.callLockTimer = null;
+      if (room.state.callerLockId !== playerId) return; // already resolved
+      const player = room.state.players.find((p) => p.id === playerId);
+      if (player) {
+        room.state.selections[playerId] = [];
+        player.incorrectSelections += 1;
+        player.score = player.correctSets - player.incorrectSelections;
+      }
+      room.state.callerLockId = null;
+      broadcast(room, { type: 'room_state', state: room.state });
+    }, CALL_SET_LOCK_MS);
+
+    broadcast(room, { type: 'room_state', state: room.state });
+    return;
+  }
+
   // ── select_card ────────────────────────────────────────────────────────────
   if (msg.type === 'select_card') {
     if (!msg.cardId) {
@@ -456,9 +565,8 @@ function handleParsedMessage(ws: GameSocket, msg: ClientMessage): void {
 
   // ── new_game ───────────────────────────────────────────────────────────────
   if (msg.type === 'new_game') {
-    const activeCount = connectedCount(room);
-    if (activeCount < MIN_PLAYERS_TO_START) {
-      send(ws, { type: 'error', message: `Need at least ${MIN_PLAYERS_TO_START} connected players to start a new game` });
+    if (connectedCount(room) < 1) {
+      send(ws, { type: 'error', message: 'No connected players to start a new game' });
       return;
     }
     resetRoom(room);

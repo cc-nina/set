@@ -39,6 +39,22 @@ export interface GameSession {
   /** Tear down the current game and start a fresh one. */
   startNewGame(): void;
 
+  /**
+   * Claim the call-SET lock for the local player.
+   * Single-player: handled entirely client-side (local countdown).
+   * Multiplayer: sends a `call_set` message to the server; the server is
+   * authoritative — it rejects the call if another player already holds the lock.
+   */
+  callSet(): void;
+
+  /**
+   * Emits the PlayerId of whoever currently holds the call-SET lock, or null
+   * when nobody has called. Used to disable the Call SET button for all other
+   * players in multiplayer.
+   * Single-player: always null (lock is managed locally, not via this stream).
+   */
+  readonly callerLockId$: Observable<PlayerId | null>;
+
   // ── Queries ───────────────────────────────────────────────────────────────
   /** Synchronous snapshot — use sparingly; prefer state$ for reactivity. */
   getStateSnapshot(): GameState;

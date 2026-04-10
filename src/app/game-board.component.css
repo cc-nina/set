@@ -20,3 +20,119 @@
   border: 2.5px solid;
   background: transparent;
 }
+
+/* ── Game-over overlay (solo) ───────────────────────────────────── */
+.board-overlay {
+  position: fixed; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(0,0,0,0.45);
+  z-index: 50;
+}
+.board-overlay-card {
+  background: #fff; border-radius: 16px;
+  padding: 2rem 2.5rem; text-align: center;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+  min-width: 240px;
+}
+.board-overlay-title {
+  font-size: 1.6rem; font-weight: 700; margin: 0 0 0.25rem;
+}
+.board-overlay-sub {
+  color: #666; margin: 0 0 0.5rem; font-size: 0.95rem;
+}
+.board-overlay-score {
+  font-size: 1.15rem; font-weight: 600; margin: 0 0 1.25rem;
+}
+.board-overlay-actions {
+  display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap;
+}
+
+/* ── Live solo scorebar ─────────────────────────────────────────── */
+.solo-scorebar {
+  display: flex; align-items: center; gap: 12px;
+}
+.solo-stat {
+  font-size: 13px; font-weight: 600; color: #444;
+}
+.solo-stat--neg {
+  color: #c00;
+}
+.solo-stat--score {
+  color: #1a7a3a;
+}
+
+/* ── Toolbar right cluster ──────────────────────────────────────── */
+.toolbar-right {
+  display: flex; align-items: center; gap: 10px;
+}
+
+/* ── "Locked by other player" indicator ─────────────────────────── */
+.locked-by-other {
+  display: inline-flex; align-items: center;
+  padding: 10px 18px; border-radius: 8px;
+  border: 1.5px solid #f5c6c6;
+  background: #fff5f5; color: #a00;
+  font-size: 13px; font-weight: 700;
+}
+.locked-label {
+  animation: pulse-label 0.6s ease-in-out infinite alternate;
+}
+
+/* ── Call SET button ────────────────────────────────────────────── */
+.call-set-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 10px 22px; border-radius: 8px;
+  border: none;
+  background: linear-gradient(135deg, #cc0000 0%, #a00000 100%);
+  color: #fff;
+  font-size: 14px; font-weight: 700; letter-spacing: 0.03em;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(180,0,0,0.25);
+  transition: background 0.12s, transform 0.1s, box-shadow 0.12s;
+  user-select: none;
+}
+.call-set-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #e50000 0%, #b80000 100%);
+  box-shadow: 0 3px 12px rgba(180,0,0,0.35);
+}
+.call-set-btn:active:not(:disabled) { transform: scale(0.96); }
+.call-set-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* ── Countdown widget ───────────────────────────────────────────── */
+.countdown-wrap {
+  display: flex; align-items: center; gap: 8px;
+}
+.countdown-label {
+  font-size: 13px; font-weight: 600; color: #c00; white-space: nowrap;
+  animation: pulse-label 0.6s ease-in-out infinite alternate;
+}
+@keyframes pulse-label {
+  from { opacity: 1; }
+  to   { opacity: 0.55; }
+}
+.countdown-bar-bg {
+  width: 100px; height: 8px; border-radius: 4px;
+  background: #e0e0e0; overflow: hidden;
+}
+.countdown-bar-fill {
+  height: 100%; border-radius: 4px;
+  background: #cc0000;
+  transition: width 0.1s linear, background 0.3s;
+}
+.countdown-bar-fill.countdown-urgent {
+  background: #ff3300;
+  animation: flicker 0.25s ease-in-out infinite alternate;
+}
+@keyframes flicker {
+  from { opacity: 1; }
+  to   { opacity: 0.6; }
+}
+.countdown-time {
+  font-size: 12px; font-weight: 700; color: #c00; min-width: 30px;
+}
+
+/* ── Inactive cards (before SET is called) ──────────────────────── */
+.card-inactive {
+  opacity: 0.72;
+  transition: opacity 0.2s;
+}

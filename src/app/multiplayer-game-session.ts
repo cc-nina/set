@@ -28,8 +28,7 @@ import {
   map,
   delay,
   merge,
-} from 'rxjs';
-import { Card, GameState, Player, PlayerId, RoomState, ServerMessage } from './game.types';
+} from 'rxjs';import { Card, GameState, Player, PlayerId, RoomState, ServerMessage } from './game.types';
 import { findSet } from './game.utils';
 import { loadColorPrefs, saveColorPrefs } from './color-prefs.storage';
 import { GameSession } from './game-session.interface';
@@ -46,7 +45,7 @@ const SS_ROOM_ID   = 'mp_roomId';
 
 /** Empty GameState used as a placeholder before the server deals the board. */
 function emptyState(): GameState {
-  return { deck: [], board: [], selected: [], score: 0, correctSets: 0, incorrectSelections: 0 };
+  return { deck: [], board: [], selected: [], score: 0, correctSets: 0, incorrectSelections: 0, status: 'active' };
 }
 
 /**
@@ -62,6 +61,7 @@ function roomStateToGameState(rs: RoomState, playerId: PlayerId): GameState {
     score: me?.score ?? 0,
     correctSets: me?.correctSets ?? 0,
     incorrectSelections: 0,
+    status: rs.status === 'finished' ? 'finished' : 'active',
   };
 }
 
@@ -83,6 +83,13 @@ export class MultiplayerGameSession implements GameSession, OnDestroy {
     this.lastSetBySource.pipe(map((id): PlayerId | null => id)),
     this.lastSetBySource.pipe(delay(LAST_SET_BANNER_MS), map((): PlayerId | null => null)),
   );
+
+  /**
+   * Emits the PlayerId of whoever currently holds the call-SET lock (from
+   * the server's room_state), or null when nobody has called.
+   */
+  private callerLockIdSubject = new BehaviorSubject<PlayerId | null>(null);
+  readonly callerLockId$: Observable<PlayerId | null> = this.callerLockIdSubject.asObservable();
 
   // ── Room identity ─────────────────────────────────────────────────────────
 
@@ -220,6 +227,7 @@ export class MultiplayerGameSession implements GameSession, OnDestroy {
       this.roomStatusSubject.next(rs.status);
       this.playersSubject.next([...rs.players] as Player[]);
       this.stateSubject.next(roomStateToGameState(rs, this.playerId));
+      this.callerLockIdSubject.next(rs.callerLockId ?? null);
 
       if (rs.lastSetBy !== null) {
         this.lastSetBySource.next(rs.lastSetBy);
@@ -255,6 +263,10 @@ export class MultiplayerGameSession implements GameSession, OnDestroy {
 
   selectCard(card: Card): void {
     this.ws?.send(JSON.stringify({ type: 'select_card', cardId: card.id }));
+  }
+
+  callSet(): void {
+    this.ws?.send(JSON.stringify({ type: 'call_set' }));
   }
 
   startNewGame(): void {

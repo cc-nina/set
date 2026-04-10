@@ -6,7 +6,6 @@ import * as core from './game.service';
 import { findSet } from './game.utils';
 import { loadColorPrefs, saveColorPrefs } from './color-prefs.storage';
 import { GameSession } from './game-session.interface';
-
 const DEFAULT_PALETTE: [string, string, string] = ['#cc0000', '#0aa64a', '#5a2ea6'];
 const DEFAULT_HIGHLIGHT = '#000000';
 
@@ -23,7 +22,7 @@ export class SetGameService implements GameSession {
    * Emits a single anonymous local player so consumers never need to null-check.
    */
   readonly players$: Observable<Player[]> = of([
-    { id: 'local', name: 'You', score: 0, correctSets: 0, connected: true },
+    { id: 'local', name: 'You', score: 0, correctSets: 0, incorrectSelections: 0, connected: true },
   ]);
 
   /**
@@ -35,6 +34,13 @@ export class SetGameService implements GameSession {
     this.lastSetBySource.pipe(map((id): PlayerId | null => id)),
     this.lastSetBySource.pipe(delay(LAST_SET_BANNER_MS), map((): PlayerId | null => null)),
   );
+
+  /**
+   * Single-player: the call-SET lock is managed entirely in the component
+   * (local countdown). This stream always emits null so the interface is
+   * satisfied; the component ignores it for single-player.
+   */
+  readonly callerLockId$: Observable<PlayerId | null> = of(null);
 
   // Per-card colour overrides (id -> hex)
   private cardColors: Record<string, string> = {};
@@ -73,6 +79,12 @@ export class SetGameService implements GameSession {
     const s = core.initGame();
     this.stateSubject.next(s);
   }
+
+  /**
+   * Single-player: the call-SET lock is handled by the component locally.
+   * This method is a no-op; the component's own callSet() drives the timer.
+   */
+  callSet(): void { /* handled client-side for single-player */ }
 
   selectCard(card: Card): void {
     const prev = this.getStateSnapshot();
