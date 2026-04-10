@@ -52,7 +52,7 @@
       <div *ngIf="callingSet" class="countdown-wrap">
         <span class="countdown-label">Pick 3 cards&hellip;</span>
         <div class="countdown-bar-bg">
-          <div class="countdown-bar-fill" [style.width]="(callTimeLeft / 5 * 100) + '%'" [class.countdown-urgent]="callTimeLeft < 2"></div>
+          <div class="countdown-bar-fill" [style.width]="(callTimeLeft / callSetSeconds * 100) + '%'" [class.countdown-urgent]="callTimeLeft < 2"></div>
         </div>
         <span class="countdown-time">{{ callTimeLeft | number:'1.1-1' }}s</span>
       </div>

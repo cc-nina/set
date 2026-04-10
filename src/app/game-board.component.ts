@@ -14,10 +14,7 @@ import { Subscription } from 'rxjs';
 import { CardComponent } from './card.component';
 import { PaletteModalComponent, PaletteChangeEvent } from './palette-modal.component';
 import { GameSession, GAME_SESSION } from './game-session.interface';
-import { Card } from './game.types';
-
-/** How many seconds a player has to pick 3 cards after calling SET. */
-const CALL_SET_SECONDS = 5;
+import { Card, CALL_SET_SECONDS } from './game.types';
 
 /** How long (ms) the set-match highlight stays visible before cards are replaced. */
 const SET_MATCH_DISPLAY_MS = 250;
@@ -65,6 +62,8 @@ export class GameBoardComponent implements AfterViewInit, OnDestroy {
 
   showPaletteModal = false;
 
+  /** Expose constant for template use in countdown bar width calculation. */
+  readonly callSetSeconds = CALL_SET_SECONDS;
   /** Whether the LOCAL player has called SET and is currently picking cards. */
   callingSet = false;
   /** Remaining time in seconds (fractional) during the call window. */
@@ -241,10 +240,7 @@ export class GameBoardComponent implements AfterViewInit, OnDestroy {
     // In single-player: clear any partial selection by toggling selected cards.
     // In multiplayer: the server clears selections on timeout/neg via room_state
     // broadcast — sending extra select_card messages here would double-toggle.
-    if (!this.game.isMultiplayer) {
-      const snapshot = this.game.getStateSnapshot();
-      snapshot.selected.forEach(c => this.game.selectCard(c));
-    }
+    this.game.clearSelectionOnCancel();
     this.cdr.markForCheck();
   }
 
@@ -344,16 +340,16 @@ export class GameBoardComponent implements AfterViewInit, OnDestroy {
     // check whether a valid set was applied (selected resets to []) and close
     // the call window. In multiplayer the server is authoritative — the
     // callerLockId$ subscriber handles clearing callingSet when it gets null.
-    if (!this.game.isMultiplayer) {
-      const snapshot = this.game.getStateSnapshot();
-      if (snapshot.selected.length === 0 && this.callingSet) {
-        if (this.countdownInterval !== null) {
-          clearInterval(this.countdownInterval);
-          this.countdownInterval = null;
-        }
-        this.callingSet = false;
-        this.cdr.markForCheck();
+    // clearSelectionOnCancel() is a no-op in multiplayer, so the snapshot check
+    // below is harmless there (selected.length will never reset to 0 synchronously).
+    const snapshot = this.game.getStateSnapshot();
+    if (snapshot.selected.length === 0 && this.callingSet) {
+      if (this.countdownInterval !== null) {
+        clearInterval(this.countdownInterval);
+        this.countdownInterval = null;
       }
+      this.callingSet = false;
+      this.cdr.markForCheck();
     }
   }
 

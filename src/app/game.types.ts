@@ -8,6 +8,15 @@ export interface Card {
   shading: Attr;
 }
 
+// ── Game constants (shared between client and server) ─────────────────────────
+
+/**
+ * How many seconds a player has to pick 3 cards after calling SET.
+ * This is the single source of truth — used by both the browser countdown
+ * (game-board.component.ts) and the server expiry timer (ws-server.ts).
+ */
+export const CALL_SET_SECONDS = 5;
+
 // ── Single-player state ────────────────────────────────────────────────────────
 
 export interface GameState {

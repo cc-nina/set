@@ -38,6 +38,7 @@ import type {
   ClientMessage,
   ServerMessage,
 } from './app/game.types.js';
+import { CALL_SET_SECONDS } from './app/game.types.js';
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
@@ -48,9 +49,9 @@ const MIN_PLAYERS_TO_START = 2;
 const MAX_PLAYERS_LIMIT = 8;
 /**
  * How long (ms) a player has to pick 3 cards after calling SET.
- * Must stay in sync with CALL_SET_SECONDS in game-board.component.ts.
+ * Derived from the shared CALL_SET_SECONDS constant in game.types.ts.
  */
-const CALL_SET_LOCK_MS = 5_000;
+const CALL_SET_LOCK_MS = CALL_SET_SECONDS * 1000;
 /**
  * How long (ms) a disconnected player's slot is held open for reconnection.
  * After this the player is permanently removed from the room.

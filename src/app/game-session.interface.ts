@@ -11,14 +11,6 @@ import { Card, GameState, Player, PlayerId } from './game.types';
  * perspective.
  */
 export interface GameSession {
-  // ── Session metadata ──────────────────────────────────────────────────────
-  /**
-   * True for MultiplayerGameSession, false for SetGameService (single-player).
-   * Used by GameBoardComponent to decide whether to manage state locally or
-   * defer to the server for things like selection clearing on timeout.
-   */
-  readonly isMultiplayer: boolean;
-
   // ── State stream ──────────────────────────────────────────────────────────
   /**
    * Emits the latest GameState whenever anything changes.
@@ -54,6 +46,16 @@ export interface GameSession {
    * authoritative — it rejects the call if another player already holds the lock.
    */
   callSet(): void;
+
+  /**
+   * Called by GameBoardComponent when the call window expires locally
+   * (countdown reaches zero) without a valid set being found.
+   *
+   * Single-player: toggles each selected card to deselect it (synchronous).
+   * Multiplayer: no-op — the server broadcasts the penalty and clears the
+   * selection via room_state, so no extra messages need to be sent.
+   */
+  clearSelectionOnCancel(): void;
 
   /**
    * Emits the PlayerId of whoever currently holds the call-SET lock, or null

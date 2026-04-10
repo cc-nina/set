@@ -1,13 +1,10 @@
-import { Injectable, Inject, PLATFORM_ID } from '@angular/core';
-import { isPlatformBrowser } from '@angular/common';
+import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable, of, Subject, merge, map, delay } from 'rxjs';
 import { Card, GameState, Player, PlayerId } from './game.types';
 import * as core from './game.service';
 import { findSet } from './game.utils';
-import { loadColorPrefs, saveColorPrefs } from './color-prefs.storage';
 import { GameSession } from './game-session.interface';
-const DEFAULT_PALETTE: [string, string, string] = ['#cc0000', '#0aa64a', '#5a2ea6'];
-const DEFAULT_HIGHLIGHT = '#000000';
+import { ColorPrefsService } from './color-prefs.service';
 
 /** How long (ms) the set-match highlight stays visible before cards are replaced. */
 const LAST_SET_BANNER_MS = 2000;
@@ -16,8 +13,6 @@ const LAST_SET_BANNER_MS = 2000;
 export class SetGameService implements GameSession {
   private stateSubject: BehaviorSubject<GameState>;
   public state$: Observable<GameState>;
-
-  readonly isMultiplayer = false;
 
   /**
    * Single-player has no real opponent list.
@@ -44,49 +39,45 @@ export class SetGameService implements GameSession {
    */
   readonly callerLockId$: Observable<PlayerId | null> = of(null);
 
-  // Per-card colour overrides (id -> hex)
-  private cardColors: Record<string, string> = {};
-
-  // Palette for numeric colour attribute (index 1..3). Always exactly 3 entries.
-  private palette: [string, string, string];
-
-  /** Persisted highlight colour — loaded at boot, kept in sync by the component. */
-  highlightColor: string;
-
-  constructor(@Inject(PLATFORM_ID) private platformId: object) {
-    // ── Load persisted colour prefs ─────────────────────────────────────────
-    const saved = isPlatformBrowser(this.platformId) ? loadColorPrefs() : null;
-    this.palette = saved ? [...saved.palette] as [string, string, string] : [...DEFAULT_PALETTE] as [string, string, string];
-    this.highlightColor = saved?.highlightColor ?? DEFAULT_HIGHLIGHT;
-
+  constructor(public colorPrefs: ColorPrefsService) {
     const initial = core.initGame();
     this.stateSubject = new BehaviorSubject<GameState>(initial);
     this.state$ = this.stateSubject.asObservable();
   }
 
-  /** Persist the current palette + highlight colour to localStorage. */
-  private savePrefs(): void {
-    if (!isPlatformBrowser(this.platformId)) return;
-    saveColorPrefs({
-      palette: [...this.palette] as [string, string, string],
-      highlightColor: this.highlightColor,
-    });
-  }
+  // ── GameSession interface — colour prefs delegated to ColorPrefsService ──
+
+  get highlightColor(): string                        { return this.colorPrefs.highlightColor; }
+  getPalette(): string[]                              { return this.colorPrefs.getPalette(); }
+  getPaletteColor(index: number): string              { return this.colorPrefs.getPaletteColor(index); }
+  updatePaletteColor(index: number, color: string)    { this.colorPrefs.updatePaletteColor(index, color); }
+  updateHighlightColor(color: string)                 { this.colorPrefs.updateHighlightColor(color); }
+  getCardColor(cardId: string): string | undefined    { return this.colorPrefs.getCardColor(cardId); }
+
+  // ── Game actions ──────────────────────────────────────────────────────────
 
   getStateSnapshot(): GameState {
     return this.stateSubject.getValue();
   }
 
   startNewGame(): void {
+    this.colorPrefs.clearCardColors();
     const s = core.initGame();
     this.stateSubject.next(s);
   }
 
-  /**
-   * Single-player: the call-SET lock is handled by the component locally.
+  /** Single-player: the call-SET lock is handled by the component locally.
    * This method is a no-op; the component's own callSet() drives the timer.
    */
   callSet(): void { /* handled client-side for single-player */ }
+
+  /**
+   * Single-player: toggle-deselect each selected card to clear the partial selection.
+   * Called by the component when the local countdown expires.
+   */
+  clearSelectionOnCancel(): void {
+    this.getStateSnapshot().selected.forEach(c => this.selectCard(c));
+  }
 
   selectCard(card: Card): void {
     const prev = this.getStateSnapshot();
@@ -110,60 +101,5 @@ export class SetGameService implements GameSession {
 
   findSetOnBoard(): [number, number, number] | null {
     return findSet(this.getStateSnapshot().board);
-  }
-
-  updateCardColor(color: string, cardId?: string): void {
-    if (cardId) {
-      this.cardColors[cardId] = color;
-    } else {
-      this.getStateSnapshot().board.forEach((c) => (this.cardColors[c.id] = color));
-    }
-  }
-
-  getCardColor(cardId: string): string | undefined {
-    return this.cardColors[cardId];
-  }
-
-  // ── Palette API ──────────────────────────────────────────────────────────────
-
-  getPalette(): string[] {
-    return this.palette.slice(0, 3);
-  }
-
-  getPaletteColor(index: number): string {
-    if (!index || index < 1) return this.palette[0];
-    return this.palette[(index - 1) % 3] || this.palette[0];
-  }
-
-  /**
-   * Update palette slot `index` (1-based) to `color`.
-   * If the colour already exists in another slot the two slots are swapped,
-   * keeping all three values distinct.
-   */
-  updatePaletteColor(index: number, color: string): void {
-    if (!index || index < 1 || index > 3) return;
-
-    const normalized = (color || '').toLowerCase();
-    const pos = index - 1;
-
-    if (this.palette[pos] === normalized) return;
-
-    // Swap if the colour is already used elsewhere
-    const other = this.palette.findIndex((c, i) => i !== pos && c === normalized);
-    if (other >= 0) {
-      const tmp = this.palette[other];
-      this.palette[other] = this.palette[pos];
-      this.palette[pos] = tmp;
-    } else {
-      this.palette[pos] = normalized;
-    }
-
-    this.savePrefs();
-  }
-
-  /** Update the selection highlight colour and persist. */
-  updateHighlightColor(color: string): void {
-    this.highlightColor = color.toLowerCase();
-    this.savePrefs();
   }
 }

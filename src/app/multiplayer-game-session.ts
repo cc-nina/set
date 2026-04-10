@@ -28,13 +28,11 @@ import {
   map,
   delay,
   merge,
-} from 'rxjs';import { Card, GameState, Player, PlayerId, RoomState, ServerMessage } from './game.types';
+} from 'rxjs';
+import { Card, GameState, Player, PlayerId, RoomState, ServerMessage } from './game.types';
 import { findSet } from './game.utils';
-import { loadColorPrefs, saveColorPrefs } from './color-prefs.storage';
 import { GameSession } from './game-session.interface';
-
-const DEFAULT_PALETTE: [string, string, string] = ['#cc0000', '#0aa64a', '#5a2ea6'];
-const DEFAULT_HIGHLIGHT = '#000000';
+import { ColorPrefsService } from './color-prefs.service';
 
 /** How long (ms) the "Player X found a set!" banner stays visible. */
 const LAST_SET_BANNER_MS = 2000;
@@ -60,7 +58,7 @@ function roomStateToGameState(rs: RoomState, playerId: PlayerId): GameState {
     selected: rs.selections[playerId] ?? [],
     score: me?.score ?? 0,
     correctSets: me?.correctSets ?? 0,
-    incorrectSelections: 0,
+    incorrectSelections: me?.incorrectSelections ?? 0,
     status: rs.status === 'finished' ? 'finished' : 'active',
   };
 }
@@ -68,8 +66,6 @@ function roomStateToGameState(rs: RoomState, playerId: PlayerId): GameState {
 @Injectable()
 export class MultiplayerGameSession implements GameSession, OnDestroy {
   // ── Public streams ────────────────────────────────────────────────────────
-
-  readonly isMultiplayer = true;
 
   private stateSubject = new BehaviorSubject<GameState>(emptyState());
   readonly state$: Observable<GameState> = this.stateSubject.asObservable();
@@ -109,19 +105,19 @@ export class MultiplayerGameSession implements GameSession, OnDestroy {
 
   private ws: WebSocket | null = null;
 
-  // ── Colour prefs ──────────────────────────────────────────────────────────
+  constructor(
+    @Inject(PLATFORM_ID) private platformId: object,
+    public colorPrefs: ColorPrefsService,
+  ) {}
 
-  private palette: [string, string, string];
-  highlightColor: string;
-  private cardColors: Record<string, string> = {};
+  // ── GameSession interface — colour prefs delegated to ColorPrefsService ──
 
-  constructor(@Inject(PLATFORM_ID) private platformId: object) {
-    const saved = isPlatformBrowser(this.platformId) ? loadColorPrefs() : null;
-    this.palette = saved
-      ? ([...saved.palette] as [string, string, string])
-      : ([...DEFAULT_PALETTE] as [string, string, string]);
-    this.highlightColor = saved?.highlightColor ?? DEFAULT_HIGHLIGHT;
-  }
+  get highlightColor(): string                        { return this.colorPrefs.highlightColor; }
+  getPalette(): string[]                              { return this.colorPrefs.getPalette(); }
+  getPaletteColor(index: number): string              { return this.colorPrefs.getPaletteColor(index); }
+  updatePaletteColor(index: number, color: string)    { this.colorPrefs.updatePaletteColor(index, color); }
+  updateHighlightColor(color: string)                 { this.colorPrefs.updateHighlightColor(color); }
+  getCardColor(cardId: string): string | undefined    { return this.colorPrefs.getCardColor(cardId); }
 
   // ── Connection ────────────────────────────────────────────────────────────
 
@@ -271,6 +267,12 @@ export class MultiplayerGameSession implements GameSession, OnDestroy {
     this.ws?.send(JSON.stringify({ type: 'call_set' }));
   }
 
+  /**
+   * Multiplayer: no-op — the server applies the timeout penalty and clears
+   * the selection in the next room_state broadcast.
+   */
+  clearSelectionOnCancel(): void { /* server handles this */ }
+
   startNewGame(): void {
     this.ws?.send(JSON.stringify({ type: 'new_game' }));
   }
@@ -283,47 +285,5 @@ export class MultiplayerGameSession implements GameSession, OnDestroy {
 
   findSetOnBoard(): [number, number, number] | null {
     return findSet(this.stateSubject.getValue().board);
-  }
-
-  // ── Colour prefs ──────────────────────────────────────────────────────────
-
-  private savePrefs(): void {
-    if (!isPlatformBrowser(this.platformId)) return;
-    saveColorPrefs({
-      palette: [...this.palette] as [string, string, string],
-      highlightColor: this.highlightColor,
-    });
-  }
-
-  getPalette(): string[] { return this.palette.slice(); }
-
-  getPaletteColor(index: number): string {
-    if (!index || index < 1) return this.palette[0];
-    return this.palette[(index - 1) % 3] ?? this.palette[0];
-  }
-
-  updatePaletteColor(index: number, color: string): void {
-    if (!index || index < 1 || index > 3) return;
-    const normalized = color.toLowerCase();
-    const pos = index - 1;
-    if (this.palette[pos] === normalized) return;
-    const other = this.palette.findIndex((c, i) => i !== pos && c === normalized);
-    if (other >= 0) {
-      const tmp = this.palette[other];
-      this.palette[other] = this.palette[pos];
-      this.palette[pos] = tmp;
-    } else {
-      this.palette[pos] = normalized;
-    }
-    this.savePrefs();
-  }
-
-  updateHighlightColor(color: string): void {
-    this.highlightColor = color.toLowerCase();
-    this.savePrefs();
-  }
-
-  getCardColor(cardId: string): string | undefined {
-    return this.cardColors[cardId];
   }
 }
