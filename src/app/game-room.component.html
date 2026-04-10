@@ -92,7 +92,7 @@
   <div *ngIf="events.length > 0" class="action-feed">
     <div *ngFor="let e of events; trackBy: trackEvent" class="feed-item" [class.feed-item--stale]="isStale(e)">
       <span class="feed-player">{{ e.playerName }}</span>
-      <span class="feed-action">{{ actionText(e.type) }}</span>
+      <span class="feed-action"> {{ actionText(e.type) }}</span>
     </div>
   </div>
 </div>

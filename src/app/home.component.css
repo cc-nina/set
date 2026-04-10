@@ -210,3 +210,36 @@
   border-color: #5a2ea6;
   box-shadow: 0 0 0 3px rgba(90,46,166,0.12);
 }
+
+/* ── Name row ───────────────────────────────────────────────────────── */
+.name-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.name-label {
+  font-size: 0.875rem;
+  color: #555;
+  font-weight: 600;
+}
+
+.name-input {
+  width: 100%;
+  padding: 9px 12px;
+  border-radius: 8px;
+  border: 1.5px solid #d1d5db;
+  font-size: 0.875rem;
+  color: #111827;
+  background: #fff;
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color 0.12s;
+}
+
+.name-input:focus {
+  border-color: #5a2ea6;
+  box-shadow: 0 0 0 3px rgba(90,46,166,0.12);
+}
+
+.name-input::placeholder { color: #9ca3af; }

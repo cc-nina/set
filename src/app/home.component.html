@@ -30,6 +30,19 @@
       <h2 class="mode-title">Multiplayer</h2>
       <p class="mode-desc">Race a friend to find SETs. First to spot one scores — both players see every find in real time.</p>
 
+      <div class="name-row">
+        <label class="name-label" for="playerName">Your name:</label>
+        <input
+          id="playerName"
+          class="name-input"
+          type="text"
+          placeholder="e.g. Alice"
+          maxlength="20"
+          [(ngModel)]="playerName"
+          aria-label="Your display name"
+        />
+      </div>
+
       <div class="players-row">
         <label class="players-label" for="maxPlayers">Players:</label>
         <select id="maxPlayers" class="players-select" [(ngModel)]="maxPlayers">

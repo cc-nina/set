@@ -15,21 +15,38 @@ export class HomeComponent {
   /** Options rendered in the player-count selector. Defined here to avoid
    *  allocating a new array on every change-detection cycle. */
   readonly playerCountOptions = [2, 3, 4, 5, 6, 7, 8];
+  playerName = '';
 
-  constructor(private router: Router) {}
+  constructor(private router: Router) {
+    // Pre-fill from localStorage if the user has played before.
+    if (typeof localStorage !== 'undefined') {
+      this.playerName = localStorage.getItem('playerName') ?? '';
+    }
+  }
 
   startSinglePlayer(): void {
     this.router.navigate(['/game']);
   }
 
   createRoom(): void {
+    this.savePlayerName();
     this.router.navigate(['/room', 'new'], {
-      queryParams: { maxPlayers: this.maxPlayers },
+      queryParams: { maxPlayers: this.maxPlayers, playerName: this.playerName.trim() || null },
     });
   }
 
   joinRoom(roomId: string): void {
     if (!roomId.trim()) return;
-    this.router.navigate(['/room', roomId.trim()]);
+    this.savePlayerName();
+    this.router.navigate(['/room', roomId.trim()], {
+      queryParams: { playerName: this.playerName.trim() || null },
+    });
+  }
+
+  private savePlayerName(): void {
+    const name = this.playerName.trim();
+    if (name && typeof localStorage !== 'undefined') {
+      localStorage.setItem('playerName', name);
+    }
   }
 }

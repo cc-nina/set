@@ -68,9 +68,15 @@ export class GameRoomComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     if (!isPlatformBrowser(this.platformId)) return;
 
-    // Restore the saved name, or generate a neutral default on first visit.
+    // Use the name passed from the home screen, then fall back to a
+    // previously saved name, then generate a random default.
+    const nameFromQuery = this.route.snapshot.queryParamMap.get('playerName')?.trim();
     this.playerName =
-      localStorage.getItem('playerName') ?? generateDefaultPlayerName();
+      nameFromQuery || localStorage.getItem('playerName') || generateDefaultPlayerName();
+    // Persist so direct room links and reconnects remember the name.
+    if (this.playerName) {
+      localStorage.setItem('playerName', this.playerName);
+    }
 
     const roomId = this.route.snapshot.paramMap.get('roomId') ?? 'new';
     // maxPlayers is passed as a query param when creating a room: /room/new?maxPlayers=4
