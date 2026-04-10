@@ -37,6 +37,7 @@ import type {
   RoomState,
   ClientMessage,
   ServerMessage,
+  GameEvent,
 } from './app/game.types.js';
 import { CALL_SET_SECONDS } from './app/game.types.js';
 
@@ -109,6 +110,18 @@ function broadcast(room: Room, msg: ServerMessage): void {
       ws.send(json);
     }
   }
+}
+
+/** Broadcast a game event to all players in the room. */
+function broadcastEvent(room: Room, type: GameEvent['type'], player: Player): void {
+  const event: GameEvent = {
+    id: randomId(4),
+    type,
+    playerId: player.id,
+    playerName: player.name,
+    timestamp: Date.now(),
+  };
+  broadcast(room, { type: 'game_event', event });
 }
 
 /** Count players whose connected flag is true. */
@@ -319,6 +332,7 @@ function applySelection(room: Room, playerId: PlayerId, cardId: string): void {
     player.score = player.correctSets + 1 - player.incorrectSelections;
     player.correctSets += 1;
     st.lastSetBy = playerId;
+    broadcastEvent(room, 'set', player);
 
     // Release the call lock — set found successfully.
     clearCallLock(room);
@@ -332,6 +346,7 @@ function applySelection(room: Room, playerId: PlayerId, cardId: string): void {
     player.incorrectSelections += 1;
     player.score = player.correctSets - player.incorrectSelections;
     st.lastSetBy = null;
+    broadcastEvent(room, 'neg', player);
 
     // Release the call lock — player was penalised.
     clearCallLock(room);
@@ -436,6 +451,7 @@ function handleParsedMessage(ws: GameSocket, msg: ClientMessage): void {
 
     send(ws, { type: 'joined', playerId: msg.playerId, roomId: msg.roomId });
     broadcast(room, { type: 'room_state', state: room.state });
+    broadcastEvent(room, 'reconnect', player);
     return;
   }
 
@@ -461,9 +477,10 @@ function handleParsedMessage(ws: GameSocket, msg: ClientMessage): void {
 
     if (roomId === 'new') {
       const room = createRoom(ws, playerName.trim(), maxPlayers);
-      const pid = ws.playerId!;
-      send(ws, { type: 'joined', playerId: pid, roomId: room.state.roomId });
+      const player = room.state.players[0];
+      send(ws, { type: 'joined', playerId: player.id, roomId: room.state.roomId });
       broadcast(room, { type: 'room_state', state: room.state });
+      broadcastEvent(room, 'join', player);
       return;
     }
 
@@ -482,9 +499,10 @@ function handleParsedMessage(ws: GameSocket, msg: ClientMessage): void {
     }
 
     joinRoom(room, ws, playerName.trim());
-    const pid = ws.playerId!;
-    send(ws, { type: 'joined', playerId: pid, roomId });
+    const player = room.state.players.find(p => p.id === ws.playerId)!;
+    send(ws, { type: 'joined', playerId: player.id, roomId });
     broadcast(room, { type: 'room_state', state: room.state });
+    broadcastEvent(room, 'join', player);
     return;
   }
 
@@ -497,9 +515,13 @@ function handleParsedMessage(ws: GameSocket, msg: ClientMessage): void {
 
   // ── leave ──────────────────────────────────────────────────────────────────
   if (msg.type === 'leave') {
+    const player = room.state.players.find((p) => p.id === ws.playerId);
     ws.intentionalClose = true; // prevent handleClose from re-processing this socket
-    evictPlayer(room, ws.playerId);
+    evictPlayer(room, ws.playerId!);
     ws.close();
+    if (player) {
+      broadcastEvent(room, 'leave', player);
+    }
     if (room.state.players.length > 0) {
       broadcast(room, { type: 'room_state', state: room.state });
     }
@@ -518,26 +540,30 @@ function handleParsedMessage(ws: GameSocket, msg: ClientMessage): void {
       return;
     }
 
-    const playerId = ws.playerId!;
-    st.callerLockId = playerId;
-    // Clear any stale selection for the caller before they start picking.
-    st.selections[playerId] = [];
+    const player = st.players.find((p) => p.id === ws.playerId);
+    if (!player) {
+      send(ws, { type: 'error', message: 'Player not found' });
+      return;
+    }
 
-    // Arm the server-side expiry timer. When it fires, penalise and unlock.
-    room.callLockTimer = setTimeout(() => {
-      room.callLockTimer = null;
-      if (room.state.callerLockId !== playerId) return; // already resolved
-      const player = room.state.players.find((p) => p.id === playerId);
-      if (player) {
-        room.state.selections[playerId] = [];
-        player.incorrectSelections += 1;
-        player.score = player.correctSets - player.incorrectSelections;
-      }
-      room.state.callerLockId = null;
-      broadcast(room, { type: 'room_state', state: room.state });
-    }, CALL_SET_LOCK_MS);
-
+    st.callerLockId = ws.playerId;
     broadcast(room, { type: 'room_state', state: room.state });
+    broadcastEvent(room, 'call', player);
+
+    // After a timeout, release the lock.
+    room.callLockTimer = setTimeout(() => {
+      if (st.callerLockId !== ws.playerId) {
+        return; // Lock was already released (e.g., by a successful set).
+      }
+      st.callerLockId = null;
+      // Also penalise the player for not completing the set in time.
+      player.incorrectSelections += 1;
+      player.score = player.correctSets - player.incorrectSelections;
+      st.selections[player.id] = [];
+
+      broadcast(room, { type: 'room_state', state: room.state });
+      broadcastEvent(room, 'timeout', player);
+    }, CALL_SET_LOCK_MS);
     return;
   }
 
@@ -598,37 +624,26 @@ function handleClose(ws: GameSocket): void {
   const timer = setTimeout(() => {
     room.reconnectTimers.delete(playerId);
     evictPlayer(room, playerId);
-    if (room.state.players.length > 0) {
-      broadcast(room, { type: 'room_state', state: room.state });
+    if (room.state.players.length === 0) {
+      rooms.delete(room.state.roomId);
     }
   }, RECONNECT_GRACE_MS);
   room.reconnectTimers.set(playerId, timer);
 
-  if (room.sockets.size === 0) {
-    // No live sockets — also arm the empty-room short-circuit TTL so the
-    // room is cleaned up quickly if no one reconnects at all.
-    scheduleEmptyRoomDeletion(room);
-    return; // nothing to broadcast to
+  // If there are still live sockets, tell them immediately so the UI can
+  // show "Player X disconnected".
+  if (room.sockets.size > 0) {
+    broadcast(room, { type: 'room_state', state: room.state });
   }
-
-  // Tell remaining players immediately so the UI can show "Player X disconnected".
-  broadcast(room, { type: 'room_state', state: room.state });
 }
 
-// ── Public API ───────────────────────────────────────────────────────────────
+// ── Main server setup ─────────────────────────────────────────────────────────
 
-/**
- * Attach a WebSocket server to an existing http.Server.
- * The upgrade path is `/ws` so normal HTTP traffic is unaffected.
- */
 export function attachWebSocketServer(httpServer: HttpServer): void {
-  const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
+  const wss = new WebSocketServer({ server: httpServer });
 
-  wss.on('connection', (ws: GameSocket) => {
-    ws.on('message', (data) => handleMessage(ws, data.toString()));
-    ws.on('close', () => handleClose(ws));
-    ws.on('error', (err) => console.error('[ws] socket error', err));
+  wss.on('connection', (ws) => {
+    ws.on('message', (msg) => handleMessage(ws as GameSocket, msg.toString()));
+    ws.on('close', () => handleClose(ws as GameSocket));
   });
-
-  console.log('[ws] WebSocket server attached on path /ws');
 }

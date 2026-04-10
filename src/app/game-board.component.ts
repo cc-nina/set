@@ -16,6 +16,7 @@ import { PaletteModalComponent, PaletteChangeEvent } from './palette-modal.compo
 import { GameSession, GAME_SESSION } from './game-session.interface';
 import { Card, CALL_SET_SECONDS } from './game.types';
 import { shapeFor, shadingFor } from './game.utils';
+import { MultiplayerGameSession } from './multiplayer-game-session';
 
 /** How long (ms) the set-match highlight stays visible before cards are replaced. */
 const SET_MATCH_DISPLAY_MS = 250;
@@ -87,6 +88,9 @@ export class GameBoardComponent implements AfterViewInit, OnDestroy {
   private stateSubscription!: Subscription;
   private lastSetBySubscription!: Subscription;
   private callerLockSubscription!: Subscription;
+
+  // Multiplayer
+  isMultiplayer = false;
 
   constructor(
     @Inject(GAME_SESSION) public game: GameSession,
@@ -183,6 +187,8 @@ export class GameBoardComponent implements AfterViewInit, OnDestroy {
       this.palette = this.game.getPalette();
       this.highlightColor = this.game.highlightColor;
     }
+
+    this.isMultiplayer = this.game instanceof MultiplayerGameSession;
   }
 
   ngAfterViewInit(): void {
@@ -335,25 +341,17 @@ export class GameBoardComponent implements AfterViewInit, OnDestroy {
   // ── Card helpers ──────────────────────────────────────────────────────────
 
   onCardClick(card: Card): void {
-    if (!this.callingSet) return; // must call SET first
-    this.game.selectCard(card);
-    // Single-player only: selectCard() is synchronous, so we can immediately
-    // check whether a valid set was applied (selected resets to []) and close
-    // the call window. In multiplayer the server is authoritative — the
-    // callerLockId$ subscriber handles clearing callingSet when it gets null.
-    // We guard this block with isMultiplayer so the async WS path never
-    // incorrectly closes the call window on the first click.
-    if (!this.isMultiplayer) {
-      const snapshot = this.game.getStateSnapshot();
-      if (snapshot.selected.length === 0 && this.callingSet) {
-        if (this.countdownInterval !== null) {
-          clearInterval(this.countdownInterval);
-          this.countdownInterval = null;
-        }
-        this.callingSet = false;
-        this.cdr.markForCheck();
-      }
+    // In multiplayer, only the caller can select cards.
+    if (this.isMultiplayer && !this.callingSet) {
+      return;
     }
+    this.game.selectCard(card);
+  }
+
+  getPlayerName(playerId: string | null): string {
+    if (!playerId) return '';
+    const state = this.game.getStateSnapshot();
+    return state.players?.find((p) => p.id === playerId)?.name ?? '';
   }
 
   shapeFor(c: Card): string {

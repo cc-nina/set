@@ -1,6 +1,6 @@
 import { InjectionToken } from '@angular/core';
 import { Observable } from 'rxjs';
-import { Card, GameState, Player, PlayerId } from './game.types';
+import { Card, GameState, Player, PlayerId, GameEvent } from './game.types';
 
 /**
  * Contract that both LocalGameSession (single-player) and
@@ -31,6 +31,13 @@ export interface GameSession {
    * a "Player X found a set!" banner.
    */
   readonly lastSetBy$: Observable<PlayerId | null>;
+
+  /**
+   * Emits a stream of discrete game events as they happen in a multiplayer
+   * room, used to render the action feed.
+   * Single-player: never emits.
+   */
+  readonly events$: Observable<GameEvent>;
 
   // ── Actions ───────────────────────────────────────────────────────────────
   /** Select or deselect a card. If it completes a valid set, the set is applied. */

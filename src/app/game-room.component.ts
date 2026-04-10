@@ -15,7 +15,7 @@ import { Subscription } from 'rxjs';
 import { GameBoardComponent } from './game-board.component';
 import { MultiplayerGameSession } from './multiplayer-game-session';
 import { GAME_SESSION } from './game-session.interface';
-import { PlayerId, Player } from './game.types';
+import { PlayerId, Player, GameEvent } from './game.types';
 import { generateDefaultPlayerName } from './game.utils';
 
 @Component({
@@ -45,6 +45,8 @@ export class GameRoomComponent implements OnInit, OnDestroy {
   lastSetBy: PlayerId | null = null;
   /** Display name of whoever just found a set. */
   lastSetByName = '';
+  /** Feed of recent actions in the room. */
+  events: GameEvent[] = [];
 
   /** Cached player list — updated by the players$ subscription so the
    *  lastSetBy$ handler can look up names without creating a nested subscribe. */
@@ -68,7 +70,7 @@ export class GameRoomComponent implements OnInit, OnDestroy {
 
     // Restore the saved name, or generate a neutral default on first visit.
     this.playerName =
-      sessionStorage.getItem('playerName') ?? generateDefaultPlayerName();
+      localStorage.getItem('playerName') ?? generateDefaultPlayerName();
 
     const roomId = this.route.snapshot.paramMap.get('roomId') ?? 'new';
     // maxPlayers is passed as a query param when creating a room: /room/new?maxPlayers=4
@@ -118,6 +120,17 @@ export class GameRoomComponent implements OnInit, OnDestroy {
       }),
     );
 
+    this.subs.add(
+      this.session.events$.subscribe(event => {
+        this.events.unshift(event);
+        // Keep the feed to a reasonable size
+        if (this.events.length > 10) {
+          this.events.pop();
+        }
+        this.cdr.markForCheck();
+      })
+    );
+
     this.session.connect(roomId, this.playerName, maxPlayers);
   }
 
@@ -154,5 +167,20 @@ export class GameRoomComponent implements OnInit, OnDestroy {
         setTimeout(() => { this.copyState = 'idle'; this.cdr.markForCheck(); }, 3000);
       },
     );
+  }
+
+  // Action feed helpers
+  trackEvent(index: number, event: GameEvent): string { return event.id; }
+  isStale(event: GameEvent): boolean { return Date.now() - event.timestamp > 5000; }
+  actionText(type: GameEvent['type']): string {
+    switch (type) {
+      case 'call': return 'called SET';
+      case 'set': return 'found a SET';
+      case 'neg': return 'negged';
+      case 'timeout': return 'timed out';
+      case 'join': return 'joined';
+      case 'leave': return 'left';
+      case 'reconnect': return 'reconnected';
+    }
   }
 }

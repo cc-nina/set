@@ -8,7 +8,7 @@
  * Lifecycle:
  *   1. GameRoomComponent creates this service in its providers array.
  *   2. GameRoomComponent calls connect(roomId, playerName, maxPlayers).
- *   3. On open the service checks sessionStorage for a saved (roomId, playerId).
+ *   3. On open the service checks localStorage for a saved (roomId, playerId).
  *      - If found and roomId matches → sends { type:'reconnect', ... }
  *      - Otherwise → sends { type:'join', ... }
  *   4. Server replies with 'joined' then 'room_state' messages.
@@ -29,12 +29,14 @@ import {
   delay,
   merge,
 } from 'rxjs';
-import { Card, GameState, Player, PlayerId, RoomState, ServerMessage, LAST_SET_BANNER_MS } from './game.types';
+import { Card, GameState, Player, PlayerId, RoomState, ServerMessage, LAST_SET_BANNER_MS, GameEvent } from './game.types';
 import { findSet } from './game.utils';
 import { GameSession } from './game-session.interface';
 import { ColorPrefsService } from './color-prefs.service';
 
-// sessionStorage keys for reconnection
+// localStorage keys for reconnection (localStorage persists across tab closes,
+// unlike sessionStorage which is cleared when the tab is closed — essential for
+// the "close tab → reopen link" reconnection flow).
 const SS_PLAYER_ID = 'mp_playerId';
 const SS_ROOM_ID   = 'mp_roomId';
 
@@ -57,6 +59,8 @@ function roomStateToGameState(rs: RoomState, playerId: PlayerId): GameState {
     correctSets: me?.correctSets ?? 0,
     incorrectSelections: me?.incorrectSelections ?? 0,
     status: rs.status === 'finished' ? 'finished' : 'active',
+    myPlayerId: playerId,
+    players: rs.players,
   };
 }
 
@@ -86,10 +90,15 @@ export class MultiplayerGameSession implements GameSession, OnDestroy {
   private callerLockIdSubject = new BehaviorSubject<PlayerId | null>(null);
   readonly callerLockId$: Observable<PlayerId | null> = this.callerLockIdSubject.asObservable();
 
+  private eventsSubject = new Subject<GameEvent>();
+  readonly events$: Observable<GameEvent> = this.eventsSubject.asObservable();
+
   // ── Room identity ─────────────────────────────────────────────────────────
 
   private playerId: PlayerId = '';
   private roomIdValue: string = '';
+  /** Tracks the previous lastSetBy to avoid re-firing the banner on every room_state. */
+  private prevLastSetBy: PlayerId | null = null;
   get roomId(): string { return this.roomIdValue; }
 
   private roomIdSubject = new BehaviorSubject<string>('');
@@ -101,6 +110,9 @@ export class MultiplayerGameSession implements GameSession, OnDestroy {
   // ── WebSocket ─────────────────────────────────────────────────────────────
 
   private ws: WebSocket | null = null;
+  /** Number of automatic reconnection attempts made in a row. */
+  private reconnectAttempts = 0;
+  private static readonly MAX_RECONNECT_ATTEMPTS = 5;
 
   constructor(
     @Inject(PLATFORM_ID) private platformId: object,
@@ -132,15 +144,16 @@ export class MultiplayerGameSession implements GameSession, OnDestroy {
 
     this.ws = new WebSocket(url);
 
+    // Detect up-front whether we'll attempt a reconnect so the UI can
+    // show "Rejoining…" instead of "Setting up your room".
+    const savedRoomId   = localStorage.getItem(SS_ROOM_ID);
+    const savedPlayerId = localStorage.getItem(SS_PLAYER_ID);
+    const isReconnect   = !!(savedRoomId && savedPlayerId && roomId === savedRoomId);
+
     this.ws.onopen = () => {
-      this.roomStatusSubject.next('connecting');
+      this.roomStatusSubject.next(isReconnect ? 'reconnecting' : 'connecting');
 
-      // Attempt reconnection only when the URL room ID exactly matches the
-      // stored room ID.  A 'new' URL must always create a fresh room.
-      const savedRoomId   = sessionStorage.getItem(SS_ROOM_ID);
-      const savedPlayerId = sessionStorage.getItem(SS_PLAYER_ID);
-
-      if (savedRoomId && savedPlayerId && roomId === savedRoomId) {
+      if (isReconnect) {
         this.ws!.send(JSON.stringify({
           type: 'reconnect',
           roomId: savedRoomId,
@@ -166,12 +179,29 @@ export class MultiplayerGameSession implements GameSession, OnDestroy {
     };
 
     this.ws.onclose = () => {
+      const status = this.roomStatusSubject.getValue();
+      // If we were still in the middle of (re)connecting and haven't
+      // exhausted retries, automatically try again with exponential backoff.
+      if (
+        (status === 'connecting' || status === 'reconnecting') &&
+        this.reconnectAttempts < MultiplayerGameSession.MAX_RECONNECT_ATTEMPTS
+      ) {
+        this.reconnectAttempts++;
+        const delayMs = Math.min(1000 * 2 ** (this.reconnectAttempts - 1), 8000);
+        setTimeout(() => this.connect(roomId, playerName, maxPlayers), delayMs);
+        return;
+      }
       this.roomStatusSubject.next('disconnected');
     };
 
     this.ws.onerror = (err) => {
       console.error('[MultiplayerGameSession] WebSocket error', err);
-      this.roomStatusSubject.next('error');
+      // Don't immediately set 'error' — let onclose handle retry logic.
+      // Only set 'error' if we're past the connecting phase.
+      const status = this.roomStatusSubject.getValue();
+      if (status !== 'connecting' && status !== 'reconnecting') {
+        this.roomStatusSubject.next('error');
+      }
     };
   }
 
@@ -184,6 +214,8 @@ export class MultiplayerGameSession implements GameSession, OnDestroy {
       this.ws.send(JSON.stringify({ type: 'leave' }));
     }
     this.clearStoredSession();
+    // Prevent the onclose handler from auto-retrying.
+    this.reconnectAttempts = MultiplayerGameSession.MAX_RECONNECT_ATTEMPTS;
     this.ws?.close();
     this.ws = null;
   }
@@ -193,6 +225,8 @@ export class MultiplayerGameSession implements GameSession, OnDestroy {
    * Credentials are kept so the player can reconnect within the grace period.
    */
   disconnect(): void {
+    // Set a terminal status so the onclose handler doesn't auto-retry.
+    this.reconnectAttempts = MultiplayerGameSession.MAX_RECONNECT_ATTEMPTS;
     this.ws?.close();
     this.ws = null;
   }
@@ -211,47 +245,71 @@ export class MultiplayerGameSession implements GameSession, OnDestroy {
       this.playerId = msg.playerId;
       this.roomIdValue = msg.roomId;
       this.roomIdSubject.next(msg.roomId);
+      // Connection succeeded — reset the retry counter.
+      this.reconnectAttempts = 0;
       // Persist for reconnection.
-      sessionStorage.setItem(SS_PLAYER_ID, msg.playerId);
-      sessionStorage.setItem(SS_ROOM_ID, msg.roomId);
+      localStorage.setItem(SS_PLAYER_ID, msg.playerId);
+      localStorage.setItem(SS_ROOM_ID, msg.roomId);
       return;
     }
 
-    if (msg.type === 'room_state') {
-      const rs = msg.state;
-      this.roomStatusSubject.next(rs.status);
-      this.playersSubject.next([...rs.players] as Player[]);
-      this.stateSubject.next(roomStateToGameState(rs, this.playerId));
-      this.callerLockIdSubject.next(rs.callerLockId ?? null);
-
-      if (rs.lastSetBy !== null) {
-        this.lastSetBySource.next(rs.lastSetBy);
+    switch (msg.type) {
+      case 'room_state': {
+        // Convert the server's RoomState to the GameState the component expects.
+        // roomStateToGameState injects myPlayerId and players so the template
+        // can identify which player is local and show names.
+        this.stateSubject.next(roomStateToGameState(msg.state, this.playerId));
+        // Also update the caller-lock subject so the Call SET button disables correctly.
+        this.callerLockIdSubject.next(msg.state.callerLockId);
+        // Update the room status so the overlay transitions correctly.
+        this.roomStatusSubject.next(msg.state.status);
+        // Trigger the lastSetBy banner only when it changes to a NEW non-null value.
+        // Without this guard, every room_state broadcast (e.g. when someone calls SET)
+        // would re-fire the banner for the previous set finder.
+        const newLastSetBy = msg.state.lastSetBy;
+        if (newLastSetBy && newLastSetBy !== this.prevLastSetBy) {
+          this.lastSetBySource.next(newLastSetBy);
+        }
+        this.prevLastSetBy = newLastSetBy;
+        this.playersSubject.next(msg.state.players);
+        break;
       }
-      return;
-    }
+      case 'game_event': {
+        this.eventsSubject.next(msg.event);
+        return;
+      }
 
-    if (msg.type === 'error') {
-      console.error('[MultiplayerGameSession] Server error:', msg.message);
-      // If the reconnect was rejected (room expired / player evicted), fall
-      // back to a fresh room creation so the player isn't stuck on a blank
-      // screen.  Always use 'new' — the original room no longer exists, so
-      // retrying with the old roomId would just produce another error.
-      if (msg.message.includes('not found') || msg.message.includes('Player not found')) {
-        this.clearStoredSession();
-        this.ws?.send(JSON.stringify({
-          type: 'join',
-          roomId: 'new',
-          playerName: connectArgs.playerName,
-          maxPlayers: connectArgs.maxPlayers,
-        }));
+      case 'error': {
+        console.error('[MultiplayerGameSession] Server error:', msg.message);
+        // If the reconnect was rejected (room expired / player evicted), fall
+        // back to a fresh room creation so the player isn't stuck on a blank
+        // screen.  Always use 'new' — the original room no longer exists, so
+        // retrying with the old roomId would just produce another error.
+        if (msg.message.includes('not found') || msg.message.includes('Player not found')) {
+          this.clearStoredSession();
+          this.ws?.send(JSON.stringify({
+            type: 'join',
+            roomId: 'new',
+            playerName: connectArgs.playerName,
+            maxPlayers: connectArgs.maxPlayers,
+          }));
+          return;
+        }
+        // Any other server error while still on the connecting/reconnecting
+        // overlay should transition to 'error' so the user isn't stuck.
+        const currentStatus = this.roomStatusSubject.getValue();
+        if (currentStatus === 'connecting' || currentStatus === 'reconnecting') {
+          this.roomStatusSubject.next('error');
+        }
+        break;
       }
     }
   }
 
   private clearStoredSession(): void {
     if (!isPlatformBrowser(this.platformId)) return;
-    sessionStorage.removeItem(SS_PLAYER_ID);
-    sessionStorage.removeItem(SS_ROOM_ID);
+    localStorage.removeItem(SS_PLAYER_ID);
+    localStorage.removeItem(SS_ROOM_ID);
   }
 
   // ── GameSession actions ───────────────────────────────────────────────────

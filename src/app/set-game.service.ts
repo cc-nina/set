@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable, of, Subject, merge, map, delay } from 'rxjs';
-import { Card, GameState, Player, PlayerId, LAST_SET_BANNER_MS } from './game.types';
+import { Card, GameState, Player, PlayerId, LAST_SET_BANNER_MS, GameEvent } from './game.types';
 import * as core from './game.service';
 import { findSet } from './game.utils';
 import { GameSession } from './game-session.interface';
@@ -28,6 +28,9 @@ export class SetGameService implements GameSession {
     this.lastSetBySource.pipe(map((id): PlayerId | null => id)),
     this.lastSetBySource.pipe(delay(LAST_SET_BANNER_MS), map((): PlayerId | null => null)),
   );
+
+  /** Single-player games have no event feed. This is an empty stream. */
+  readonly events$: Observable<GameEvent> = of();
 
   /**
    * Single-player: the call-SET lock is managed entirely in the component

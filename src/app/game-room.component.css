@@ -212,3 +212,39 @@
   color: #ff6b6b;
   border-color: #ff6b6b;
 }
+
+/* ── Action feed ─────────────────────────────────────────────────────────── */
+.action-feed {
+  position: fixed;
+  bottom: 4rem;
+  left: 1rem;
+  z-index: 35;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-width: 16rem;
+}
+
+.feed-item {
+  background: rgba(26, 26, 46, 0.85);
+  backdrop-filter: blur(4px);
+  color: #fff;
+  padding: 0.4rem 0.8rem;
+  border-radius: 0.4rem;
+  font-size: 0.9rem;
+  animation: feed-in 0.25s ease;
+  transition: opacity 0.3s;
+}
+
+.feed-item--stale {
+  opacity: 0;
+}
+
+@keyframes feed-in {
+  from { opacity: 0; transform: translateX(-1rem); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+.feed-player {
+  font-weight: 700;
+}

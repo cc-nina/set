@@ -46,7 +46,7 @@
       >Call SET!</button>
       <!-- Another player holds the lock — show a waiting indicator -->
       <div *ngIf="lockedByOther" class="locked-by-other">
-        <span class="locked-label">SET called!</span>
+        <span class="locked-label">{{ getPlayerName(serverCallerLockId) }} called SET!</span>
       </div>
       <!-- Countdown display — shown while we hold the lock -->
       <div *ngIf="callingSet" class="countdown-wrap">

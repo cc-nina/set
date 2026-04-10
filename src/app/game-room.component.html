@@ -13,6 +13,14 @@
     </div>
   </div>
 
+  <!-- ── Reconnecting overlay ──────────────────────────────────────────── -->
+  <div *ngIf="roomStatus === 'reconnecting'" class="overlay">
+    <div class="overlay-card">
+      <p class="overlay-title">Rejoining…</p>
+      <p class="overlay-sub">Reconnecting to your game, hang tight.</p>
+    </div>
+  </div>
+
   <!-- ── Waiting overlay ───────────────────────────────────────────────── -->
   <div *ngIf="roomStatus === 'waiting' && roomCode" class="overlay">
     <div class="overlay-card">
@@ -80,4 +88,11 @@
   <!-- ── Game board ────────────────────────────────────────────────────── -->
   <app-game-board *ngIf="roomStatus === 'active'"></app-game-board>
 
+  <!-- ── Action feed ───────────────────────────────────────────────────── -->
+  <div *ngIf="events.length > 0" class="action-feed">
+    <div *ngFor="let e of events; trackBy: trackEvent" class="feed-item" [class.feed-item--stale]="isStale(e)">
+      <span class="feed-player">{{ e.playerName }}</span>
+      <span class="feed-action">{{ actionText(e.type) }}</span>
+    </div>
+  </div>
 </div>

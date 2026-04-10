@@ -156,8 +156,8 @@ export function shadingFor(c: Card): string {
 
 /**
  * Generate a short anonymous display name for first-time visitors and persist
- * it to sessionStorage so the same name is shown on refresh.
- * Safe to call only in a browser context (sessionStorage is not available on the server).
+ * it to localStorage so the same name is shown when re-opening the page.
+ * Safe to call only in a browser context (localStorage is not available on the server).
  */
 export function generateDefaultPlayerName(): string {
   const adjectives = ['Swift', 'Keen', 'Bold', 'Bright', 'Sharp'];
@@ -165,6 +165,6 @@ export function generateDefaultPlayerName(): string {
   const adj  = adjectives[Math.floor(Math.random() * adjectives.length)];
   const noun = nouns[Math.floor(Math.random() * nouns.length)];
   const name = `${adj}${noun}`;
-  try { sessionStorage.setItem('playerName', name); } catch { /* SSR / private-mode no-op */ }
+  try { localStorage.setItem('playerName', name); } catch { /* SSR / private-mode no-op */ }
   return name;
 }

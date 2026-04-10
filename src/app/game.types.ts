@@ -35,6 +35,10 @@ export interface GameState {
   incorrectSelections: number; // number of incorrect selection attempts
   /** 'active' while the game is in progress; 'finished' when no moves remain. */
   status: 'active' | 'finished';
+  /** Multiplayer only: the PlayerId of the local player, injected by MultiplayerGameSession. */
+  myPlayerId?: string;
+  /** Multiplayer only: all players in the room, injected by MultiplayerGameSession. */
+  players?: Player[];
 }
 
 // ── Multiplayer types ──────────────────────────────────────────────────────────
@@ -101,8 +105,18 @@ export type ClientMessage =
   | { type: 'new_game' }
   | { type: 'leave' };
 
+/** A discrete event that occurred in a multiplayer game, for the action feed. */
+export interface GameEvent {
+  id: string;       // unique id for ngFor tracking
+  type: 'call' | 'set' | 'neg' | 'timeout' | 'join' | 'leave' | 'reconnect';
+  playerId: PlayerId;
+  playerName: string;
+  timestamp: number;  // ISO timestamp
+}
+
 /** Messages sent from the server to a browser client. */
 export type ServerMessage =
   | { type: 'joined';     playerId: PlayerId; roomId: string }
   | { type: 'room_state'; state: RoomState }
+  | { type: 'game_event'; event: GameEvent }
   | { type: 'error';      message: string };
