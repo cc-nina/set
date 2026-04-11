@@ -239,9 +239,9 @@ describe('SetGameService palette API', () => {
 
 describe('Multiplayer types structural checks', () => {
   it('Player shape is correct', () => {
-    const p = { id: 'pid-1', name: 'Alice', score: 0, correctSets: 0 };
+    const p = { id: 'pid-1', name: 'FunnyFish', score: 0, correctSets: 0 };
     expect(p.id).toBe('pid-1');
-    expect(p.name).toBe('Alice');
+    expect(p.name).toBe('FunnyFish');
     expect(p.score).toBe(0);
     expect(p.correctSets).toBe(0);
   });
@@ -258,7 +258,7 @@ describe('Multiplayer types structural checks', () => {
     } = {
       roomId: 'room-abc',
       status: 'waiting',
-      players: [{ id: 'p1', name: 'Alice', score: 0, correctSets: 0 }],
+      players: [{ id: 'p1', name: 'FunnyFish', score: 0, correctSets: 0 }],
       board: [],
       deck: [],
       selections: {},
@@ -268,7 +268,7 @@ describe('Multiplayer types structural checks', () => {
   });
 
   it('RoomState with two players can be active', () => {
-    const p1 = { id: 'p1', name: 'Alice', score: 0, correctSets: 0 };
+    const p1 = { id: 'p1', name: 'FunnyFish', score: 0, correctSets: 0 };
     const p2 = { id: 'p2', name: 'Bob',   score: 0, correctSets: 0 };
     const room = {
       roomId: 'room-xyz',
@@ -284,7 +284,7 @@ describe('Multiplayer types structural checks', () => {
   });
 
   it('ClientMessage types are discriminated correctly', () => {
-    const join    = { type: 'join'        as const, roomId: 'r1', playerName: 'Alice' };
+    const join    = { type: 'join'        as const, roomId: 'r1', playerName: 'FunnyFish' };
     const select  = { type: 'select_card' as const, cardId: 'c42' };
     const newGame = { type: 'new_game'    as const };
 

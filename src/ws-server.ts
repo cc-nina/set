@@ -9,7 +9,7 @@
  *   Server → Client  ServerMessage  { joined | room_state | error }
  *
  * Room lifecycle:
- *   1. Player A sends  { type:'join', roomId:'new', playerName:'Alice', maxPlayers:4 }
+ *   1. Player A sends  { type:'join', roomId:'new', playerName:'FunnyFish', maxPlayers:4 }
  *      → server mints a roomId, assigns playerId, replies { type:'joined', ... }
  *      → broadcasts room_state (status:'waiting', 1 player)
  *   2–N. Players B…N send  { type:'join', roomId:'abc123', playerName:'...' }
