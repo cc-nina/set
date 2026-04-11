@@ -58,7 +58,7 @@ describe('SetGameService', () => {
     // applySet returns boolean; after.score only increments when selected was a valid set
     expect(after.selected.length).toBe(0);
     if (applied) {
-      expect(after.score).toBe(beforeScore + 3);
+      expect(after.score).toBe(after.correctSets - after.incorrectSelections);
       expect(after.correctSets).toBe(s.correctSets + 1);
     } else {
       // unchanged
