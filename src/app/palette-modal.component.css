@@ -13,6 +13,9 @@
   border-radius: 20px;
   padding: 28px 28px 24px;
   width: 320px;
+  max-width: calc(100vw - 2rem);
+  max-height: calc(100dvh - 2rem);
+  overflow-y: auto;
   box-shadow: 0 8px 40px rgba(0,0,0,0.18);
   animation: slideUp 0.18s cubic-bezier(.22,1,.36,1);
   position: relative;
@@ -68,34 +71,43 @@
 
 /* SV (saturation/value) canvas */
 .sv-canvas-wrap {
-  position:relative; width:100%; height:160px;
+  position:relative; width:100%; height:180px;
   border-radius:10px; overflow:hidden; cursor:crosshair;
-  user-select:none;
+  user-select:none; touch-action:none;
 }
 #sv-canvas { display:block; width:100%; height:100%; }
 .sv-cursor {
   position:absolute;
-  width:14px; height:14px; border-radius:50%;
-  border:2.5px solid #fff;
-  box-shadow:0 0 0 1.5px rgba(0,0,0,0.35);
+  width:20px; height:20px; border-radius:50%;
+  border:3px solid #fff;
+  box-shadow:0 0 0 2px rgba(0,0,0,0.4), 0 2px 6px rgba(0,0,0,0.25);
   transform:translate(-50%,-50%);
   pointer-events:none;
 }
 
 /* Hue slider */
-.hue-wrap { position:relative; height:14px; border-radius:7px; cursor:pointer; user-select:none; }
+.hue-wrap {
+  position: relative;
+  height: 28px;           /* tall enough to contain the 24px thumb + shadow */
+  cursor: pointer;
+  user-select: none;
+  touch-action: none;
+  display: flex;
+  align-items: center;
+}
 .hue-track {
-  width:100%; height:100%; border-radius:7px;
-  background:linear-gradient(to right,
+  width: 100%; height: 16px; border-radius: 8px;
+  background: linear-gradient(to right,
     #f00,#ff0,#0f0,#0ff,#00f,#f0f,#f00);
+  flex-shrink: 0;
 }
 .hue-thumb {
-  position:absolute; top:50%;
-  width:18px; height:18px; border-radius:50%;
-  border:2.5px solid #fff;
-  box-shadow:0 0 0 1.5px rgba(0,0,0,0.3);
-  transform:translate(-50%,-50%);
-  pointer-events:none;
+  position: absolute; top: 50%;
+  width: 24px; height: 24px; border-radius: 50%;
+  border: 3px solid #fff;
+  box-shadow: 0 0 0 2px rgba(0,0,0,0.35), 0 2px 6px rgba(0,0,0,0.25);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
 }
 
 /* Hex input + current swatch */

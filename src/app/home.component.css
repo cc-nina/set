@@ -30,9 +30,9 @@
   height: 18px;
   border-radius: 50%;
 }
-.dot-red    { background: #cc0000; }
-.dot-green  { background: #0aa64a; }
-.dot-purple { background: #5a2ea6; }
+.dot-red    { background: #DB2C05; }
+.dot-green  { background: #0C8D1B; }
+.dot-purple { background: #2B094C; }
 
 .home-title {
   font-size: 3.5rem;
@@ -120,7 +120,7 @@
 .mode-cta {
   font-size: 0.875rem;
   font-weight: 600;
-  color: #5a2ea6;
+  color: #2B094C;
   margin-top: auto;
 }
 
@@ -141,9 +141,9 @@
 .btn:active { transform: scale(0.97); }
 
 .btn-primary {
-  background: #5a2ea6;
+  background: #2B094C;
   color: #fff;
-  border-color: #5a2ea6;
+  border-color: #2B094C;
 }
 .btn-primary:hover { background: #4a2490; border-color: #4a2490; }
 
@@ -174,7 +174,7 @@
 }
 
 .join-input:focus {
-  border-color: #5a2ea6;
+  border-color: #2B094C;
   box-shadow: 0 0 0 3px rgba(90,46,166,0.12);
 }
 
@@ -207,7 +207,7 @@
 }
 
 .players-select:focus {
-  border-color: #5a2ea6;
+  border-color: #2B094C;
   box-shadow: 0 0 0 3px rgba(90,46,166,0.12);
 }
 
@@ -238,7 +238,7 @@
 }
 
 .name-input:focus {
-  border-color: #5a2ea6;
+  border-color: #2B094C;
   box-shadow: 0 0 0 3px rgba(90,46,166,0.12);
 }
 

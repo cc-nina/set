@@ -8,6 +8,7 @@ import {
   OnChanges,
   SimpleChanges,
   HostListener,
+  NgZone,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { hsvToHex, hexToHsv, colorDistance } from './color.utils';
@@ -41,6 +42,8 @@ export class PaletteModalComponent implements OnChanges {
 
   activeSwatchIdx = 0;
   hexInvalid = false;
+  /** Drives the hex input value — kept in sync with the picker so it updates while dragging. */
+  hexInputValue = '';
 
   // HSV picker state
   hue = 0;   // 0–360
@@ -49,25 +52,26 @@ export class PaletteModalComponent implements OnChanges {
 
   @ViewChild('svCanvas') svCanvasRef!: ElementRef<HTMLCanvasElement>;
 
+  constructor(private ngZone: NgZone) {}
+
   readonly presetColors: string[] = [
-    '#cc0000', '#e05c00', '#d4a017',
-    '#0aa64a', '#1a7fc4', '#5a2ea6',
+    '#DB2C05', '#e05c00', '#d4a017',
+    '#0C8D1B', '#0433ff', '#2B094C',
     '#c4307a', '#16a3a3', '#2c2c2c',
     '#000000', '#ffffff', '#808080',
   ];
 
   ngOnChanges(changes: SimpleChanges): void {
-    // When the modal receives new inputs (e.g. palette updated from outside),
-    // keep the HSV picker in sync with the active swatch.
     if (changes['palette'] || changes['highlightColor']) {
       this.syncHsvFromColor(this.currentSwatchColor);
+      setTimeout(() => this.drawSvCanvas(), 0);
     }
   }
 
   /** The colour of whichever swatch is currently active (0–2 = palette, 3 = highlight). */
   get currentSwatchColor(): string {
     if (this.activeSwatchIdx === 3) return this.highlightColor;
-    return this.palette[this.activeSwatchIdx] ?? '#cc0000';
+    return this.palette[this.activeSwatchIdx] ?? '#DB2C05';
   }
 
   get hasConflict(): boolean {
@@ -91,7 +95,7 @@ export class PaletteModalComponent implements OnChanges {
     this.activeSwatchIdx = idx;
     this.hexInvalid = false;
     this.syncHsvFromColor(this.currentSwatchColor);
-    this.drawSvCanvas();
+    setTimeout(() => this.drawSvCanvas(), 0);
   }
 
   // ── Canvas drawing ────────────────────────────────────────────────────────
@@ -103,7 +107,7 @@ export class PaletteModalComponent implements OnChanges {
     if (!ctx) return;
 
     const W = canvas.offsetWidth  || 264;
-    const H = canvas.offsetHeight || 160;
+    const H = canvas.offsetHeight || 180;
     canvas.width  = W;
     canvas.height = H;
 
@@ -123,31 +127,38 @@ export class PaletteModalComponent implements OnChanges {
   // ── SV canvas interactions ────────────────────────────────────────────────
 
   onSvMouseDown(e: MouseEvent): void {
-    this.handleSvEvent(e.currentTarget as HTMLElement, e.clientX, e.clientY);
+    e.preventDefault();
+    const el = e.currentTarget as HTMLElement;
+    this.ngZone.run(() => this.handleSvEvent(el, e.clientX, e.clientY));
     const move = (me: MouseEvent) =>
-      this.handleSvEvent(e.currentTarget as HTMLElement, me.clientX, me.clientY);
+      this.ngZone.run(() => this.handleSvEvent(el, me.clientX, me.clientY));
     const up = () => {
       window.removeEventListener('mousemove', move);
       window.removeEventListener('mouseup', up);
     };
-    window.addEventListener('mousemove', move);
-    window.addEventListener('mouseup', up);
+    this.ngZone.runOutsideAngular(() => {
+      window.addEventListener('mousemove', move);
+      window.addEventListener('mouseup', up);
+    });
   }
 
   onSvTouch(e: TouchEvent): void {
     e.preventDefault();
+    const el = e.currentTarget as HTMLElement;
     const t = e.touches[0];
-    this.handleSvEvent(e.currentTarget as HTMLElement, t.clientX, t.clientY);
+    this.ngZone.run(() => this.handleSvEvent(el, t.clientX, t.clientY));
     const move = (te: TouchEvent) => {
       const tt = te.touches[0];
-      this.handleSvEvent(e.currentTarget as HTMLElement, tt.clientX, tt.clientY);
+      this.ngZone.run(() => this.handleSvEvent(el, tt.clientX, tt.clientY));
     };
     const up = () => {
       window.removeEventListener('touchmove', move);
       window.removeEventListener('touchend', up);
     };
-    window.addEventListener('touchmove', move, { passive: false });
-    window.addEventListener('touchend', up);
+    this.ngZone.runOutsideAngular(() => {
+      window.addEventListener('touchmove', move, { passive: false });
+      window.addEventListener('touchend', up);
+    });
   }
 
   private handleSvEvent(el: HTMLElement, clientX: number, clientY: number): void {
@@ -160,31 +171,38 @@ export class PaletteModalComponent implements OnChanges {
   // ── Hue slider interactions ───────────────────────────────────────────────
 
   onHueMouseDown(e: MouseEvent): void {
-    this.handleHueEvent(e.currentTarget as HTMLElement, e.clientX);
+    e.preventDefault();
+    const el = e.currentTarget as HTMLElement;
+    this.ngZone.run(() => this.handleHueEvent(el, e.clientX));
     const move = (me: MouseEvent) =>
-      this.handleHueEvent(e.currentTarget as HTMLElement, me.clientX);
+      this.ngZone.run(() => this.handleHueEvent(el, me.clientX));
     const up = () => {
       window.removeEventListener('mousemove', move);
       window.removeEventListener('mouseup', up);
     };
-    window.addEventListener('mousemove', move);
-    window.addEventListener('mouseup', up);
+    this.ngZone.runOutsideAngular(() => {
+      window.addEventListener('mousemove', move);
+      window.addEventListener('mouseup', up);
+    });
   }
 
   onHueTouch(e: TouchEvent): void {
     e.preventDefault();
+    const el = e.currentTarget as HTMLElement;
     const t = e.touches[0];
-    this.handleHueEvent(e.currentTarget as HTMLElement, t.clientX);
+    this.ngZone.run(() => this.handleHueEvent(el, t.clientX));
     const move = (te: TouchEvent) => {
       const tt = te.touches[0];
-      this.handleHueEvent(e.currentTarget as HTMLElement, tt.clientX);
+      this.ngZone.run(() => this.handleHueEvent(el, tt.clientX));
     };
     const up = () => {
       window.removeEventListener('touchmove', move);
       window.removeEventListener('touchend', up);
     };
-    window.addEventListener('touchmove', move, { passive: false });
-    window.addEventListener('touchend', up);
+    this.ngZone.runOutsideAngular(() => {
+      window.addEventListener('touchmove', move, { passive: false });
+      window.addEventListener('touchend', up);
+    });
   }
 
   private handleHueEvent(el: HTMLElement, clientX: number): void {
@@ -198,7 +216,9 @@ export class PaletteModalComponent implements OnChanges {
 
   private commitHsv(): void {
     this.hexInvalid = false;
-    this.emitColor(this.activeSwatchIdx, hsvToHex(this.hue, this.svX, this.svY));
+    const color = hsvToHex(this.hue, this.svX, this.svY);
+    this.hexInputValue = color;
+    this.emitColor(this.activeSwatchIdx, color);
   }
 
   private syncHsvFromColor(hex: string): void {
@@ -206,12 +226,14 @@ export class PaletteModalComponent implements OnChanges {
     this.hue = h;
     this.svX = s;
     this.svY = v;
+    this.hexInputValue = hex.toLowerCase();
   }
 
   // ── Hex input ─────────────────────────────────────────────────────────────
 
   onHexInput(event: Event): void {
     const val = (event.target as HTMLInputElement).value;
+    this.hexInputValue = val;
     if (/^#[0-9a-fA-F]{6}$/.test(val)) {
       this.hexInvalid = false;
       this.emitColor(this.activeSwatchIdx, val);
@@ -225,7 +247,7 @@ export class PaletteModalComponent implements OnChanges {
   onHexBlur(event: Event): void {
     const input = event.target as HTMLInputElement;
     if (!/^#[0-9a-fA-F]{6}$/.test(input.value)) {
-      input.value = this.currentSwatchColor;
+      this.hexInputValue = this.currentSwatchColor;
       this.hexInvalid = false;
     }
   }

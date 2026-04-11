@@ -388,7 +388,7 @@ export class GameBoardComponent implements AfterViewInit, OnDestroy {
 
   colorFor(c: Card): string {
     const override = this.game.getCardColor(c.id);
-    return override ?? this.game.getPaletteColor(c.color) ?? '#cc0000';
+    return override ?? this.game.getPaletteColor(c.color) ?? '#DB2C05';
   }
 
   // ── Private helpers ───────────────────────────────────────────────────────

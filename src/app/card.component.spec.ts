@@ -13,7 +13,7 @@ describe('CardComponent', () => {
     const comp = fixture.componentInstance;
     comp.shape = 'diamond';
     comp.number = 3;
-    comp.color = '#cc0000';
+    comp.color = '#DB2C05';
     comp.shading = 'solid';
     fixture.detectChanges();
 
@@ -31,7 +31,7 @@ describe('CardComponent', () => {
     const fixture = TestBed.createComponent(CardComponent);
     const comp = fixture.componentInstance;
     comp.selected = true;
-    comp.color = '#00ff00';
+    comp.color = '#0C8D1B';
     fixture.detectChanges();
 
     const el = fixture.nativeElement as HTMLElement;

@@ -70,7 +70,7 @@ describe('color.utils', () => {
   // ── round-trip ────────────────────────────────────────────────────────────
 
   describe('hexToHsv → hsvToHex round-trip', () => {
-    const samples = ['#cc0000', '#0aa64a', '#5a2ea6', '#000000', '#ffffff', '#808080', '#1a7fc4'];
+    const samples = ['#DB2C05', '#0C8D1B', '#2B094C', '#000000', '#ffffff', '#808080', '#0433ff'];
 
     it.each(samples)('round-trips %s without loss', (hex) => {
       const [h, s, v] = hexToHsv(hex);
@@ -92,17 +92,17 @@ describe('color.utils', () => {
     });
 
     it('is symmetric', () => {
-      const a = '#cc0000', b = '#0aa64a';
+      const a = '#DB2C05', b = '#0C8D1B';
       expect(colorDistance(a, b)).toBe(colorDistance(b, a));
     });
 
     it('returns a positive value for different colours', () => {
-      expect(colorDistance('#cc0000', '#0aa64a')).toBeGreaterThan(0);
+      expect(colorDistance('#DB2C05', '#0C8D1B')).toBeGreaterThan(0);
     });
 
     it('similar colours have small distance', () => {
-      // #cc0000 vs #cd0000 differ only by 1 in R
-      expect(colorDistance('#cc0000', '#cd0000')).toBeCloseTo(1, 5);
+      // #DB2C05 vs #cd0000 differ only by 1 in R
+      expect(colorDistance('#DB2C05', '#cd0000')).toBeCloseTo(1, 5);
     });
   });
 

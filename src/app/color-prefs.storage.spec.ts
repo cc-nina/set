@@ -16,7 +16,7 @@ function makeMockStorage() {
 const STORAGE_KEY = 'set-game-color-prefs';
 
 const VALID_PREFS: ColorPrefs = {
-  palette: ['#cc0000', '#0aa64a', '#5a2ea6'],
+  palette: ['#DB2C05', '#0C8D1B', '#2B094C'],
   highlightColor: '#000000',
 };
 
@@ -79,12 +79,12 @@ describe('color-prefs.storage', () => {
     });
 
     it('returns null when palette has wrong length', () => {
-      mock.store[STORAGE_KEY] = JSON.stringify({ palette: ['#cc0000', '#0aa64a'], highlightColor: '#000000' });
+      mock.store[STORAGE_KEY] = JSON.stringify({ palette: ['#DB2C05', '#0C8D1B'], highlightColor: '#000000' });
       expect(loadColorPrefs()).toBeNull();
     });
 
     it('returns null when a palette entry is not a valid hex', () => {
-      mock.store[STORAGE_KEY] = JSON.stringify({ palette: ['red', '#0aa64a', '#5a2ea6'], highlightColor: '#000000' });
+      mock.store[STORAGE_KEY] = JSON.stringify({ palette: ['red', '#0C8D1B', '#2B094C'], highlightColor: '#000000' });
       expect(loadColorPrefs()).toBeNull();
     });
 
@@ -95,7 +95,7 @@ describe('color-prefs.storage', () => {
 
     it('returns null when palette entries contain uppercase hex (must be lowercase)', () => {
       // The validator uses /^#[0-9a-f]{6}$/ — uppercase is invalid
-      mock.store[STORAGE_KEY] = JSON.stringify({ palette: ['#CC0000', '#0aa64a', '#5a2ea6'], highlightColor: '#000000' });
+      mock.store[STORAGE_KEY] = JSON.stringify({ palette: ['#DB2C05', '#0C8D1B', '#2B094C'], highlightColor: '#000000' });
       expect(loadColorPrefs()).toBeNull();
     });
 

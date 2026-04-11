@@ -70,6 +70,15 @@
     </div>
   </div>
 
+  <!-- ── Room full overlay ──────────────────────────────────────────────── -->
+  <div *ngIf="roomStatus === 'room_full'" class="overlay">
+    <div class="overlay-card">
+      <p class="overlay-title">Room is full</p>
+      <p class="overlay-sub">This room has already reached its maximum number of players. Ask the host to create a new room, or start your own.</p>
+      <button class="btn-home" (click)="goHome()">← Back to home</button>
+    </div>
+  </div>
+
   <!-- ── Scorebar (visible while active) ───────────────────────────────── -->
   <div *ngIf="roomStatus === 'active'" class="scorebar">
     <ng-container *ngFor="let p of session.players$ | async">

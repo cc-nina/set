@@ -127,7 +127,7 @@ export class CardComponent {
 
   // pattern id for striped shading
   get patternId(): string {
-    const s = (this.color || '#cc0000').replace('#', '');
+    const s = (this.color || '#DB2C05').replace('#', '');
     return 'stripe-' + s;
   }
 

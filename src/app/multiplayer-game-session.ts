@@ -300,6 +300,14 @@ export class MultiplayerGameSession implements GameSession, OnDestroy {
           }));
           return;
         }
+        // Room is full or no longer accepting players — show a specific overlay
+        // instead of the generic "Disconnected" screen.
+        if (msg.message.includes('full') || msg.message.includes('not accepting')) {
+          this.roomStatusSubject.next('room_full');
+          // Stop auto-retry so we don't hammer a full room.
+          this.reconnectAttempts = MultiplayerGameSession.MAX_RECONNECT_ATTEMPTS;
+          return;
+        }
         // Any other server error while still on the connecting/reconnecting
         // overlay should transition to 'error' so the user isn't stuck.
         const currentStatus = this.roomStatusSubject.getValue();
