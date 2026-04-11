@@ -28,6 +28,8 @@
 
 import WebSocket, { WebSocketServer } from 'ws';
 import { createServer, type Server as HttpServer } from 'node:http';
+import { createServer as createHttpsServer } from 'node:https';
+import { readFileSync } from 'node:fs';
 import { randomBytes } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { isSet, findSet, dealInitialBoard } from './app/game.utils.js';
@@ -660,8 +662,10 @@ const isMain =
 
 if (isMain || process.env['WS_STANDALONE'] === '1') {
   const PORT = Number(process.env['PORT']) || 3000;
+  const CERT_PATH = `/etc/letsencrypt/live/34.44.229.168.sslip.io/fullchain.pem`;
+  const KEY_PATH  = `/etc/letsencrypt/live/34.44.229.168.sslip.io/privkey.pem`;
 
-  const httpServer = createServer((req, res) => {
+  const requestHandler = (req: import('node:http').IncomingMessage, res: import('node:http').ServerResponse) => {
     // CORS headers so the Vercel-hosted frontend can reach this server.
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -675,12 +679,27 @@ if (isMain || process.env['WS_STANDALONE'] === '1') {
 
     res.writeHead(200, { 'Content-Type': 'text/plain' });
     res.end('SET Game — WebSocket server is running');
-  });
+  };
+
+  // Use HTTPS/WSS if certs are present, otherwise fall back to plain HTTP/WS.
+  let httpServer: HttpServer;
+  let usingTls = false;
+  try {
+    const cert = readFileSync(CERT_PATH);
+    const key  = readFileSync(KEY_PATH);
+    httpServer = createHttpsServer({ cert, key }, requestHandler) as unknown as HttpServer;
+    usingTls = true;
+    console.log(`🔒 TLS certs loaded — using HTTPS/WSS`);
+  } catch {
+    console.warn(`⚠️  TLS certs not found — falling back to HTTP/WS`);
+    httpServer = createServer(requestHandler);
+  }
 
   attachWebSocketServer(httpServer);
 
   httpServer.listen(PORT, '0.0.0.0', () => {
+    const proto = usingTls ? 'wss' : 'ws';
     console.log(`🚀 Standalone WS server listening on 0.0.0.0:${PORT}`);
-    console.log(`   External: ws://34.44.229.168:${PORT}`);
+    console.log(`   External: ${proto}://34.44.229.168.sslip.io:${PORT}`);
   });
 }
