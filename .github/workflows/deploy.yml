@@ -15,6 +15,10 @@ jobs:
           username: ${{ secrets.GCP_USERNAME }}
           key: ${{ secrets.GCP_SSH_KEY }}
           script: |
+            export NVM_DIR="$HOME/.nvm"
+            [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+            nvm use 20
+
             cd ~/set
 
             # Save hash of package.json before pulling
