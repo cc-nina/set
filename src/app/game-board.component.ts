@@ -41,14 +41,16 @@ export class GameBoardComponent implements AfterViewInit, OnDestroy {
   board: Card[] = [];
   palette: string[] = [];
   selectedIds: Set<string> = new Set();
-  /** Cards that were just identified as a valid set — show match animation. */
+  /** Cards that were just identified as a valid set  show match animation. */
   setMatchIds: Set<string> = new Set();
-  /** Cards that were just part of an incorrect selection (neg) — show shake animation. */
+  /** Cards that were just part of an incorrect selection (neg)  show shake animation. */
   negMatchIds: Set<string> = new Set();
-  /** Timeout handle for clearing negMatchIds — tracked so rapid negs don't stomp each other. */
+  /** Timeout handle for clearing negMatchIds  tracked so rapid negs don't stomp each other. */
   private negMatchTimeout: ReturnType<typeof setTimeout> | null = null;
   /** Timeout handle for clearing setMatchIds after the match animation. */
   private setMatchTimeout: ReturnType<typeof setTimeout> | null = null;
+  /** Previous board snapshot for set/neg animation diffing. */
+  private prevBoard: Card[] = [];
   /** Colour used for the selection border ring. Stored locally (UI-only). */
   highlightColor: string = '#000000';
   /** 'finished' once no valid sets remain and the deck is exhausted. */
@@ -131,12 +133,11 @@ export class GameBoardComponent implements AfterViewInit, OnDestroy {
     this.isBrowser = isPlatformBrowser(this.platformId);
 
     let first = true;
-    // Snapshot of the board from the previous state$ emission — used by the
-    // lastSetBy$ / negSetBy$ subscribers to diff which cards were removed.
-    let prevBoard: Card[] = [];
-
     this.stateSubscription = this.game.state$.subscribe((s) => {
-      prevBoard = this.board; // capture BEFORE overwriting
+      // Only update prevBoard if no animation is running
+      if (this.setMatchTimeout === null && this.negMatchTimeout === null) {
+        this.prevBoard = this.board;
+      }
       this.board = s.board;
       this.selectedIds = new Set(s.selected.map((c) => c.id));
       this.gameStatus = s.status;
@@ -189,16 +190,16 @@ export class GameBoardComponent implements AfterViewInit, OnDestroy {
       }
 
       const newBoardIds = new Set(this.board.map((c) => c.id));
-      const removedCards = prevBoard.filter((c) => !newBoardIds.has(c.id));
+      const removedCards = this.prevBoard.filter((c) => !newBoardIds.has(c.id));
 
       if (removedCards.length !== 3) return; // safety guard
 
       this.setMatchIds = new Set(removedCards.map((c) => c.id));
       // Temporarily restore the old board so the matched cards are visible
       // during the flash animation, then switch to the real new board.
-      // Capture both snapshots now — prevBoard may be overwritten by the
+      // Capture both snapshots now  prevBoard may be overwritten by the
       // next state$ emission before the timeout fires.
-      const animOldBoard = prevBoard.slice();
+      const animOldBoard = this.prevBoard.slice();
       const animNewBoard = this.board.slice();
       this.board = animOldBoard;
       this.cdr.markForCheck();
@@ -224,12 +225,12 @@ export class GameBoardComponent implements AfterViewInit, OnDestroy {
       }
 
       const newBoardIds = new Set(this.board.map((c) => c.id));
-      const removedCards = prevBoard.filter((c) => !newBoardIds.has(c.id));
+      const removedCards = this.prevBoard.filter((c) => !newBoardIds.has(c.id));
 
       if (removedCards.length !== 3) return; // safety guard
 
       this.negMatchIds = new Set(removedCards.map((c) => c.id));
-      const animOldBoard = prevBoard.slice();
+      const animOldBoard = this.prevBoard.slice();
       const animNewBoard = this.board.slice();
       this.board = animOldBoard;
       this.cdr.markForCheck();
