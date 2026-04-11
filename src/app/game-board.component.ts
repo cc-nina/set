@@ -19,7 +19,10 @@ import { shapeFor, shadingFor } from './game.utils';
 import { ThemeService } from './theme.service';
 
 /** How long (ms) the set-match highlight stays visible before cards are replaced. */
-const SET_MATCH_DISPLAY_MS = 250;
+const SET_MATCH_DISPLAY_MS = 700;
+
+/** How long (ms) the neg-set shake animation stays visible before clearing. */
+const NEG_MATCH_DISPLAY_MS = 700;
 
 /** How long (ms) each tick interval is for the countdown. */
 const COUNTDOWN_TICK_MS = 100;
@@ -40,6 +43,12 @@ export class GameBoardComponent implements AfterViewInit, OnDestroy {
   selectedIds: Set<string> = new Set();
   /** Cards that were just identified as a valid set — show match animation. */
   setMatchIds: Set<string> = new Set();
+  /** Cards that were just part of an incorrect selection (neg) — show shake animation. */
+  negMatchIds: Set<string> = new Set();
+  /** Timeout handle for clearing negMatchIds — tracked so rapid negs don't stomp each other. */
+  private negMatchTimeout: ReturnType<typeof setTimeout> | null = null;
+  /** Timeout handle for clearing setMatchIds after the match animation. */
+  private setMatchTimeout: ReturnType<typeof setTimeout> | null = null;
   /** Colour used for the selection border ring. Stored locally (UI-only). */
   highlightColor: string = '#000000';
   /** 'finished' once no valid sets remain and the deck is exhausted. */
@@ -107,6 +116,7 @@ export class GameBoardComponent implements AfterViewInit, OnDestroy {
 
   private stateSubscription!: Subscription;
   private lastSetBySubscription!: Subscription;
+  private negSetBySubscription!: Subscription;
   private callerLockSubscription!: Subscription;
 
   /** True when this session is a live multiplayer game. Sourced from the GameSession contract. */
@@ -122,7 +132,7 @@ export class GameBoardComponent implements AfterViewInit, OnDestroy {
 
     let first = true;
     // Snapshot of the board from the previous state$ emission — used by the
-    // lastSetBy$ subscriber to diff which cards were removed.
+    // lastSetBy$ / negSetBy$ subscribers to diff which cards were removed.
     let prevBoard: Card[] = [];
 
     this.stateSubscription = this.game.state$.subscribe((s) => {
@@ -131,14 +141,15 @@ export class GameBoardComponent implements AfterViewInit, OnDestroy {
       this.selectedIds = new Set(s.selected.map((c) => c.id));
       this.gameStatus = s.status;
       const prevSets = this.liveSets;
+      const prevNegs = this.liveNegs;
       this.liveSets = s.correctSets;
       this.liveNegs = s.incorrectSelections;
       this.liveScore = s.score;
       // Keep our own player id up to date so lockedByOther can compare correctly.
       if (s.myPlayerId !== undefined) this.myPlayerId = s.myPlayerId;
-      // In single-player, callerLockId$ never re-emits after a set is found,
-      // so we must reset the local countdown here when a correct set is applied.
-      if (s.correctSets > prevSets && this.callingSet) {
+      // When a correct set OR a neg is applied, cancel the local countdown —
+      // the call window is over either way.
+      if ((s.correctSets > prevSets || s.incorrectSelections > prevNegs) && this.callingSet) {
         if (this.countdownInterval !== null) {
           clearInterval(this.countdownInterval);
           this.countdownInterval = null;
@@ -155,6 +166,7 @@ export class GameBoardComponent implements AfterViewInit, OnDestroy {
         first = false;
         this.scheduleShowBoard();
       }
+
       this.cdr.markForCheck();
     });
 
@@ -191,11 +203,44 @@ export class GameBoardComponent implements AfterViewInit, OnDestroy {
       this.board = animOldBoard;
       this.cdr.markForCheck();
 
-      setTimeout(() => {
+      if (this.setMatchTimeout !== null) clearTimeout(this.setMatchTimeout);
+      this.setMatchTimeout = setTimeout(() => {
         this.setMatchIds = new Set();
+        this.setMatchTimeout = null;
         this.board = animNewBoard;
         this.cdr.markForCheck();
       }, SET_MATCH_DISPLAY_MS);
+    });
+
+    // Neg animation — mirrors the lastSetBy$ pattern above but uses the
+    // shake animation + neg highlight ring. Cards that were neg'd have already
+    // been removed from the board by the service; we temporarily restore the
+    // old board so the player sees them shake before they vanish.
+    this.negSetBySubscription = this.game.negSetBy$.subscribe((id) => {
+      if (id === null) {
+        this.negMatchIds = new Set();
+        this.cdr.markForCheck();
+        return;
+      }
+
+      const newBoardIds = new Set(this.board.map((c) => c.id));
+      const removedCards = prevBoard.filter((c) => !newBoardIds.has(c.id));
+
+      if (removedCards.length !== 3) return; // safety guard
+
+      this.negMatchIds = new Set(removedCards.map((c) => c.id));
+      const animOldBoard = prevBoard.slice();
+      const animNewBoard = this.board.slice();
+      this.board = animOldBoard;
+      this.cdr.markForCheck();
+
+      if (this.negMatchTimeout !== null) clearTimeout(this.negMatchTimeout);
+      this.negMatchTimeout = setTimeout(() => {
+        this.negMatchIds = new Set();
+        this.negMatchTimeout = null;
+        this.board = animNewBoard;
+        this.cdr.markForCheck();
+      }, NEG_MATCH_DISPLAY_MS);
     });
 
     // Subscribe to the server-authoritative call lock so we can disable the
@@ -255,12 +300,21 @@ export class GameBoardComponent implements AfterViewInit, OnDestroy {
   ngOnDestroy(): void {
     this.stateSubscription.unsubscribe();
     this.lastSetBySubscription.unsubscribe();
+    this.negSetBySubscription.unsubscribe();
     this.callerLockSubscription.unsubscribe();
     this.themeSubscription.unsubscribe();
     // Just clear the interval — no need to touch game state on teardown.
     if (this.countdownInterval !== null) {
       clearInterval(this.countdownInterval);
       this.countdownInterval = null;
+    }
+    if (this.negMatchTimeout !== null) {
+      clearTimeout(this.negMatchTimeout);
+      this.negMatchTimeout = null;
+    }
+    if (this.setMatchTimeout !== null) {
+      clearTimeout(this.setMatchTimeout);
+      this.setMatchTimeout = null;
     }
   }
 

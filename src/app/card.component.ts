@@ -16,6 +16,7 @@ const SW = 13;
     [attr.viewBox]="orientation === 'portrait' ? '0 0 120 180' : '0 0 180 120'"
     [style]="orientation === 'portrait' ? 'width:100%;aspect-ratio:120/180;display:block;' : 'width:100%;aspect-ratio:180/120;display:block;'"
     [class.card-set-match]="setMatch"
+    [class.card-neg-match]="negMatch"
     role="img"
   >
       <defs>
@@ -42,7 +43,7 @@ const SW = 13;
 
   <!-- highlight border when selected (uses highlightColor) -->
   <rect
-    *ngIf="selected || setMatch"
+    *ngIf="selected || setMatch || negMatch"
     [attr.x]="orientation==='portrait'?1:1" [attr.y]="orientation==='portrait'?1:1"
     [attr.width]="orientation==='portrait'?118:178" [attr.height]="orientation==='portrait'?178:118"
     rx="9" ry="9" fill="none"
@@ -102,12 +103,29 @@ const SW = 13;
     /* Set-match pulse animation */
     @keyframes setMatchPulse {
       0%   { transform: scale(1);    filter: brightness(1); }
-      40%  { transform: scale(1.04); filter: brightness(1.07); }
+      30%  { transform: scale(1.06); filter: brightness(1.10); }
+      65%  { transform: scale(0.98); filter: brightness(1.02); }
       100% { transform: scale(1);    filter: brightness(1); }
     }
 
     svg.card-set-match {
-      animation: setMatchPulse 0.24s cubic-bezier(.22,1,.36,1) both;
+      animation: setMatchPulse 0.55s cubic-bezier(.22,1,.36,1) both;
+      transform-origin: center;
+    }
+
+    /* Neg-match shake animation */
+    @keyframes negShake {
+      0%   { transform: translateX(0); }
+      15%  { transform: translateX(-7px); }
+      35%  { transform: translateX(6px); }
+      55%  { transform: translateX(-5px); }
+      72%  { transform: translateX(4px); }
+      86%  { transform: translateX(-2px); }
+      100% { transform: translateX(0); }
+    }
+
+    svg.card-neg-match {
+      animation: negShake 0.5s cubic-bezier(.36,.07,.19,.97) both;
       transform-origin: center;
     }
   `],
@@ -124,6 +142,8 @@ export class CardComponent {
   @Input() highlightColor: string = '#000000';
   /** True when this card is the 3rd card of a valid set just completed. */
   @Input() setMatch: boolean = false;
+  /** True when this card was part of an incorrect 3-card selection (neg). */
+  @Input() negMatch: boolean = false;
   /** Card background fill — driven by the active theme via CSS variable. */
   @Input() cardBg: string = '#ffffff';
   /** Card border stroke — driven by the active theme via CSS variable. */

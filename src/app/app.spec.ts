@@ -1,6 +1,20 @@
 import { TestBed } from '@angular/core/testing';
 import { App } from './app';
 
+// ThemeService calls window.matchMedia — provide a stub in the test environment.
+if (typeof window !== 'undefined') {
+  (window as any).matchMedia = (query: string) => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addListener: () => {},
+    removeListener: () => {},
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    dispatchEvent: () => false,
+  });
+}
+
 describe('App', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
@@ -19,14 +33,8 @@ describe('App', () => {
     fixture.detectChanges();
     await fixture.whenStable();
     const compiled = fixture.nativeElement as HTMLElement;
-    const h1 = compiled.querySelector('h1');
-    if (h1) {
-      expect(h1.textContent).toContain('Hello, set-game');
-    } else {
-      // Fallback: assert the component's title signal is set correctly
-      const app = fixture.componentInstance as any;
-      expect(typeof app.title).toBe('function');
-      expect(app.title()).toBe('set-game');
-    }
+    // The template contains a theme-toggle button and a router-outlet.
+    const btn = compiled.querySelector('.theme-toggle');
+    expect(btn).toBeTruthy();
   });
 });

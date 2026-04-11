@@ -70,7 +70,7 @@ describe('color.utils', () => {
   // ── round-trip ────────────────────────────────────────────────────────────
 
   describe('hexToHsv → hsvToHex round-trip', () => {
-    const samples = ['#DB2C05', '#0C8D1B', '#2B094C', '#000000', '#ffffff', '#808080', '#0433ff'];
+    const samples = ['#db2c05', '#0c8d1b', '#2b094c', '#000000', '#ffffff', '#808080', '#0433ff'];
 
     it.each(samples)('round-trips %s without loss', (hex) => {
       const [h, s, v] = hexToHsv(hex);
@@ -101,8 +101,8 @@ describe('color.utils', () => {
     });
 
     it('similar colours have small distance', () => {
-      // #DB2C05 vs #cd0000 differ only by 1 in R
-      expect(colorDistance('#DB2C05', '#cd0000')).toBeCloseTo(1, 5);
+      // #100000 vs #110000 differ only by 1 in R
+      expect(colorDistance('#100000', '#110000')).toBeCloseTo(1, 5);
     });
   });
 

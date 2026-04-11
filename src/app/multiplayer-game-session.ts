@@ -85,6 +85,16 @@ export class MultiplayerGameSession implements GameSession, OnDestroy {
     this.lastSetBySource.pipe(delay(LAST_SET_BANNER_MS), map((): PlayerId | null => null)),
   );
 
+  private negSetBySource = new Subject<PlayerId>();
+  /**
+   * Emits a PlayerId when a neg happens (cards removed), then null after
+   * the animation window.
+   */
+  readonly negSetBy$: Observable<PlayerId | null> = merge(
+    this.negSetBySource.pipe(map((id): PlayerId | null => id)),
+    this.negSetBySource.pipe(delay(LAST_SET_BANNER_MS), map((): PlayerId | null => null)),
+  );
+
   /**
    * Emits the PlayerId of whoever currently holds the call-SET lock (from
    * the server's room_state), or null when nobody has called.
@@ -101,6 +111,8 @@ export class MultiplayerGameSession implements GameSession, OnDestroy {
   private roomIdValue: string = '';
   /** Tracks the previous lastSetBy to avoid re-firing the banner on every room_state. */
   private prevLastSetBy: PlayerId | null = null;
+  /** Tracks the previous incorrectSelections to detect negs from room_state. */
+  private prevIncorrectSelections = 0;
   get roomId(): string { return this.roomIdValue; }
 
   private roomIdSubject = new BehaviorSubject<string>('');
@@ -263,7 +275,8 @@ export class MultiplayerGameSession implements GameSession, OnDestroy {
         // Convert the server's RoomState to the GameState the component expects.
         // roomStateToGameState injects myPlayerId and players so the template
         // can identify which player is local and show names.
-        this.stateSubject.next(roomStateToGameState(msg.state, this.playerId));
+        const gs = roomStateToGameState(msg.state, this.playerId);
+        this.stateSubject.next(gs);
         // Also update the caller-lock subject so the Call SET button disables correctly.
         this.callerLockIdSubject.next(msg.state.callerLockId);
         // Update the room status so the overlay transitions correctly.
@@ -276,6 +289,13 @@ export class MultiplayerGameSession implements GameSession, OnDestroy {
           this.lastSetBySource.next(newLastSetBy);
         }
         this.prevLastSetBy = newLastSetBy;
+        // Trigger the neg animation when any player's incorrectSelections increased.
+        // (The server has already removed the neg cards from the board, so the
+        // component can diff prevBoard vs new board to find the 3 removed cards.)
+        if (gs.incorrectSelections > this.prevIncorrectSelections) {
+          this.negSetBySource.next(this.playerId);
+        }
+        this.prevIncorrectSelections = gs.incorrectSelections;
         this.playersSubject.next(msg.state.players);
         break;
       }

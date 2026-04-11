@@ -348,7 +348,33 @@ function applySelection(room: Room, playerId: PlayerId, cardId: string): void {
       st.status = 'finished';
     }
   } else {
+    // Penalise: remove the 3 neg cards from the board (replaced from deck if
+    // possible, otherwise the board shrinks), then clear selection.
+    const negIds = new Set([a.id, b.id, c.id]);
+    const deck = st.deck.slice();
+    const board: Card[] = [];
+    for (const boardCard of st.board) {
+      if (negIds.has(boardCard.id)) {
+        if (deck.length > 0) {
+          board.push(deck.shift()!);
+        }
+        // deck empty — slot dropped, board shrinks
+      } else {
+        board.push(boardCard);
+      }
+    }
+    st.board = board;
+    st.deck = deck;
     st.selections[playerId] = [];
+
+    // Remove ghost references from other players' selections.
+    const boardIds = new Set(board.map((bc) => bc.id));
+    for (const pid of Object.keys(st.selections)) {
+      if (pid !== playerId) {
+        st.selections[pid] = st.selections[pid].filter((sc) => boardIds.has(sc.id));
+      }
+    }
+
     player.incorrectSelections += 1;
     player.score = player.correctSets - player.incorrectSelections;
     st.lastSetBy = null;
@@ -356,6 +382,12 @@ function applySelection(room: Room, playerId: PlayerId, cardId: string): void {
 
     // Release the call lock — player was penalised.
     clearCallLock(room);
+
+    // Check if the game should end after removing neg cards.
+    const hasSetAfterNeg = findSet(board) !== null;
+    if (deck.length === 0 && !hasSetAfterNeg) {
+      st.status = 'finished';
+    }
   }
 }
 

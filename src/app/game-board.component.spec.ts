@@ -6,6 +6,20 @@ import { SetGameService } from './set-game.service';
 import { GAME_SESSION } from './game-session.interface';
 import { Card } from './game.types';
 
+// ThemeService calls window.matchMedia — provide a stub in the test environment.
+if (typeof window !== 'undefined') {
+  (window as any).matchMedia = (query: string) => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addListener: () => {},
+    removeListener: () => {},
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    dispatchEvent: () => false,
+  });
+}
+
 describe('GameBoardComponent', () => {
   let service: SetGameService;
 

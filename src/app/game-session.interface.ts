@@ -41,6 +41,14 @@ export interface GameSession {
   readonly lastSetBy$: Observable<PlayerId | null>;
 
   /**
+   * Emits the PlayerId of whoever just made an incorrect 3-card selection
+   * (neg), then null after the animation window. The component uses this to
+   * show the shake animation and briefly restore the board before the cards
+   * vanish, exactly mirroring the correct-set animation flow.
+   */
+  readonly negSetBy$: Observable<PlayerId | null>;
+
+  /**
    * Emits a stream of discrete game events as they happen in a multiplayer
    * room, used to render the action feed.
    * Single-player: never emits.

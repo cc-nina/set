@@ -48,10 +48,31 @@ export function selectCard(state: GameState, card: Card): GameState {
       // apply set
       return applySet(newState, newState.selected);
     } else {
-      // penalize and clear selection
+      // penalize: remove the 3 cards from the board (replaced from deck if
+      // possible, otherwise the board shrinks), then clear selection.
       newState.incorrectSelections += 1;
       newState.score = newState.correctSets - newState.incorrectSelections;
+      const negIds = new Set(newState.selected.map((c) => c.id));
+      const board: typeof newState.board = [];
+      for (const boardCard of newState.board) {
+        if (negIds.has(boardCard.id)) {
+          if (newState.deck.length > 0) {
+            board.push(newState.deck.shift() as Card);
+          }
+          // deck empty — slot dropped, board shrinks
+        } else {
+          board.push(boardCard);
+        }
+      }
+      newState.board = board;
       newState.selected = [];
+
+      // After removing neg cards, check if the game should end.
+      const hasSetAfterNeg = findSet(board) !== null;
+      if (newState.deck.length === 0 && !hasSetAfterNeg) {
+        newState.status = 'finished';
+      }
+
       return newState;
     }
   }

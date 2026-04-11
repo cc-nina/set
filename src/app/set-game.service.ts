@@ -31,6 +31,16 @@ export class SetGameService implements GameSession {
     this.lastSetBySource.pipe(delay(LAST_SET_BANNER_MS), map((): PlayerId | null => null)),
   );
 
+  /**
+   * Emits 'local' immediately after an incorrect 3-card selection (neg), then
+   * null after the animation window. Drives the shake+remove animation.
+   */
+  private negSetBySource = new Subject<PlayerId>();
+  readonly negSetBy$: Observable<PlayerId | null> = merge(
+    this.negSetBySource.pipe(map((id): PlayerId | null => id)),
+    this.negSetBySource.pipe(delay(LAST_SET_BANNER_MS), map((): PlayerId | null => null)),
+  );
+
   /** Single-player games have no event feed. This is an empty stream. */
   readonly events$: Observable<GameEvent> = of();
 
@@ -96,6 +106,10 @@ export class SetGameService implements GameSession {
     // Fire the match signal when a correct set was just applied.
     if (next.correctSets > prev.correctSets) {
       this.lastSetBySource.next('local');
+    }
+    // Fire the neg signal when an incorrect 3-card selection was just penalised.
+    if (next.incorrectSelections > prev.incorrectSelections) {
+      this.negSetBySource.next('local');
     }
   }
 

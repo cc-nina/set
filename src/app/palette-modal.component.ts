@@ -62,7 +62,7 @@ export class PaletteModalComponent implements OnChanges {
   /** Colourblind-friendly preset set. */
   readonly colorblindColors: [string, string, string] = ['#ff2600', '#00f900', '#0433ff'];
 
-  readonly defaultPalette: [string, string, string] = ['#DB2C05', '#0C8D1B', '#2B094C'];
+  readonly defaultPalette: [string, string, string] = ['#db2c05', '#0c8d1b', '#2b094c'];
   readonly defaultHighlight: string = '#000000';
 
   ngOnChanges(changes: SimpleChanges): void {

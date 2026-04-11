@@ -16,7 +16,7 @@ function makeMockStorage() {
 const STORAGE_KEY = 'set-game-color-prefs';
 
 const VALID_PREFS: ColorPrefs = {
-  palette: ['#DB2C05', '#0C8D1B', '#2B094C'],
+  palette: ['#db2c05', '#0c8d1b', '#2b094c'],
   highlightColor: '#000000',
 };
 
