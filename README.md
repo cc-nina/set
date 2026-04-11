@@ -1,4 +1,4 @@
-# SET Game
+# SET Game!
 
 A full-stack implementation of the card game [SET](https://en.wikipedia.org/wiki/Set_(card_game)), built with Angular 21. Playable solo or in real-time multiplayer rooms, deployed on Vercel and Google Cloud.
 
