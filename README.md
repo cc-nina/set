@@ -1,6 +1,6 @@
 # SET Game
 
-A full-stack implementation of the card game [SET](https://en.wikipedia.org/wiki/Set_(card_game)), built with Angular 21. Playable solo or in real-time multiplayer rooms, deployed on Vercel + Google Cloud.
+A full-stack implementation of the card game [SET](https://en.wikipedia.org/wiki/Set_(card_game)), built with Angular 21. Playable solo or in real-time multiplayer rooms, deployed on Vercel and Google Cloud.
 
 ---
 
@@ -12,7 +12,7 @@ A full-stack implementation of the card game [SET](https://en.wikipedia.org/wiki
 | Backend | Node.js, Express 5, `ws` (WebSockets) |
 | SSR | `@angular/ssr` + Angular Node App Engine |
 | Testing | Vitest + jsdom |
-| Hosting | Vercel (frontend) · Google Cloud VM (WebSocket server) |
+| Hosting | Vercel (frontend) · Google Cloud VM (WebSocket server) | 
 
 ---
 
