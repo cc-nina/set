@@ -91,8 +91,10 @@ export function applySet(state: GameState, selected: Card[]): GameState {
 
   // Per official rules: if no set exists after removing the found set,
   // deal one extra card at a time until a set is present or the deck runs out.
-  while (findSet(board) === null && deck.length > 0) {
+  let hasSet = findSet(board) !== null;
+  while (!hasSet && deck.length > 0) {
     board.push(deck.shift() as Card);
+    hasSet = findSet(board) !== null;
   }
 
   return {
@@ -103,6 +105,6 @@ export function applySet(state: GameState, selected: Card[]): GameState {
     correctSets: state.correctSets + 1,
     incorrectSelections: state.incorrectSelections,
     // Game is finished when no valid set remains and the deck is exhausted.
-    status: deck.length === 0 && findSet(board) === null ? 'finished' : 'active',
+    status: deck.length === 0 && !hasSet ? 'finished' : 'active',
   };
 }

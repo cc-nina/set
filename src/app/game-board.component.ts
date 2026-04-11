@@ -79,9 +79,22 @@ export class GameBoardComponent implements AfterViewInit, OnDestroy {
    * In single-player: always null (lock is local only).
    */
   serverCallerLockId: string | null = null;
-  /** True when another player (not us) holds the server lock. */
+  /** The local player's id — populated from GameState.myPlayerId (multiplayer only). */
+  private myPlayerId: string | null = null;
+  /**
+   * True when another player (not us) holds the server lock.
+   * Uses the server-authoritative callerLockId compared against our own
+   * playerId — not the local callingSet flag, which can lag behind the
+   * server during network round-trips.
+   */
   get lockedByOther(): boolean {
-    return this.serverCallerLockId !== null && !this.callingSet;
+    if (this.serverCallerLockId === null) return false;
+    // If we know our own id, compare directly. Otherwise fall back to the
+    // local callingSet flag (single-player path where myPlayerId is undefined).
+    if (this.myPlayerId !== null) {
+      return this.serverCallerLockId !== this.myPlayerId;
+    }
+    return !this.callingSet;
   }
   @ViewChild('paletteModal') paletteModalRef?: PaletteModalComponent;
 
@@ -109,9 +122,21 @@ export class GameBoardComponent implements AfterViewInit, OnDestroy {
       this.board = s.board;
       this.selectedIds = new Set(s.selected.map((c) => c.id));
       this.gameStatus = s.status;
+      const prevSets = this.liveSets;
       this.liveSets = s.correctSets;
       this.liveNegs = s.incorrectSelections;
       this.liveScore = s.score;
+      // Keep our own player id up to date so lockedByOther can compare correctly.
+      if (s.myPlayerId !== undefined) this.myPlayerId = s.myPlayerId;
+      // In single-player, callerLockId$ never re-emits after a set is found,
+      // so we must reset the local countdown here when a correct set is applied.
+      if (s.correctSets > prevSets && this.callingSet) {
+        if (this.countdownInterval !== null) {
+          clearInterval(this.countdownInterval);
+          this.countdownInterval = null;
+        }
+        this.callingSet = false;
+      }
       if (s.status === 'finished') {
         this.finalScore = s.score;
         this.finalSets = s.correctSets;

@@ -316,8 +316,10 @@ function applySelection(room: Room, playerId: PlayerId, cardId: string): void {
 
     // Per official rules: if no set exists on the remaining board,
     // deal one extra card at a time until a set is present or the deck runs out.
-    while (findSet(board) === null && deck.length > 0) {
+    let hasSet = findSet(board) !== null;
+    while (!hasSet && deck.length > 0) {
       board.push(deck.shift()!);
+      hasSet = findSet(board) !== null;
     }
 
     st.board = board;
@@ -342,7 +344,7 @@ function applySelection(room: Room, playerId: PlayerId, cardId: string): void {
     clearCallLock(room);
 
     // If no set exists now, the game is over.
-    if (findSet(st.board) === null) {
+    if (deck.length === 0 && !hasSet) {
       st.status = 'finished';
     }
   } else {

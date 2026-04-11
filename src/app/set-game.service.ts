@@ -72,11 +72,15 @@ export class SetGameService implements GameSession {
   callSet(): void { /* handled client-side for single-player */ }
 
   /**
-   * Single-player: toggle-deselect each selected card to clear the partial selection.
-   * Called by the component when the local countdown expires.
+   * Single-player: clear the partial selection when the local countdown expires.
+   * Takes a snapshot of the selected cards first to avoid re-reading state
+   * mid-loop — if 3 cards happened to be selected, toggling the 3rd would
+   * trigger set evaluation inside selectCard(), mutating the subject before
+   * the forEach finishes. Snapshotting prevents that race.
    */
   clearSelectionOnCancel(): void {
-    this.getStateSnapshot().selected.forEach(c => this.selectCard(c));
+    const toDeselect = this.getStateSnapshot().selected.slice();
+    toDeselect.forEach(c => this.selectCard(c));
   }
 
   selectCard(card: Card): void {
