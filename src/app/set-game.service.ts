@@ -88,15 +88,31 @@ export class SetGameService implements GameSession {
   callSet(): void { /* handled client-side for single-player */ }
 
   /**
-   * Single-player: clear the partial selection when the local countdown expires.
+   * Single-player: penalise and clear the partial selection when the local
+   * countdown expires.  This mirrors the multiplayer server behaviour: a
+   * timeout counts as an incorrect selection (−1 point).
+   *
    * Takes a snapshot of the selected cards first to avoid re-reading state
    * mid-loop — if 3 cards happened to be selected, toggling the 3rd would
    * trigger set evaluation inside selectCard(), mutating the subject before
    * the forEach finishes. Snapshotting prevents that race.
    */
   clearSelectionOnCancel(): void {
-    const toDeselect = this.getStateSnapshot().selected.slice();
+    const prev = this.getStateSnapshot();
+
+    // Deselect all currently selected cards.
+    const toDeselect = prev.selected.slice();
     toDeselect.forEach(c => this.selectCard(c));
+
+    // Apply the timeout penalty (same as an incorrect selection).
+    const after = this.getStateSnapshot();
+    const penalised: GameState = {
+      ...after,
+      incorrectSelections: after.incorrectSelections + 1,
+      score: after.correctSets - (after.incorrectSelections + 1),
+    };
+    this.stateSubject.next(penalised);
+    this.negSetBySource.next('local');
   }
 
   selectCard(card: Card): void {
