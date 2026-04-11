@@ -12,7 +12,7 @@ jobs:
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: 34.44.229.168
-          username: cc-nina
+          username: ${{ secrets.GCP_USERNAME }}
           key: ${{ secrets.GCP_SSH_KEY }}
           script: |
             cd ~/set
