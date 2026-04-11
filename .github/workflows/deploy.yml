@@ -1,0 +1,35 @@
+name: Deploy Backend
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch: # Allows manual trigger from GitHub Actions UI
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: SSH and Update VM
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: 34.44.229.168
+          username: cc-nina
+          key: ${{ secrets.GCP_SSH_KEY }}
+          script: |
+            cd ~/set
+
+            # Save hash of package.json before pulling
+            OLD_HASH=$(md5sum package.json | awk '{print $1}')
+
+            git pull
+
+            # Only run npm ci if package.json actually changed
+            NEW_HASH=$(md5sum package.json | awk '{print $1}')
+            if [ "$OLD_HASH" != "$NEW_HASH" ]; then
+              echo "package.json changed — running npm ci"
+              npm ci --no-audit --no-fund
+            else
+              echo "package.json unchanged — skipping npm ci"
+            fi
+
+            npm run build
+            pm2 restart game-backend
