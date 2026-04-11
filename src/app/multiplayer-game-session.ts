@@ -68,6 +68,8 @@ function roomStateToGameState(rs: RoomState, playerId: PlayerId): GameState {
 export class MultiplayerGameSession implements GameSession, OnDestroy {
   // ── Public streams ────────────────────────────────────────────────────────
 
+  readonly isMultiplayer = true;
+
   private stateSubject = new BehaviorSubject<GameState>(emptyState());
   readonly state$: Observable<GameState> = this.stateSubject.asObservable();
 
@@ -127,6 +129,10 @@ export class MultiplayerGameSession implements GameSession, OnDestroy {
   updatePaletteColor(index: number, color: string)    { this.colorPrefs.updatePaletteColor(index, color); }
   updateHighlightColor(color: string)                 { this.colorPrefs.updateHighlightColor(color); }
   getCardColor(cardId: string): string | undefined    { return this.colorPrefs.getCardColor(cardId); }
+  updateCardColor(color: string, cardId?: string): void {
+    const boardCardIds = cardId ? undefined : this.stateSubject.getValue().board.map(c => c.id);
+    this.colorPrefs.updateCardColor(color, cardId, boardCardIds);
+  }
 
   // ── Connection ────────────────────────────────────────────────────────────
 

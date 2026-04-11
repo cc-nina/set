@@ -8,6 +8,8 @@ import { ColorPrefsService } from './color-prefs.service';
 
 @Injectable({ providedIn: 'root' })
 export class SetGameService implements GameSession {
+  readonly isMultiplayer = false;
+
   private stateSubject: BehaviorSubject<GameState>;
   public state$: Observable<GameState>;
 
@@ -53,6 +55,10 @@ export class SetGameService implements GameSession {
   updatePaletteColor(index: number, color: string)    { this.colorPrefs.updatePaletteColor(index, color); }
   updateHighlightColor(color: string)                 { this.colorPrefs.updateHighlightColor(color); }
   getCardColor(cardId: string): string | undefined    { return this.colorPrefs.getCardColor(cardId); }
+  updateCardColor(color: string, cardId?: string): void {
+    const boardCardIds = cardId ? undefined : this.getStateSnapshot().board.map(c => c.id);
+    this.colorPrefs.updateCardColor(color, cardId, boardCardIds);
+  }
 
   // ── Game actions ──────────────────────────────────────────────────────────
 
@@ -94,6 +100,8 @@ export class SetGameService implements GameSession {
   }
 
   applySet(selected: Card[]): boolean {
+    // Not part of GameSession — single-player implementation detail.
+    // Exposed publicly only so unit tests can drive it directly.
     try {
       const next = core.applySet(this.getStateSnapshot(), selected);
       this.stateSubject.next(next);

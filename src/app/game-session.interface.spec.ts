@@ -38,6 +38,11 @@ describe('GameSession interface contract (SetGameService)', () => {
     expect(typeof svc.state$.subscribe).toBe('function');
   });
 
+  it('exposes isMultiplayer as a boolean, false for single-player', () => {
+    expect(typeof svc.isMultiplayer).toBe('boolean');
+    expect(svc.isMultiplayer).toBe(false);
+  });
+
   it('exposes required action methods', () => {
     expect(typeof svc.selectCard).toBe('function');
     expect(typeof svc.startNewGame).toBe('function');

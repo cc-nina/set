@@ -11,6 +11,14 @@ import { Card, GameState, Player, PlayerId, GameEvent } from './game.types';
  * perspective.
  */
 export interface GameSession {
+  // ── Session type ──────────────────────────────────────────────────────────
+  /**
+   * True for the WebSocket-backed multiplayer implementation, false for
+   * single-player. Components should use this flag instead of instanceof
+   * checks so they remain decoupled from concrete classes.
+   */
+  readonly isMultiplayer: boolean;
+
   // ── State stream ──────────────────────────────────────────────────────────
   /**
    * Emits the latest GameState whenever anything changes.
@@ -102,6 +110,14 @@ export interface GameSession {
 
   /** Returns a per-card colour override, or undefined if none is set. */
   getCardColor(cardId: string): string | undefined;
+
+  /**
+   * Set a per-card colour override.
+   * - With `cardId`: sets the colour for that specific card.
+   * - Without `cardId`: applies the colour to every card currently on the board
+   *   (bulk path — implementations must resolve board card ids themselves).
+   */
+  updateCardColor(color: string, cardId?: string): void;
 }
 
 /**

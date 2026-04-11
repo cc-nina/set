@@ -80,19 +80,19 @@ describe('HomeComponent', () => {
   it('createRoom navigates to /room/new', () => {
     const { fixture } = setup();
     fixture.componentInstance.createRoom();
-    expect(navigateSpy).toHaveBeenCalledWith(['/room', 'new']);
+    expect(navigateSpy).toHaveBeenCalledWith(['/room', 'new'], expect.objectContaining({ queryParams: expect.any(Object) }));
   });
 
   it('joinRoom navigates to the given room code', () => {
     const { fixture } = setup();
     fixture.componentInstance.joinRoom('abc123');
-    expect(navigateSpy).toHaveBeenCalledWith(['/room', 'abc123']);
+    expect(navigateSpy).toHaveBeenCalledWith(['/room', 'abc123'], expect.objectContaining({ queryParams: expect.any(Object) }));
   });
 
   it('joinRoom trims whitespace from the room code', () => {
     const { fixture } = setup();
     fixture.componentInstance.joinRoom('  abc123  ');
-    expect(navigateSpy).toHaveBeenCalledWith(['/room', 'abc123']);
+    expect(navigateSpy).toHaveBeenCalledWith(['/room', 'abc123'], expect.objectContaining({ queryParams: expect.any(Object) }));
   });
 
   it('joinRoom does nothing when the code is blank', () => {
@@ -135,7 +135,7 @@ describe('HomeComponent', () => {
   it('clicking Create room navigates to /room/new', () => {
     const { el } = setup();
     (el.querySelector('.btn-primary') as HTMLButtonElement).click();
-    expect(navigateSpy).toHaveBeenCalledWith(['/room', 'new']);
+    expect(navigateSpy).toHaveBeenCalledWith(['/room', 'new'], expect.objectContaining({ queryParams: expect.any(Object) }));
   });
 
   it('typing a code and clicking Join navigates to that room', () => {
@@ -146,7 +146,7 @@ describe('HomeComponent', () => {
     input.value = 'room-42';
     joinBtn.click();
 
-    expect(navigateSpy).toHaveBeenCalledWith(['/room', 'room-42']);
+    expect(navigateSpy).toHaveBeenCalledWith(['/room', 'room-42'], expect.objectContaining({ queryParams: expect.any(Object) }));
   });
 
   it('pressing Enter in the room-code input navigates to that room', () => {
@@ -158,7 +158,7 @@ describe('HomeComponent', () => {
       new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }),
     );
 
-    expect(navigateSpy).toHaveBeenCalledWith(['/room', 'enter-room']);
+    expect(navigateSpy).toHaveBeenCalledWith(['/room', 'enter-room'], expect.objectContaining({ queryParams: expect.any(Object) }));
   });
 
   it('clicking Join with an empty input does not navigate', () => {

@@ -16,7 +16,6 @@ import { PaletteModalComponent, PaletteChangeEvent } from './palette-modal.compo
 import { GameSession, GAME_SESSION } from './game-session.interface';
 import { Card, CALL_SET_SECONDS } from './game.types';
 import { shapeFor, shadingFor } from './game.utils';
-import { MultiplayerGameSession } from './multiplayer-game-session';
 
 /** How long (ms) the set-match highlight stays visible before cards are replaced. */
 const SET_MATCH_DISPLAY_MS = 250;
@@ -102,8 +101,8 @@ export class GameBoardComponent implements AfterViewInit, OnDestroy {
   private lastSetBySubscription!: Subscription;
   private callerLockSubscription!: Subscription;
 
-  // Multiplayer
-  isMultiplayer = false;
+  /** True when this session is a live multiplayer game. Sourced from the GameSession contract. */
+  readonly isMultiplayer: boolean;
 
   constructor(
     @Inject(GAME_SESSION) public game: GameSession,
@@ -213,7 +212,7 @@ export class GameBoardComponent implements AfterViewInit, OnDestroy {
       this.highlightColor = this.game.highlightColor;
     }
 
-    this.isMultiplayer = this.game instanceof MultiplayerGameSession;
+    this.isMultiplayer = this.game.isMultiplayer;
   }
 
   ngAfterViewInit(): void {
@@ -269,9 +268,9 @@ export class GameBoardComponent implements AfterViewInit, OnDestroy {
       this.countdownInterval = null;
     }
     this.callingSet = false;
-    // In single-player: clear any partial selection by toggling selected cards.
-    // In multiplayer: the server clears selections on timeout/neg via room_state
-    // broadcast — sending extra select_card messages here would double-toggle.
+    // Delegate post-cancel cleanup to the session — behaviour differs by
+    // implementation: single-player deselects cards, multiplayer is a no-op
+    // (the server broadcasts the penalty and clears selections via room_state).
     this.game.clearSelectionOnCancel();
     this.cdr.markForCheck();
   }

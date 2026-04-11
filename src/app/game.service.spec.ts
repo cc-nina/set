@@ -22,7 +22,8 @@ describe('game.service', () => {
     const s3 = selectCard(s2, fake as any);
     expect(s3.selected.length).toBe(0);
     expect(s3.incorrectSelections).toBe(s.incorrectSelections + 1);
-    expect(s3.score).toBeGreaterThanOrEqual(0);
+    // score = correctSets - incorrectSelections; can be negative
+    expect(s3.score).toBe(s3.correctSets - s3.incorrectSelections);
   });
 
   it('applySet removes cards and draws new ones when valid', () => {
@@ -32,7 +33,8 @@ describe('game.service', () => {
       const after = applySet(s, sel as any);
       expect(after.selected.length).toBe(0);
       expect(after.board.length).toBeGreaterThanOrEqual(9);
-      expect(after.score).toBe(s.score + 3);
+      // score = correctSets - incorrectSelections
+      expect(after.score).toBe(after.correctSets - after.incorrectSelections);
       expect(after.correctSets).toBe(s.correctSets + 1);
     } catch (e) {
       // if the slice wasn't a set, applySet should throw — that's acceptable for this test.
@@ -56,7 +58,8 @@ describe('game.service', () => {
     // since A,B,C form a valid set, the selection should be applied and cleared
     expect(s3.selected.length).toBe(0);
     expect(s3.correctSets).toBe(1);
-    expect(s3.score).toBe(3);
+    // score = correctSets - incorrectSelections
+    expect(s3.score).toBe(1);
   });
 
   it('applySet throws if passed invalid number of cards or invalid set', () => {

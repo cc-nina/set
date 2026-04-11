@@ -80,7 +80,8 @@ describe('SetGameService – additional coverage', () => {
 
       const after = service.getStateSnapshot();
       expect(result).toBe(true);
-      expect(after.score).toBe(beforeScore + 3);
+      // score = correctSets - incorrectSelections
+      expect(after.score).toBe(after.correctSets - after.incorrectSelections);
       expect(after.correctSets).toBe(beforeCorrect + 1);
       expect(after.selected).toEqual([]);
     });
