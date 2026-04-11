@@ -59,7 +59,7 @@
         <input
           class="hex-input"
           [class.invalid]="hexInvalid"
-          [value]="currentSwatchColor"
+          [value]="hexInputValue"
           maxlength="7"
           (input)="onHexInput($event)"
           (blur)="onHexBlur($event)"
@@ -85,6 +85,29 @@
           (click)="applyPreset(pc)"
         ></div>
       </div>
+
+      <!-- Colourblind-friendly set -->
+      <div class="cb-row">
+        <span class="cb-label">Colourblind</span>
+        <div class="cb-swatches">
+          <div
+            *ngFor="let c of colorblindColors"
+            class="preset-dot"
+            [class.selected-preset]="currentSwatchColor === c"
+            [style.background]="c"
+            [title]="c"
+            (click)="applyPreset(c)"
+          ></div>
+        </div>
+        <button class="cb-apply-btn" (click)="applyColorblindSet()" title="Apply all three colourblind colours to the card palette">
+          Apply all
+        </button>
+      </div>
+    </div>
+
+    <!-- Reset to defaults -->
+    <div class="reset-row">
+      <button class="reset-btn" (click)="resetToDefaults()">↺ Reset to defaults</button>
     </div>
   </div>
 </div>

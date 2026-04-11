@@ -56,7 +56,7 @@
   box-shadow: inset 0 0 0 1.5px #ccc;
 }
 
-.swatch-label { font-size:10px; color:#888; text-align:center; }
+.swatch-label { font-size:12px; color:#888; text-align:center; }
 
 /* Divider between card colours and highlight colour */
 .swatch-divider {
@@ -131,7 +131,7 @@
 /* ── Presets ────────────────────────────────────────────────────── */
 .presets-section { margin-top:4px; }
 .presets-label {
-  font-size:11px; color:#888; margin-bottom:10px;
+  font-size:12px; color:#888; margin-bottom:10px;
   letter-spacing:0.04em; text-transform:uppercase;
 }
 .presets-grid { display:flex; flex-wrap:wrap; gap:8px; }
@@ -146,7 +146,69 @@
 
 /* ── Conflict warning ───────────────────────────────────────────── */
 .conflict-warning {
-  font-size:11px; color:#b03030; background:#fff0f0;
+  font-size:12px; color:#b03030; background:#fff0f0;
   border-radius:8px; padding:6px 10px;
   display:flex; align-items:center; gap:6px;
+}
+
+/* ── Colourblind row ────────────────────────────────────────────── */
+.cb-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.cb-label {
+  font-size: 12px;
+  color: #888;
+  white-space: nowrap;
+  letter-spacing: 0.03em;
+  flex-shrink: 0;
+}
+
+.cb-swatches {
+  display: flex;
+  gap: 8px;
+}
+
+.cb-apply-btn {
+  font-size: 12px;
+  font-weight: 600;
+  color: #3a3aaa;
+  background: #e8e8ff;
+  border: 1px solid #c4c4f0;
+  border-radius: 8px;
+  padding: 4px 9px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.12s, border-color 0.12s;
+  margin-left: auto;
+}
+.cb-apply-btn:hover {
+  background: #d4d4ff;
+  border-color: #ababee;
+}
+
+/* ── Reset row ──────────────────────────────────────────────────── */
+.reset-row {
+  margin-top: 14px;
+  display: flex;
+  justify-content: center;
+}
+
+.reset-btn {
+  font-size: 12px;
+  color: #888;
+  background: none;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 6px 14px;
+  cursor: pointer;
+  transition: color 0.12s, border-color 0.12s, background 0.12s;
+}
+.reset-btn:hover {
+  color: #333;
+  border-color: #bbb;
+  background: #f5f5f5;
 }

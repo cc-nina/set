@@ -182,14 +182,14 @@
 
 .chip-offline-dot {
   color: #ff6b6b;
-  font-size: 0.65rem;
+  font-size: 0.75rem;
 }
 
 /* ── Badge used in finished scoreboard ──────────────────────────────────── */
 .badge-offline {
   display: inline-block;
   color: #ff6b6b;
-  font-size: 0.6rem;
+  font-size: 0.75rem;
   vertical-align: middle;
   margin-left: 0.25rem;
 }
@@ -242,7 +242,7 @@
   }
 
   .feed-item {
-    font-size: 0.72rem;
+    font-size: 0.75rem;
     padding: 0.25rem 0.5rem;
   }
 }

@@ -55,11 +55,15 @@ export class PaletteModalComponent implements OnChanges {
   constructor(private ngZone: NgZone) {}
 
   readonly presetColors: string[] = [
-    '#DB2C05', '#e05c00', '#d4a017',
-    '#0C8D1B', '#0433ff', '#2B094C',
-    '#c4307a', '#16a3a3', '#2c2c2c',
-    '#000000', '#ffffff', '#808080',
+    '#DB2C05', '#e05c00', '#d4a017', '#0C8D1B', 
+    '#1872d8', '#d45695', '#2B094C', '#5a5a5a',
   ];
+
+  /** Colourblind-friendly preset set. */
+  readonly colorblindColors: [string, string, string] = ['#ff2600', '#00f900', '#0433ff'];
+
+  readonly defaultPalette: [string, string, string] = ['#DB2C05', '#0C8D1B', '#2B094C'];
+  readonly defaultHighlight: string = '#000000';
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['palette'] || changes['highlightColor']) {
@@ -258,6 +262,21 @@ export class PaletteModalComponent implements OnChanges {
     this.emitColor(this.activeSwatchIdx, color);
     this.syncHsvFromColor(color);
     this.drawSvCanvas();
+  }
+
+  /** Apply the three colourblind-friendly colours to all three card slots
+   *  and reset the selection highlight to the default black. */
+  applyColorblindSet(): void {
+    this.colorblindColors.forEach((c, i) => this.emitColor(i, c));
+    this.emitColor(3, this.defaultHighlight);
+    this.activateSwatch(0);
+  }
+
+  /** Reset all four slots back to the application defaults. */
+  resetToDefaults(): void {
+    this.defaultPalette.forEach((c, i) => this.emitColor(i, c));
+    this.emitColor(3, this.defaultHighlight);
+    this.activateSwatch(0);
   }
 
   // ── Overlay click ─────────────────────────────────────────────────────────
