@@ -1,1 +1,11 @@
 <router-outlet />
+
+<!-- ── Theme toggle — rendered once, fixed, always on top ──────────── -->
+<button
+  class="theme-toggle"
+  (click)="theme.cycle()"
+  [title]="'Switch theme (current: ' + meta[theme.current].label + ')'"
+  [attr.aria-label]="'Switch theme (current: ' + meta[theme.current].label + ')'"
+>
+  {{ meta[theme.current].icon }}
+</button>

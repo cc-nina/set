@@ -6,6 +6,22 @@
   <base href="/">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <!--
+    Theme bootstrap: runs synchronously before any rendering so there is
+    zero flash-of-wrong-theme on hard refresh. Mirrors the logic in
+    ThemeService.resolveInitial() — keep both in sync if adding new themes.
+  -->
+  <script>
+    (function () {
+      var THEMES = ['light', 'dark'];
+      var stored = null;
+      try { stored = localStorage.getItem('app-theme'); } catch (_) {}
+      var theme = (stored && THEMES.indexOf(stored) !== -1)
+        ? stored
+        : (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+      if (theme !== 'light') document.documentElement.classList.add(theme);
+    })();
+  </script>
 </head>
 <body>
   <app-root></app-root>

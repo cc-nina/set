@@ -10,13 +10,13 @@
   left: 50%;
   transform: translateX(-50%);
   z-index: 50;
-  background: #1a1a2e;
-  color: #ffd700;
+  background: var(--text-primary);
+  color: var(--bg-page);
   font-size: 1.1rem;
   font-weight: 700;
   padding: 0.6rem 1.4rem;
   border-radius: 9999px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+  box-shadow: var(--shadow-md);
   pointer-events: none;
   animation: banner-in 0.2s ease;
 }
@@ -39,7 +39,7 @@
 }
 
 .overlay-card {
-  background: #fff;
+  background: var(--bg-surface);
   border-radius: 1rem;
   padding: 2rem 2.5rem;
   max-width: 22rem;
@@ -48,19 +48,20 @@
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--shadow-lg);
+  transition: var(--theme-transition);
 }
 
 .overlay-title {
   font-size: 1.5rem;
   font-weight: 800;
-  color: #1a1a2e;
+  color: var(--text-primary);
   margin: 0;
 }
 
 .overlay-sub {
   font-size: 0.95rem;
-  color: #555;
+  color: var(--text-secondary);
   margin: 0;
 }
 
@@ -77,21 +78,24 @@
   font-size: 2rem;
   font-weight: 900;
   letter-spacing: 0.2em;
-  color: #1a1a2e;
+  color: var(--text-primary);
 }
 
 .btn-copy {
-  background: #f0f0f0;
-  border: 1px solid #ccc;
+  background: var(--bg-surface-alt);
+  border: 1px solid var(--border-strong);
   border-radius: 0.4rem;
   padding: 0.3rem 0.7rem;
   cursor: pointer;
   font-size: 0.85rem;
-  transition: background 0.15s;
+  color: var(--text-primary);
+  transition: background 0.15s, var(--theme-transition);
 }
-.btn-copy:hover { background: #e0e0e0; }
+.btn-copy:hover { background: var(--border); }
 .btn-copy--ok  { background: #d4edda; border-color: #28a745; color: #155724; }
 .btn-copy--err { background: #f8d7da; border-color: #dc3545; color: #721c24; }
+html.dark .btn-copy--ok  { background: rgba(40,167,69,0.18);  border-color: #28a745; color: #6fcf97; }
+html.dark .btn-copy--err { background: rgba(220,53,69,0.18);  border-color: #dc3545; color: #f08080; }
 
 /* ── Scoreboard ──────────────────────────────────────────────────────────── */
 .scoreboard {
@@ -108,12 +112,12 @@
   justify-content: space-between;
   gap: 1rem;
   padding: 0.4rem 0.6rem;
-  background: #f7f7f7;
+  background: var(--bg-surface-alt);
   border-radius: 0.4rem;
 }
 
-.score-name { font-weight: 600; color: #1a1a2e; }
-.score-val  { color: #444; font-size: 0.9rem; }
+.score-name { font-weight: 600; color: var(--text-primary); }
+.score-val  { color: var(--text-secondary); font-size: 0.9rem; }
 
 /* ── Overlay action buttons ──────────────────────────────────────────────── */
 .overlay-actions {
@@ -124,8 +128,8 @@
 }
 
 .btn-primary {
-  background: #1a1a2e;
-  color: #fff;
+  background: var(--accent);
+  color: var(--text-inverse);
   border: none;
   border-radius: 0.5rem;
   padding: 0.55rem 1.2rem;
@@ -137,15 +141,15 @@
 
 .btn-home {
   background: transparent;
-  border: 1px solid #ccc;
+  border: 1px solid var(--border-strong);
   border-radius: 0.5rem;
   padding: 0.5rem 1rem;
-  color: #555;
+  color: var(--text-secondary);
   cursor: pointer;
   font-size: 0.9rem;
-  transition: background 0.15s;
+  transition: background 0.15s, var(--theme-transition);
 }
-.btn-home:hover { background: #f0f0f0; }
+.btn-home:hover { background: var(--bg-surface-alt); }
 
 /* ── Live scorebar ───────────────────────────────────────────────────────── */
 .scorebar {
@@ -158,12 +162,12 @@
   justify-content: center;
   gap: 1rem;
   padding: 0.4rem 1rem;
-  background: rgba(26, 26, 46, 0.92);
+  background: var(--scorebar-bg);
   backdrop-filter: blur(6px);
 }
 
 .score-chip {
-  color: #eee;
+  color: rgba(255,255,255,0.88);
   font-size: 0.9rem;
   font-weight: 600;
   padding: 0.2rem 0.7rem;
@@ -188,7 +192,7 @@
 /* ── Badge used in finished scoreboard ──────────────────────────────────── */
 .badge-offline {
   display: inline-block;
-  color: #ff6b6b;
+  color: var(--stat-neg);
   font-size: 0.75rem;
   vertical-align: middle;
   margin-left: 0.25rem;
@@ -197,9 +201,9 @@
 /* ── Leave button in scorebar ────────────────────────────────────────────── */
 .btn-leave {
   background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  border: 1px solid rgba(255,255,255,0.3);
   border-radius: 9999px;
-  color: #ccc;
+  color: rgba(255,255,255,0.65);
   font-size: 0.8rem;
   font-weight: 600;
   padding: 0.2rem 0.75rem;
@@ -208,7 +212,7 @@
   margin-left: auto;
 }
 .btn-leave:hover {
-  background: rgba(255, 107, 107, 0.25);
+  background: rgba(255,107,107,0.25);
   color: #ff6b6b;
   border-color: #ff6b6b;
 }
@@ -216,57 +220,39 @@
 /* ── Action feed ─────────────────────────────────────────────────────────── */
 .action-feed {
   position: fixed;
-  bottom: 4rem;
-  left: 1rem;
+  bottom: 4rem; left: 1rem;
   z-index: 35;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
+  display: flex; flex-direction: column; gap: 0.5rem;
   max-width: 16rem;
-  /* Prevent growing tall enough to cover cards */
   max-height: calc(100dvh - 10rem);
   overflow: hidden;
   pointer-events: none;
 }
 
-/* On narrow screens the feed moves to the top-right corner as a compact strip
-   so it never sits over the card grid. */
 @media (max-width: 600px) {
   .action-feed {
-    bottom: auto;
-    top: 3.5rem;
-    left: auto;
-    right: 0.5rem;
-    max-width: 10rem;
-    gap: 0.3rem;
+    bottom: auto; top: 3.5rem;
+    left: auto; right: 0.5rem;
+    max-width: 10rem; gap: 0.3rem;
   }
-
-  .feed-item {
-    font-size: 0.75rem;
-    padding: 0.25rem 0.5rem;
-  }
+  .feed-item { font-size: 0.75rem; padding: 0.25rem 0.5rem; }
 }
 
 .feed-item {
-  background: rgba(26, 26, 46, 0.85);
+  background: rgba(15,17,23,0.88);
   backdrop-filter: blur(4px);
-  color: #fff;
+  color: rgba(255,255,255,0.92);
   padding: 0.4rem 0.8rem;
   border-radius: 0.4rem;
   font-size: 0.9rem;
   animation: feed-in 0.25s ease;
   transition: opacity 0.3s;
 }
-
-.feed-item--stale {
-  opacity: 0;
-}
+.feed-item--stale { opacity: 0; }
 
 @keyframes feed-in {
   from { opacity: 0; transform: translateX(-1rem); }
   to   { opacity: 1; transform: translateX(0); }
 }
 
-.feed-player {
-  font-weight: 700;
-}
+.feed-player { font-weight: 700; }

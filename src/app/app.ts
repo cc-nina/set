@@ -1,13 +1,15 @@
-import { Component, signal } from '@angular/core';
+import { Component } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
+import { ThemeService, THEME_META } from './theme.service';
 
 @Component({
   selector: 'app-root',
   standalone: true,
   imports: [RouterOutlet],
   templateUrl: './app.html',
-  styleUrls: ['./app.css']
+  styleUrls: ['./app.css'],
 })
 export class App {
-  protected readonly title = signal('set-game');
+  protected readonly meta = THEME_META;
+  constructor(protected readonly theme: ThemeService) {}
 }

@@ -2,13 +2,150 @@
 @tailwind components;
 @tailwind utilities;
 
-html, body {
-	height: 100%;
+/* ═══════════════════════════════════════════════════════════════════════════
+   DESIGN TOKENS
+   All themed colours live here as CSS custom properties.
+   Components use var(--token) — they never reference hard-coded colours.
+
+   To add a new theme:
+     1. Add the theme name to ThemeService (theme.service.ts).
+     2. Copy the html.dark block below, rename the selector, override only
+        the tokens that differ. Done — zero component changes required.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+:root {
+  /* ── Page ──────────────────────────────────────────────────────────────── */
+  --bg-page:            #F9FAFB;   /* body / page background                 */
+  --bg-surface:         #ffffff;   /* modal, overlay-card, mode-card          */
+  --bg-surface-alt:     #f7f7f7;   /* score rows, subtle inset surfaces       */
+  --bg-input:           #fafafa;   /* text inputs, selects                    */
+  --bg-input-focus:     #ffffff;
+
+  /* ── Text ──────────────────────────────────────────────────────────────── */
+  --text-primary:       #111827;   /* headings, strong labels                 */
+  --text-secondary:     #6b7280;   /* subtitles, muted descriptions           */
+  --text-muted:         #9ca3af;   /* placeholders, very soft labels          */
+  --text-inverse:       #ffffff;   /* text on dark/coloured backgrounds       */
+
+  /* ── Borders ───────────────────────────────────────────────────────────── */
+  --border:             #e5e7eb;   /* general dividers, card outlines         */
+  --border-strong:      #d1d5db;   /* input borders, mode cards               */
+  --border-focus:       #2B094C;   /* focused input ring colour               */
+
+  /* ── Cards (SET game cards — SVG elements) ─────────────────────────────── */
+  --card-bg:            #ffffff;   /* rect fill inside the SVG card           */
+  --card-border:        #d1d5db;   /* rect stroke inside the SVG card         */
+  --card-shadow-color:  rgba(0,0,0,0.25);   /* feDropShadow flood-color       */
+  --card-selected-default: #000000; /* default selection highlight ring       */
+
+  /* ── Shadows ───────────────────────────────────────────────────────────── */
+  --shadow-sm:          0 2px  8px rgba(0,0,0,0.06);
+  --shadow-md:          0 4px 16px rgba(0,0,0,0.10);
+  --shadow-lg:          0 8px 32px rgba(0,0,0,0.18);
+  --shadow-modal:       0 8px 40px rgba(0,0,0,0.18);
+
+  /* ── UI controls ───────────────────────────────────────────────────────── */
+  --btn-ghost-bg:       #ffffff;
+  --btn-ghost-bg-hover: #f7f7f7;
+  --btn-ghost-border:   #e0e0e0;
+  --btn-ghost-border-hover: #cccccc;
+  --btn-ghost-text:     #333333;
+
+  --btn-icon-bg:        #f0f0f0;   /* close-btn, icon buttons                 */
+  --btn-icon-bg-hover:  #e0e0e0;
+  --btn-icon-text:      #555555;
+
+  /* ── Palette modal specific ─────────────────────────────────────────────── */
+  --modal-divider:      #e8e8e8;
+  --swatch-active-border: #111111;
+  --picker-label:       #888888;
+
+  /* ── Semantic state colours ────────────────────────────────────────────── */
+  --stat-neg:           #c00000;   /* neg/penalty score                       */
+  --stat-pos:           #1a7a3a;   /* positive score                          */
+  --danger-text:        #a00000;   /* error/danger text                       */
+  --danger-bg:          #fff5f5;   /* error/danger background                 */
+  --danger-border:      #f5c6c6;   /* error/danger border                     */
+
+  /* ── Scorebar (always dark strip regardless of theme) ───────────────────── */
+  --scorebar-bg:        rgba(26,26,46,0.92);
+
+  /* ── Accent (brand purple) ─────────────────────────────────────────────── */
+  --accent:             #2B094C;
+  --accent-hover:       #4a2490;
+  --accent-focus-ring:  rgba(90,46,166,0.12);
+
+  /* ── Transition applied to all themed elements ─────────────────────────── */
+  --theme-transition: background-color 0.2s ease, color 0.2s ease,
+                      border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-/* Use explicit CSS here to avoid editor/tooling errors with @apply in some setups */
-body {
-	background-color: #F9FAFB; /* Tailwind gray-50 */
-	color: #111827; /* Tailwind gray-900 */
-	-webkit-font-smoothing: antialiased;
+/* ── Dark theme overrides ────────────────────────────────────────────────── */
+html.dark {
+  --bg-page:            #0f1117;
+  --bg-surface:         #1c1f27;
+  --bg-surface-alt:     #252830;
+  --bg-input:           #252830;
+  --bg-input-focus:     #2c303c;
+
+  --text-primary:       #f0f2f5;
+  --text-secondary:     #9aa3b2;
+  --text-muted:         #636d7e;
+  --text-inverse:       #f0f2f5;
+
+  --border:             #2e3240;
+  --border-strong:      #3a3f52;
+  --border-focus:       #9b72cf;
+
+  --card-bg:            #1e2130;
+  --card-border:        #3a3f52;
+  --card-shadow-color:  rgba(0,0,0,0.55);
+  --card-selected-default: #c8b8e8;
+
+  --shadow-sm:          0 2px  8px rgba(0,0,0,0.30);
+  --shadow-md:          0 4px 16px rgba(0,0,0,0.40);
+  --shadow-lg:          0 8px 32px rgba(0,0,0,0.55);
+  --shadow-modal:       0 8px 40px rgba(0,0,0,0.55);
+
+  --btn-ghost-bg:       #252830;
+  --btn-ghost-bg-hover: #2c303c;
+  --btn-ghost-border:   #3a3f52;
+  --btn-ghost-border-hover: #52586e;
+  --btn-ghost-text:     #c8cdd8;
+
+  --btn-icon-bg:        #2c303c;
+  --btn-icon-bg-hover:  #383d4e;
+  --btn-icon-text:      #a0a8b8;
+
+  --modal-divider:      #2e3240;
+  --swatch-active-border: #c8b8e8;
+  --picker-label:       #636d7e;
+
+  --scorebar-bg:        rgba(10,10,20,0.95);
+
+  --accent:             #9b72cf;
+  --accent-hover:       #b894e8;
+  --accent-focus-ring:  rgba(155,114,207,0.20);
+
+  --stat-neg:           #ff6b6b;
+  --stat-pos:           #4ade80;
+  --danger-text:        #f08080;
+  --danger-bg:          rgba(176,48,48,0.15);
+  --danger-border:      rgba(240,128,128,0.40);
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   BASE
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+html, body {
+  height: 100%;
+}
+
+body {
+  background-color: var(--bg-page);
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+  transition: var(--theme-transition);
+}
+

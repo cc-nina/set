@@ -16,6 +16,7 @@ import { PaletteModalComponent, PaletteChangeEvent } from './palette-modal.compo
 import { GameSession, GAME_SESSION } from './game-session.interface';
 import { Card, CALL_SET_SECONDS } from './game.types';
 import { shapeFor, shadingFor } from './game.utils';
+import { ThemeService } from './theme.service';
 
 /** How long (ms) the set-match highlight stays visible before cards are replaced. */
 const SET_MATCH_DISPLAY_MS = 250;
@@ -63,6 +64,13 @@ export class GameBoardComponent implements AfterViewInit, OnDestroy {
 
   showPaletteModal = false;
 
+  /** Card background colour — resolved from CSS variable, updated on theme change. */
+  cardBg = '#ffffff';
+  /** Card border colour — resolved from CSS variable, updated on theme change. */
+  cardBorder = '#d1d5db';
+
+  private themeSubscription!: Subscription;
+
   /** Expose constant for template use in countdown bar width calculation. */
   readonly callSetSeconds = CALL_SET_SECONDS;
   /** Whether the LOCAL player has called SET and is currently picking cards. */
@@ -108,6 +116,7 @@ export class GameBoardComponent implements AfterViewInit, OnDestroy {
     @Inject(GAME_SESSION) public game: GameSession,
     @Inject(PLATFORM_ID) private platformId: object,
     private cdr: ChangeDetectorRef,
+    private themeService: ThemeService,
   ) {
     this.isBrowser = isPlatformBrowser(this.platformId);
 
@@ -209,8 +218,31 @@ export class GameBoardComponent implements AfterViewInit, OnDestroy {
     if (this.isBrowser) {
       this.updateLayout();
       this.palette = this.game.getPalette();
-      this.highlightColor = this.game.highlightColor;
+      this.readCardTokens();
+      // If the user has never customised the highlight colour, seed it from the
+      // CSS variable so dark mode gets a readable default automatically.
+      const savedHighlight = this.game.highlightColor;
+      this.highlightColor = (savedHighlight === '#000000' || savedHighlight === '#000')
+        ? (this.cardBg === '#ffffff' ? '#000000' : this.readCssVar('--card-selected-default', '#000000'))
+        : savedHighlight;
     }
+
+    // Re-read card colour tokens whenever the theme changes.
+    this.themeSubscription = this.themeService.theme$.subscribe(() => {
+      if (this.isBrowser) {
+        // CSS variables are applied synchronously by ThemeService before this
+        // fires, so reading them in a microtask is sufficient.
+        Promise.resolve().then(() => {
+          this.readCardTokens();
+          // If the user hasn't customised the highlight, track the theme default.
+          const saved = this.game.highlightColor;
+          if (saved === '#000000' || saved === '#000') {
+            this.highlightColor = this.readCssVar('--card-selected-default', '#000000');
+          }
+          this.cdr.markForCheck();
+        });
+      }
+    });
 
     this.isMultiplayer = this.game.isMultiplayer;
   }
@@ -224,11 +256,26 @@ export class GameBoardComponent implements AfterViewInit, OnDestroy {
     this.stateSubscription.unsubscribe();
     this.lastSetBySubscription.unsubscribe();
     this.callerLockSubscription.unsubscribe();
+    this.themeSubscription.unsubscribe();
     // Just clear the interval — no need to touch game state on teardown.
     if (this.countdownInterval !== null) {
       clearInterval(this.countdownInterval);
       this.countdownInterval = null;
     }
+  }
+
+  // ── Theme helpers ─────────────────────────────────────────────────────────
+
+  /** Read --card-bg and --card-border CSS variables from the document root. */
+  private readCardTokens(): void {
+    const style = getComputedStyle(document.documentElement);
+    this.cardBg     = style.getPropertyValue('--card-bg').trim()     || '#ffffff';
+    this.cardBorder = style.getPropertyValue('--card-border').trim() || '#d1d5db';
+  }
+
+  /** Read a single CSS variable from the document root, with a fallback. */
+  private readCssVar(name: string, fallback: string): string {
+    return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback;
   }
 
   // ── Keyboard ──────────────────────────────────────────────────────────────

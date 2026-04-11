@@ -2,12 +2,14 @@
 .open-palette-btn {
   display:inline-flex; align-items:center; gap:8px;
   padding:10px 18px; border-radius:8px;
-  border:1.5px solid #e0e0e0; background:#fff; color:#333;
+  border:1.5px solid var(--btn-ghost-border);
+  background:var(--btn-ghost-bg);
+  color:var(--btn-ghost-text);
   font-size:13px; font-weight:500; cursor:pointer;
-  transition:background 0.12s, border-color 0.12s, transform 0.1s;
-  box-shadow:0 1px 3px rgba(0,0,0,0.06);
+  transition: background 0.12s, border-color 0.12s, transform 0.1s, var(--theme-transition);
+  box-shadow: var(--shadow-sm);
 }
-.open-palette-btn:hover { background:#f7f7f7; border-color:#ccc; }
+.open-palette-btn:hover { background:var(--btn-ghost-bg-hover); border-color:var(--btn-ghost-border-hover); }
 .open-palette-btn:active { transform:scale(0.97); }
 
 .palette-dots-preview { display:flex; gap:4px; align-items:center; }
@@ -29,19 +31,22 @@
   z-index: 50;
 }
 .board-overlay-card {
-  background: #fff; border-radius: 16px;
+  background: var(--bg-surface); border-radius: 16px;
   padding: 2rem 2.5rem; text-align: center;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+  box-shadow: var(--shadow-lg);
   min-width: 240px;
+  transition: var(--theme-transition);
 }
 .board-overlay-title {
   font-size: 1.6rem; font-weight: 700; margin: 0 0 0.25rem;
+  color: var(--text-primary);
 }
 .board-overlay-sub {
-  color: #666; margin: 0 0 0.5rem; font-size: 0.95rem;
+  color: var(--text-secondary); margin: 0 0 0.5rem; font-size: 0.95rem;
 }
 .board-overlay-score {
   font-size: 1.15rem; font-weight: 600; margin: 0 0 1.25rem;
+  color: var(--text-primary);
 }
 .board-overlay-actions {
   display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap;
@@ -52,13 +57,13 @@
   display: flex; align-items: center; gap: 12px;
 }
 .solo-stat {
-  font-size: 13px; font-weight: 600; color: #444;
+  font-size: 13px; font-weight: 600; color: var(--text-secondary);
 }
 .solo-stat--neg {
-  color: #c00;
+  color: var(--stat-neg);
 }
 .solo-stat--score {
-  color: #1a7a3a;
+  color: var(--stat-pos);
 }
 
 /* ── Toolbar right cluster ──────────────────────────────────────── */
@@ -70,8 +75,8 @@
 .locked-by-other {
   display: inline-flex; align-items: center;
   padding: 10px 18px; border-radius: 8px;
-  border: 1.5px solid #f5c6c6;
-  background: #fff5f5; color: #a00;
+  border: 1.5px solid var(--danger-border);
+  background: var(--danger-bg); color: var(--danger-text);
   font-size: 13px; font-weight: 700;
 }
 .locked-label {
@@ -103,7 +108,7 @@
   display: flex; align-items: center; gap: 8px;
 }
 .countdown-label {
-  font-size: 13px; font-weight: 600; color: #c00; white-space: nowrap;
+  font-size: 13px; font-weight: 600; color: var(--danger-text); white-space: nowrap;
   animation: pulse-label 0.6s ease-in-out infinite alternate;
 }
 @keyframes pulse-label {
@@ -112,7 +117,7 @@
 }
 .countdown-bar-bg {
   width: 100px; height: 8px; border-radius: 4px;
-  background: #e0e0e0; overflow: hidden;
+  background: var(--border); overflow: hidden;
 }
 .countdown-bar-fill {
   height: 100%; border-radius: 4px;
@@ -128,7 +133,7 @@
   to   { opacity: 0.6; }
 }
 .countdown-time {
-  font-size: 12px; font-weight: 700; color: #c00; min-width: 30px;
+  font-size: 12px; font-weight: 700; color: var(--danger-text); min-width: 30px;
 }
 
 /* ── Cards locked out (another player called SET) ───────────────── */

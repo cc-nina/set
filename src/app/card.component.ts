@@ -21,7 +21,7 @@ const SW = 13;
       <defs>
         <!-- striped pattern (horizontal lines); id depends on color to allow multiple patterns -->
         <pattern [attr.id]="patternId" patternUnits="userSpaceOnUse" width="6" height="6">
-          <rect width="6" height="6" fill="white"></rect>
+          <rect width="6" height="6" [attr.fill]="cardBg"></rect>
           <path d="M0 3 H6" [attr.stroke]="color" stroke-width="1" />
         </pattern>
         <filter id="card-shadow" x="-50%" y="-50%" width="200%" height="200%">
@@ -36,7 +36,7 @@ const SW = 13;
   <rect
     [attr.x]="orientation==='portrait'?2:2" [attr.y]="orientation==='portrait'?2:2"
     [attr.width]="orientation==='portrait'?116:176" [attr.height]="orientation==='portrait'?176:116"
-    rx="8" ry="8" fill="#fff" stroke="#d1d5db" stroke-width="1.4"
+    rx="8" ry="8" [attr.fill]="cardBg" [attr.stroke]="cardBorder" stroke-width="1.4"
     [attr.filter]="setMatch ? 'url(#card-glow)' : 'url(#card-shadow)'"
   />
 
@@ -87,7 +87,7 @@ const SW = 13;
             <path
               [attr.d]="orientation === 'portrait' ? squiggleHorizontal : squiggleVertical"
               fill="none"
-              [attr.stroke]="shading === 'outline' ? 'white' : shading === 'striped' ? 'url(#' + patternId + ')' : strokeForShading()"
+              [attr.stroke]="shading === 'outline' ? cardBg : shading === 'striped' ? 'url(#' + patternId + ')' : strokeForShading()"
               [attr.stroke-width]="squiggleStrokeWidth"
               stroke-linecap="round"
               stroke-linejoin="round"
@@ -124,6 +124,10 @@ export class CardComponent {
   @Input() highlightColor: string = '#000000';
   /** True when this card is the 3rd card of a valid set just completed. */
   @Input() setMatch: boolean = false;
+  /** Card background fill — driven by the active theme via CSS variable. */
+  @Input() cardBg: string = '#ffffff';
+  /** Card border stroke — driven by the active theme via CSS variable. */
+  @Input() cardBorder: string = '#d1d5db';
 
   // pattern id for striped shading
   get patternId(): string {
