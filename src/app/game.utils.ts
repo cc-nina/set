@@ -161,7 +161,7 @@ export function shadingFor(c: Card): string {
  */
 export function generateDefaultPlayerName(): string {
   const adjectives = ['Funny', 'Swag', 'Epic', 'Clever', 'Fast'];
-  const nouns      = ['Horse', 'Shark', 'Bear', 'Fish', 'Snoopy'];
+  const nouns = ['Horse', 'Shark', 'Bear', 'Fish', 'Snoopy'];
   const adj  = adjectives[Math.floor(Math.random() * adjectives.length)];
   const noun = nouns[Math.floor(Math.random() * nouns.length)];
   const name = `${adj}${noun}`;
