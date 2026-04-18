@@ -21,7 +21,7 @@ import { ThemeService } from './theme.service';
 /** How long (ms) the set-match highlight stays visible before cards are replaced. */
 const SET_MATCH_DISPLAY_MS = 700;
 
-/** How long (ms) the neg-set shake animation stays visible before clearing. */
+/** How long (ms) the neg-set shake animation plays before the new board lands. */
 const NEG_MATCH_DISPLAY_MS = 700;
 
 /** How long (ms) each tick interval is for the countdown. */
@@ -41,24 +41,36 @@ export class GameBoardComponent implements AfterViewInit, OnDestroy {
   board: Card[] = [];
   palette: string[] = [];
   selectedIds: Set<string> = new Set();
-  /** Cards that were just identified as a valid set  show match animation. */
+
+  /** Cards that were just identified as a valid set — show match animation. */
   setMatchIds: Set<string> = new Set();
-  /** Cards that were just part of an incorrect selection (neg)  show shake animation. */
+  /** Cards that were just part of an incorrect selection (neg) — show shake animation. */
   negMatchIds: Set<string> = new Set();
-  /** Timeout handle for clearing negMatchIds  tracked so rapid negs don't stomp each other. */
+
+  /** Timeout handle for clearing negMatchIds — tracked so rapid negs don't stomp each other. */
   private negMatchTimeout: ReturnType<typeof setTimeout> | null = null;
   /** Timeout handle for clearing setMatchIds after the match animation. */
   private setMatchTimeout: ReturnType<typeof setTimeout> | null = null;
-  /** Previous board snapshot for set/neg animation diffing. */
+
+  /**
+   * Snapshot of the board from the previous state emission.
+   * Used by both the set-match and neg animations to diff which cards were
+   * removed, so the old board can be temporarily restored during the animation.
+   * Only updated when no animation is currently running, to prevent a mid-
+   * animation state$ emission from clobbering the snapshot we're animating from.
+   */
   private prevBoard: Card[] = [];
+
   /** Colour used for the selection border ring. Stored locally (UI-only). */
   highlightColor: string = '#000000';
   /** 'finished' once no valid sets remain and the deck is exhausted. */
   gameStatus: 'active' | 'finished' = 'active';
+
   /** Live stats shown in the toolbar while playing. */
   liveSets = 0;
   liveNegs = 0;
   liveScore = 0;
+
   /** Final score snapshot shown on the game-over overlay. */
   finalScore = 0;
   finalSets = 0;
@@ -99,6 +111,7 @@ export class GameBoardComponent implements AfterViewInit, OnDestroy {
   serverCallerLockId: string | null = null;
   /** The local player's id — populated from GameState.myPlayerId (multiplayer only). */
   private myPlayerId: string | null = null;
+
   /**
    * True when another player (not us) holds the server lock.
    * Uses the server-authoritative callerLockId compared against our own
@@ -107,13 +120,12 @@ export class GameBoardComponent implements AfterViewInit, OnDestroy {
    */
   get lockedByOther(): boolean {
     if (this.serverCallerLockId === null) return false;
-    // If we know our own id, compare directly. Otherwise fall back to the
-    // local callingSet flag (single-player path where myPlayerId is undefined).
     if (this.myPlayerId !== null) {
       return this.serverCallerLockId !== this.myPlayerId;
     }
     return !this.callingSet;
   }
+
   @ViewChild('paletteModal') paletteModalRef?: PaletteModalComponent;
 
   private stateSubscription!: Subscription;
@@ -134,20 +146,24 @@ export class GameBoardComponent implements AfterViewInit, OnDestroy {
 
     let first = true;
     this.stateSubscription = this.game.state$.subscribe((s) => {
-      // Only update prevBoard if no animation is running
+      // Only update prevBoard when no animation is running — mid-animation
+      // state$ emissions must not clobber the snapshot we're animating from.
       if (this.setMatchTimeout === null && this.negMatchTimeout === null) {
         this.prevBoard = this.board;
       }
       this.board = s.board;
       this.selectedIds = new Set(s.selected.map((c) => c.id));
       this.gameStatus = s.status;
+
       const prevSets = this.liveSets;
       const prevNegs = this.liveNegs;
       this.liveSets = s.correctSets;
       this.liveNegs = s.incorrectSelections;
       this.liveScore = s.score;
+
       // Keep our own player id up to date so lockedByOther can compare correctly.
       if (s.myPlayerId !== undefined) this.myPlayerId = s.myPlayerId;
+
       // When a correct set OR a neg is applied, cancel the local countdown —
       // the call window is over either way.
       if ((s.correctSets > prevSets || s.incorrectSelections > prevNegs) && this.callingSet) {
@@ -157,6 +173,7 @@ export class GameBoardComponent implements AfterViewInit, OnDestroy {
         }
         this.callingSet = false;
       }
+
       if (s.status === 'finished') {
         this.finalScore = s.score;
         this.finalSets = s.correctSets;
@@ -171,19 +188,15 @@ export class GameBoardComponent implements AfterViewInit, OnDestroy {
       this.cdr.markForCheck();
     });
 
-    // Use the authoritative lastSetBy$ signal to trigger the match animation.
-    // This is correct for both single-player (SetGameService always emits null,
-    // so animation never fires) and multiplayer (server sets lastSetBy to the
-    // finder's id in the same broadcast as the board update).
-    //
-    // By the time this subscriber runs, state$ has already updated this.board
-    // to the new board and prevBoard holds the board before the set was removed.
-    // We diff them to find the three cards that were taken off the board.
+    // ── Set-match animation ───────────────────────────────────────────────────
+    // lastSetBy$ emits the finder's id when a valid set is applied, then null
+    // after LAST_SET_BANNER_MS. By the time this fires, state$ has already
+    // updated this.board to the new board; prevBoard holds the pre-removal
+    // snapshot. We diff them to find the 3 removed cards, temporarily restore
+    // the old board so they're visible during the flash, then land the new board.
     this.lastSetBySubscription = this.game.lastSetBy$.subscribe((id) => {
       if (id === null) {
-        // Null is the tear-down signal emitted after LAST_SET_BANNER_MS.
-        // Clear the match highlight so it doesn't persist if the animation
-        // was already resolved by the state$ subscriber updating the board.
+        // Tear-down signal: clear any lingering highlight.
         this.setMatchIds = new Set();
         this.cdr.markForCheck();
         return;
@@ -191,14 +204,12 @@ export class GameBoardComponent implements AfterViewInit, OnDestroy {
 
       const newBoardIds = new Set(this.board.map((c) => c.id));
       const removedCards = this.prevBoard.filter((c) => !newBoardIds.has(c.id));
-
       if (removedCards.length !== 3) return; // safety guard
 
       this.setMatchIds = new Set(removedCards.map((c) => c.id));
-      // Temporarily restore the old board so the matched cards are visible
-      // during the flash animation, then switch to the real new board.
-      // Capture both snapshots now  prevBoard may be overwritten by the
-      // next state$ emission before the timeout fires.
+
+      // Capture snapshots now — prevBoard may be overwritten by a subsequent
+      // state$ emission before the timeout fires.
       const animOldBoard = this.prevBoard.slice();
       const animNewBoard = this.board.slice();
       this.board = animOldBoard;
@@ -213,12 +224,16 @@ export class GameBoardComponent implements AfterViewInit, OnDestroy {
       }, SET_MATCH_DISPLAY_MS);
     });
 
-    // Neg animation — mirrors the lastSetBy$ pattern above but uses the
-    // shake animation + neg highlight ring. Cards that were neg'd have already
-    // been removed from the board by the service; we temporarily restore the
-    // old board so the player sees them shake before they vanish.
+    // ── Neg animation ─────────────────────────────────────────────────────────
+    // negSetBy$ emits when an incorrect 3-card selection is penalised, then null
+    // after the animation window. The service (single-player) and server
+    // (multiplayer) both remove the 3 neg'd cards from the board before this
+    // fires, so we use the same prevBoard diff as the set-match animation:
+    // temporarily restore the old board so the cards are visible during the
+    // shake, then land the new board (without those cards) after the timeout.
     this.negSetBySubscription = this.game.negSetBy$.subscribe((id) => {
       if (id === null) {
+        // Tear-down signal: clear any lingering neg highlight.
         this.negMatchIds = new Set();
         this.cdr.markForCheck();
         return;
@@ -226,10 +241,11 @@ export class GameBoardComponent implements AfterViewInit, OnDestroy {
 
       const newBoardIds = new Set(this.board.map((c) => c.id));
       const removedCards = this.prevBoard.filter((c) => !newBoardIds.has(c.id));
-
       if (removedCards.length !== 3) return; // safety guard
 
       this.negMatchIds = new Set(removedCards.map((c) => c.id));
+
+      // Capture snapshots now — prevBoard may be overwritten before the timeout.
       const animOldBoard = this.prevBoard.slice();
       const animNewBoard = this.board.slice();
       this.board = animOldBoard;
@@ -244,13 +260,14 @@ export class GameBoardComponent implements AfterViewInit, OnDestroy {
       }, NEG_MATCH_DISPLAY_MS);
     });
 
+    // ── Caller lock ───────────────────────────────────────────────────────────
     // Subscribe to the server-authoritative call lock so we can disable the
     // Call SET button when another player holds it (multiplayer only).
-    // In single-player this stream always emits null and is effectively a no-op.
+    // In single-player this stream always emits null and is a no-op.
     this.callerLockSubscription = this.game.callerLockId$.subscribe((lockId) => {
       this.serverCallerLockId = lockId;
-      // If the server cleared a lock that we held (timeout penalty), also
-      // cancel our local countdown so the UI stays in sync.
+      // If the server cleared a lock we held (timeout penalty), cancel the
+      // local countdown so the UI stays in sync.
       if (lockId === null && this.callingSet) {
         if (this.countdownInterval !== null) {
           clearInterval(this.countdownInterval);
@@ -280,7 +297,6 @@ export class GameBoardComponent implements AfterViewInit, OnDestroy {
         // fires, so reading them in a microtask is sufficient.
         Promise.resolve().then(() => {
           this.readCardTokens();
-          // If the user hasn't customised the highlight, track the theme default.
           const saved = this.game.highlightColor;
           if (saved === '#000000' || saved === '#000') {
             this.highlightColor = this.readCssVar('--card-selected-default', '#000000');
@@ -304,7 +320,6 @@ export class GameBoardComponent implements AfterViewInit, OnDestroy {
     this.negSetBySubscription.unsubscribe();
     this.callerLockSubscription.unsubscribe();
     this.themeSubscription.unsubscribe();
-    // Just clear the interval — no need to touch game state on teardown.
     if (this.countdownInterval !== null) {
       clearInterval(this.countdownInterval);
       this.countdownInterval = null;
@@ -347,9 +362,7 @@ export class GameBoardComponent implements AfterViewInit, OnDestroy {
 
   callSet(): void {
     if (this.callingSet || this.gameStatus !== 'active') return;
-    // In multiplayer, reject immediately if another player already holds the lock.
     if (this.lockedByOther) return;
-    // Notify the service (no-op for single-player; sends call_set WS msg for multiplayer).
     this.game.callSet();
     this.callingSet = true;
     this.callTimeLeft = CALL_SET_SECONDS;
@@ -397,11 +410,9 @@ export class GameBoardComponent implements AfterViewInit, OnDestroy {
       const rows = 3;
       const cardAspect = 180 / 120; // width / height = 1.5
 
-      // Fit by width: boardWidth = min(w-16, 896)
       const boardWidth = Math.min(w - 16, 896);
       const cardWFromWidth = boardWidth / (cols + GAP_RATIO * (cols - 1));
 
-      // Fit by height: allow ~56px for the toolbar row above the board
       const boardHeight = h - 56;
       const cardHFromHeight = boardHeight / (rows + GAP_RATIO * (rows - 1));
       const cardWFromHeight = cardHFromHeight * cardAspect;
@@ -422,11 +433,9 @@ export class GameBoardComponent implements AfterViewInit, OnDestroy {
       const rows = 4;
       const cardAspect = 120 / 180; // width / height = 0.667
 
-      // Fit by width
       const boardWidth = w - 16;
       const cardWFromWidth = boardWidth / (cols + GAP_RATIO * (cols - 1));
 
-      // Fit by height: allow ~56px for the toolbar row above the board
       const boardHeight = h - 56;
       const cardHFromHeight = boardHeight / (rows + GAP_RATIO * (rows - 1));
       const cardWFromHeight = cardHFromHeight * cardAspect;
@@ -446,7 +455,6 @@ export class GameBoardComponent implements AfterViewInit, OnDestroy {
 
   openPaletteModal(): void {
     this.showPaletteModal = true;
-    // initPicker() needs the child to be in the DOM — defer one tick.
     setTimeout(() => this.paletteModalRef?.initPicker(), 0);
   }
 
