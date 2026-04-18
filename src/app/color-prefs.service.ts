@@ -2,7 +2,7 @@ import { Injectable, Inject, PLATFORM_ID } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { loadColorPrefs, saveColorPrefs } from './color-prefs.storage';
 
-const DEFAULT_PALETTE: [string, string, string] = ['#db2c05', '#0c8d1b', '#2b094c'];
+const DEFAULT_PALETTE: [string, string, string] = ['#db2c05', '#0c8d1b', '#4F158A'];
 const DEFAULT_HIGHLIGHT = '#000000';
 
 /**

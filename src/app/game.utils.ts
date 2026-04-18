@@ -141,12 +141,12 @@ export function dealInitialBoard(): { board: Card[]; deck: Card[] } {
 
 // ── Presentation helpers ───────────────────────────────────────────────────
 
-const SHAPES   = ['oval', 'diamond', 'squiggle'] as const;
+const SHAPES   = ['pill', 'diamond', 'squiggle'] as const;
 const SHADINGS = ['solid', 'striped', 'outline'] as const;
 
 /** Map a card's numeric shape attribute (1–3) to its display name. */
 export function shapeFor(c: Card): string {
-  return SHAPES[c.shape - 1] ?? 'oval';
+  return SHAPES[c.shape - 1] ?? 'pill';
 }
 
 /** Map a card's numeric shading attribute (1–3) to its display name. */

@@ -2,9 +2,11 @@ import { Component, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
 /** Half-length (major axis) of each shape in SVG units. Increase to make shapes longer. */
-const SL = 27;
+const SL = 35;
+const SQUIGGLE_L = 27;
 /** Half-width (minor axis) of each shape in SVG units. */
-const SW = 13;
+const SW = 16;
+const SQUIGGLE_W = 13;
 
 @Component({
   selector: 'app-card',
@@ -55,16 +57,16 @@ const SW = 13;
       <g [attr.fill]="fillForShading()" [attr.stroke]="strokeForShading()" stroke-width="2" stroke-linejoin="round" stroke-linecap="round">
         <ng-container *ngFor="let i of shapePositions()">
           <g [attr.transform]="orientation === 'landscape' ? ('translate(' + i + ',60)') : ('translate(60,' + i + ')')">
-            <!--
-              oval: orient based on card orientation
-                - landscape cards (horizontal): blobs are vertical (taller than wide)
-                - portrait cards (vertical): blobs are horizontal (wider than tall)
-            -->
-            <ellipse *ngIf="shape === 'oval'" cx="0" cy="0"
-              [attr.rx]="orientation==='portrait'?shapeSL:shapeSW"
-              [attr.ry]="orientation==='portrait'?shapeSW:shapeSL" />
-
-            <!-- diamond: half-lengths match oval major axis and minor axis -->
+            <!-- pill: rect with rx = half-height for fully rounded ends -->
+              <rect *ngIf="shape === 'pill'"
+                [attr.x]="orientation==='portrait' ? -shapeSL : -shapeSW"
+                [attr.y]="orientation==='portrait' ? -shapeSW : -shapeSL"
+                [attr.width]="orientation==='portrait' ? shapeSL*2 : shapeSW*2"
+                [attr.height]="orientation==='portrait' ? shapeSW*2 : shapeSL*2"
+                [attr.rx]="shapeSW"
+                [attr.ry]="shapeSW"
+              />
+            <!-- diamond: half-lengths match pill major axis and minor axis -->
             <polygon *ngIf="shape === 'diamond'"
                      [attr.points]="orientation === 'portrait' ? diamondPortrait : diamondLandscape" />
           </g>
@@ -133,7 +135,7 @@ const SW = 13;
 })
 export class CardComponent {
   @Input() color: string = '#c00';
-  @Input() shape: string = 'oval';
+  @Input() shape: string = 'pill';
   @Input() number: number = 1;
   @Input() orientation: 'portrait' | 'landscape' = 'portrait';
   @Input() shading: string = 'solid';
@@ -182,9 +184,9 @@ export class CardComponent {
     return this.color;
   }
 
-  /** Exposes SL to the template for oval rx/ry bindings. */
+  /** Exposes SL to the template for pill rx/ry bindings. */
   get shapeSL(): number { return SL; }
-  /** Exposes SW to the template for oval rx/ry bindings. */
+  /** Exposes SW to the template for pill rx/ry bindings. */
   get shapeSW(): number { return SW; }
 
   /** Diamond points string for portrait orientation. */
@@ -198,7 +200,7 @@ export class CardComponent {
 
   /**
    * Stroke width for the squiggle, sized to match the visual thickness of
-   * the oval/diamond (minor axis = SW). The open-stroke approach means the
+   * the pill/diamond (minor axis = SW). The open-stroke approach means the
    * rendered band is stroke-width wide, so we use SW directly.
    */
   get squiggleStrokeWidth(): number { return SW; }
@@ -208,7 +210,7 @@ export class CardComponent {
    * Rendered as a thick stroke with round caps — no closed path needed.
    */
   get squiggleHorizontal(): string {
-    const l = SL, w = SW;
+    const l = SQUIGGLE_L, w = SQUIGGLE_W;
     const t1 = +(l * 0.33).toFixed(1);
     const t2 = +(l * 0.67).toFixed(1);
     // Single S-curve: starts at left, peaks up, crosses centre, peaks down, ends at right
@@ -220,7 +222,7 @@ export class CardComponent {
    * Rotated 90° version of horizontal.
    */
   get squiggleVertical(): string {
-    const l = SL, w = SW;
+    const l = SQUIGGLE_L, w = SW;
     const t1 = +(l * 0.33).toFixed(1);
     const t2 = +(l * 0.67).toFixed(1);
     return `M 0,-${l} C -${w},-${t2} -${w},-${t1} 0,0 C ${w},${t1} ${w},${t2} 0,${l}`;

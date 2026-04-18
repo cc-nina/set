@@ -70,7 +70,7 @@ describe('color.utils', () => {
   // ── round-trip ────────────────────────────────────────────────────────────
 
   describe('hexToHsv → hsvToHex round-trip', () => {
-    const samples = ['#db2c05', '#0c8d1b', '#2b094c', '#000000', '#ffffff', '#808080', '#0433ff'];
+    const samples = ['#db2c05', '#0c8d1b', '#4F158A', '#000000', '#ffffff', '#808080', '#0433ff'];
 
     it.each(samples)('round-trips %s without loss', (hex) => {
       const [h, s, v] = hexToHsv(hex);

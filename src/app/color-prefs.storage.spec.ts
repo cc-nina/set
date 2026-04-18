@@ -16,7 +16,7 @@ function makeMockStorage() {
 const STORAGE_KEY = 'set-game-color-prefs';
 
 const VALID_PREFS: ColorPrefs = {
-  palette: ['#db2c05', '#0c8d1b', '#2b094c'],
+  palette: ['#db2c05', '#0c8d1b', '#4F158A'],
   highlightColor: '#000000',
 };
 
@@ -84,7 +84,7 @@ describe('color-prefs.storage', () => {
     });
 
     it('returns null when a palette entry is not a valid hex', () => {
-      mock.store[STORAGE_KEY] = JSON.stringify({ palette: ['red', '#0C8D1B', '#2B094C'], highlightColor: '#000000' });
+      mock.store[STORAGE_KEY] = JSON.stringify({ palette: ['red', '#0C8D1B', '#4F158A'], highlightColor: '#000000' });
       expect(loadColorPrefs()).toBeNull();
     });
 
@@ -95,7 +95,7 @@ describe('color-prefs.storage', () => {
 
     it('returns null when palette entries contain uppercase hex (must be lowercase)', () => {
       // The validator uses /^#[0-9a-f]{6}$/ — uppercase is invalid
-      mock.store[STORAGE_KEY] = JSON.stringify({ palette: ['#DB2C05', '#0C8D1B', '#2B094C'], highlightColor: '#000000' });
+      mock.store[STORAGE_KEY] = JSON.stringify({ palette: ['#DB2C05', '#0C8D1B', '#4F158A'], highlightColor: '#000000' });
       expect(loadColorPrefs()).toBeNull();
     });
 

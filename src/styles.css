@@ -30,7 +30,7 @@
   /* ── Borders ───────────────────────────────────────────────────────────── */
   --border:             #e5e7eb;   /* general dividers, card outlines         */
   --border-strong:      #d1d5db;   /* input borders, mode cards               */
-  --border-focus:       #2B094C;   /* focused input ring colour               */
+  --border-focus:       #4F158A;   /* focused input ring colour               */
 
   /* ── Cards (SET game cards — SVG elements) ─────────────────────────────── */
   --card-bg:            #ffffff;   /* rect fill inside the SVG card           */
@@ -71,7 +71,7 @@
   --scorebar-bg:        rgba(26,26,46,0.92);
 
   /* ── Accent (brand purple) ─────────────────────────────────────────────── */
-  --accent:             #2B094C;
+  --accent:             #4F158A;
   --accent-hover:       #4a2490;
   --accent-focus-ring:  rgba(90,46,166,0.12);
 
