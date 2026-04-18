@@ -80,43 +80,55 @@ export function selectCard(state: GameState, card: Card): GameState {
   return newState;
 }
 
-// Remove the selected set from board and draw new cards from deck to maintain board size.
-// Validates the set; returns new state. If invalid, throws an Error.
+// Remove the selected set from the board and replenish from the deck if needed.
+// Rules:
+//   - If the board is at the standard size (12), replace the 3 removed cards in-place
+//     so the layout stays stable.
+//   - If the board is extended (15, 18, ...), just remove the 3 cards without replacing —
+//     we want to drain back down to 12.
+//   - After removal, if no set exists, deal 3 cards at a time until a set appears or
+//     the deck runs out.
+// Throws if called with anything other than exactly 3 cards forming a valid set.
 export function applySet(state: GameState, selected: Card[]): GameState {
   if (selected.length !== 3) {
     throw new Error('applySet requires exactly 3 selected cards');
   }
-
   if (!isSet(selected[0], selected[1], selected[2])) {
     throw new Error('applySet called with an invalid set');
   }
 
-  // We'll operate on copies
   const deck = state.deck.slice();
-  const board = state.board.slice();
+  let board = state.board.slice();
 
   const selectedIds = new Set(selected.map((c) => c.id));
-  for (let i = 0; i < board.length; i++) {
-    if (selectedIds.has(board[i].id)) {
-      if (deck.length > 0 && board.length - selectedIds.size < BOARD_SIZE) {
-        // Deck has cards — replace in-place so the layout stays stable.
+
+  // Decide once, upfront, before mutating the board — avoids a moving-target
+  // bug where board.length changes mid-loop and produces wrong replacement counts.
+  const shouldReplace = deck.length > 0 && board.length <= BOARD_SIZE;
+
+  if (shouldReplace) {
+    // Board is at standard size: swap each removed card with one from the deck,
+    // preserving the positions of all other cards.
+    for (let i = 0; i < board.length; i++) {
+      if (selectedIds.has(board[i].id)) {
         board[i] = deck.shift() as Card;
-      } else {
-        // Deck is empty — remove the card. Remaining cards stay in position,
-        // just like a real game where empty spaces are left on the table.
-        board.splice(i, 1);
-        i--;
       }
     }
+  } else {
+    // Board is extended (or deck empty): just remove the 3 cards.
+    board = board.filter((c) => !selectedIds.has(c.id));
   }
 
-  // Per official rules: if no set exists after removing the found set,
-  // deal one extra card at a time until a set is present or the deck runs out.
-  let hasSet = findSet(board) !== null;
-  while (!hasSet && deck.length > 0) {
+  // If the remaining board has no valid set, deal 3 cards at a time until one appears
+  // or the deck is exhausted. Guard deck.length >= 3 to avoid shifting undefined
+  // on a deck whose size isn't a clean multiple of 3.
+  while (findSet(board) === null && deck.length >= 3) {
     board.push(deck.shift() as Card);
-    hasSet = findSet(board) !== null;
+    board.push(deck.shift() as Card);
+    board.push(deck.shift() as Card);
   }
+
+  const hasSet = findSet(board) !== null;
 
   return {
     deck,
@@ -125,7 +137,7 @@ export function applySet(state: GameState, selected: Card[]): GameState {
     score: state.correctSets + 1 - state.incorrectSelections,
     correctSets: state.correctSets + 1,
     incorrectSelections: state.incorrectSelections,
-    // Game is finished when no valid set remains and the deck is exhausted.
+    // Game ends when the deck is empty and no set remains on the board.
     status: deck.length === 0 && !hasSet ? 'finished' : 'active',
   };
 }
