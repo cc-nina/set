@@ -15,7 +15,7 @@ export interface Card {
  * This is the single source of truth — used by both the browser countdown
  * (game-board.component.ts) and the server expiry timer (ws-server.ts).
  */
-export const CALL_SET_SECONDS = 5;
+export const CALL_SET_SECONDS = 7;
 
 /**
  * How long (ms) the "found a set!" banner/highlight stays visible.
