@@ -24,6 +24,13 @@ export const CALL_SET_SECONDS = 7;
  */
 export const LAST_SET_BANNER_MS = 2000;
 
+/**
+ * How many cards are on the board at the start of the game
+ * Increases if there are no sets
+ * Decreases if the deck runs out
+ */
+export const BOARD_SIZE = 12;
+
 // ── Single-player state ────────────────────────────────────────────────────────
 
 export interface GameState {

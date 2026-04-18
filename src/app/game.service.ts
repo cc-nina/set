@@ -1,4 +1,4 @@
-import { Card, GameState } from './game.types';
+import { Card, GameState, BOARD_SIZE } from './game.types';
 import { dealInitialBoard, isSet, findSet } from './game.utils';
 
 // Initializes a fresh game state
@@ -98,7 +98,7 @@ export function applySet(state: GameState, selected: Card[]): GameState {
   const selectedIds = new Set(selected.map((c) => c.id));
   for (let i = 0; i < board.length; i++) {
     if (selectedIds.has(board[i].id)) {
-      if (deck.length > 0) {
+      if (deck.length > 0 && board.length - selectedIds.size < BOARD_SIZE) {
         // Deck has cards — replace in-place so the layout stays stable.
         board[i] = deck.shift() as Card;
       } else {

@@ -46,7 +46,6 @@ import { CALL_SET_SECONDS } from './app/game.types.js';
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
-const BOARD_SIZE = 12;
 /** Minimum players required to START a game (creator alone can wait). */
 const MIN_PLAYERS_TO_START = 2;
 /** Hard ceiling — one deck supports up to 8 comfortably. */
