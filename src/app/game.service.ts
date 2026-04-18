@@ -84,10 +84,11 @@ export function selectCard(state: GameState, card: Card): GameState {
 // Rules:
 //   - If the board is at the standard size (12), replace the 3 removed cards in-place
 //     so the layout stays stable.
-//   - If the board is extended (15, 18, ...), just remove the 3 cards without replacing —
-//     we want to drain back down to 12.
-//   - After removal, if no set exists, deal 3 cards at a time until a set appears or
-//     the deck runs out.
+//   - If the board is extended (15, 18, ...), remove the 3 cards and check the remainder:
+//     if a set still exists, leave it (drain back toward 12); if no set exists, deal 3
+//     more cards so play can continue.
+//   - In either case, if the board still has no set after the above, deal 3 cards at a
+//     time until a set appears or the deck is exhausted.
 // Throws if called with anything other than exactly 3 cards forming a valid set.
 export function applySet(state: GameState, selected: Card[]): GameState {
   if (selected.length !== 3) {
@@ -102,11 +103,7 @@ export function applySet(state: GameState, selected: Card[]): GameState {
 
   const selectedIds = new Set(selected.map((c) => c.id));
 
-  // Decide once, upfront, before mutating the board — avoids a moving-target
-  // bug where board.length changes mid-loop and produces wrong replacement counts.
-  const shouldReplace = deck.length > 0 && board.length <= BOARD_SIZE;
-
-  if (shouldReplace) {
+  if (board.length <= BOARD_SIZE && deck.length > 0) {
     // Board is at standard size: swap each removed card with one from the deck,
     // preserving the positions of all other cards.
     for (let i = 0; i < board.length; i++) {
@@ -115,13 +112,16 @@ export function applySet(state: GameState, selected: Card[]): GameState {
       }
     }
   } else {
-    // Board is extended (or deck empty): just remove the 3 cards.
+    // Board is extended (or deck empty): remove the 3 cards first, then check
+    // whether the remainder already contains a set before deciding to replenish.
     board = board.filter((c) => !selectedIds.has(c.id));
+    // If a set exists in the remainder, do nothing — the board drains naturally
+    // toward 12. The while loop below will not fire in this case.
   }
 
-  // If the remaining board has no valid set, deal 3 cards at a time until one appears
-  // or the deck is exhausted. Guard deck.length >= 3 to avoid shifting undefined
-  // on a deck whose size isn't a clean multiple of 3.
+  // If the board has no valid set after the above, deal 3 cards at a time until
+  // one appears or the deck is exhausted. Guard deck.length >= 3 to avoid
+  // shifting undefined on a deck whose size isn't a clean multiple of 3.
   while (findSet(board) === null && deck.length >= 3) {
     board.push(deck.shift() as Card);
     board.push(deck.shift() as Card);
