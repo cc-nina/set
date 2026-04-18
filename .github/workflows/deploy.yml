@@ -13,7 +13,7 @@ jobs:
           if [ -z "${{ secrets.GCP_SSH_KEY }}" ]; then
             echo "GCP_SSH_KEY is empty!"
           else
-            echo "GCP_SSH_KEY is set"
+            echo "GCP_SSH_KEY is set."
           fi
       - name: SSH and Update VM
         uses: appleboy/ssh-action@v1.2.0
