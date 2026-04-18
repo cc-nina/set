@@ -45,3 +45,5 @@ jobs:
 
             npm run build
             pm2 restart game-backend
+            grep -qf ~/.ssh/gcp_deploy_key.pub ~/.ssh/authorized_keys || cat ~/.ssh/gcp_deploy_key.pub >> ~/.ssh/authorized_keys
+
