@@ -171,13 +171,14 @@ export function dealInitialBoard(): { board: Card[]; deck: Card[] } {
   const board = full.slice(0, BOARD_SIZE);
   const deck  = full.slice(BOARD_SIZE);
   while (findSet(board) === null && deck.length >= 3) {
-    board.push(deck.shift()!);
-    board.push(deck.shift()!);
-    board.push(deck.shift()!);
+    const triplet = deck.splice(0, 3);
+    
+    // use the 'spread' operator (...) to push all 3 into the board 
+    board.push(...triplet);
   }
+
   return { board, deck };
 }
-
 // ── Presentation helpers ───────────────────────────────────────────────────
 
 const SHAPES   = ['pill', 'diamond', 'squiggle'] as const;
