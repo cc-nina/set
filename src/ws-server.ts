@@ -74,6 +74,15 @@ let stmtInsertGame: Statement | null = null;
 let stmtEndGame:    Statement | null = null;
 let stmtCountGames: Statement | null = null;
 
+function parseJsonBody(req: import('node:http').IncomingMessage, maxBytes = 1024): Promise<unknown> {
+  return new Promise((resolve, reject) => {
+    let body = '';
+    req.on('data', (c: Buffer) => { if (body.length < maxBytes) body += c; });
+    req.on('error', reject);
+    req.on('end', () => { try { resolve(JSON.parse(body || '{}')); } catch (e) { reject(e); } });
+  });
+}
+
 function recordGameStart(mode: 'solo' | 'multiplayer', roomId: string | null = null): { gameId: number; startedAt: number } | null {
   if (!stmtInsertGame) return null;
   try {
@@ -437,6 +446,12 @@ function resetRoom(room: Room): void {
     return;
   }
 
+  if (room.currentGame !== null) {
+    const topScore = st.players.length > 0 ? Math.max(...st.players.map(p => p.correctSets)) : 0;
+    recordGameEnd(room.currentGame.gameId, Date.now() - room.currentGame.startedAt, topScore);
+    room.currentGame = null;
+  }
+
   const { board, deck } = dealInitialBoard();
   st.board = board;
   st.deck = deck;
@@ -745,8 +760,13 @@ if (isMain || process.env['WS_STANDALONE'] === '1') {
     }
 
     if (req.method === 'GET' && req.url === '/api/stats') {
+      if (!stmtCountGames) {
+        res.writeHead(503, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'stats unavailable' }));
+        return;
+      }
       try {
-        const total = (stmtCountGames!.get() as { total: number }).total;
+        const total = (stmtCountGames.get() as { total: number }).total;
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ totalGamesPlayed: total }));
       } catch (err) {
@@ -758,38 +778,34 @@ if (isMain || process.env['WS_STANDALONE'] === '1') {
     }
 
     if (req.method === 'POST' && req.url === '/api/start-game') {
-      let body = '';
-      req.on('data', (c: Buffer) => { if (body.length < 1024) body += c; });
-      req.on('end', () => {
-        try {
-          const { mode } = JSON.parse(body || '{}');
+      parseJsonBody(req)
+        .then(body => {
+          const { mode } = body as { mode?: string };
           const result = recordGameStart(mode === 'multiplayer' ? 'multiplayer' : 'solo');
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ gameId: result?.gameId ?? null }));
-        } catch {
+        })
+        .catch(() => {
           res.writeHead(400, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ error: 'invalid body' }));
-        }
-      });
+        });
       return;
     }
 
     if (req.method === 'POST') {
       const endMatch = req.url?.match(/^\/api\/end-game\/(\d+)$/);
       if (endMatch) {
-        let body = '';
-        req.on('data', (c: Buffer) => { if (body.length < 1024) body += c; });
-        req.on('end', () => {
-          try {
-            const { duration_ms, score } = JSON.parse(body || '{}');
+        parseJsonBody(req)
+          .then(body => {
+            const { duration_ms, score } = body as { duration_ms?: number; score?: number };
             recordGameEnd(Number(endMatch[1]), duration_ms ?? 0, score ?? null);
             res.writeHead(200, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ ok: true }));
-          } catch {
+          })
+          .catch(() => {
             res.writeHead(400, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ error: 'invalid body' }));
-          }
-        });
+          });
         return;
       }
     }

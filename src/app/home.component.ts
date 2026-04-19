@@ -1,8 +1,8 @@
 import { Component, OnInit, Inject, PLATFORM_ID } from '@angular/core';
-import { isPlatformBrowser } from '@angular/common';
+import { isPlatformBrowser, CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
-import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { SERVER_ORIGIN } from './server.config';
 
 @Component({
   selector: 'app-home',
@@ -18,6 +18,7 @@ export class HomeComponent implements OnInit {
   readonly playerCountOptions = [2, 3, 4, 5, 6, 7, 8];
   playerName = '';
   gamesPlayed: number | null = null;
+  statsReady = false;
 
   constructor(
     private router: Router,
@@ -31,12 +32,13 @@ export class HomeComponent implements OnInit {
 
   ngOnInit(): void {
     if (!isPlatformBrowser(this.platformId)) return;
-    fetch('https://34.44.229.168.sslip.io:3000/api/stats')
-      .then(r => { if (!r.ok) throw new Error(); return r.json(); })
+    fetch(`${SERVER_ORIGIN}/api/stats`)
+      .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
       .then((d: { totalGamesPlayed: number }) => {
         if (typeof d.totalGamesPlayed === 'number') this.gamesPlayed = d.totalGamesPlayed;
       })
-      .catch(() => {});
+      .catch((err) => console.warn('[stats] Could not load game count', err))
+      .finally(() => { this.statsReady = true; });
   }
 
   startSinglePlayer(): void {

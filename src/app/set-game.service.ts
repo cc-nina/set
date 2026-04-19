@@ -7,6 +7,7 @@ import { findSet } from './game.utils';
 import { GameSession } from './game-session.interface';
 import { ColorPrefsService } from './color-prefs.service';
 import { loadGameState, saveGameState } from './game-state.storage';
+import { SERVER_ORIGIN } from './server.config';
 
 @Injectable({ providedIn: 'root' })
 export class SetGameService implements GameSession {
@@ -53,8 +54,7 @@ export class SetGameService implements GameSession {
    */
   readonly callerLockId$: Observable<PlayerId | null> = of(null);
 
-  private currentGameId: number | null = null;
-  private gameStartedAt: number | null = null;
+  private currentGame: { gameId: number; startedAt: number } | null = null;
 
   constructor(
     @Inject(PLATFORM_ID) private platformId: object,
@@ -64,9 +64,9 @@ export class SetGameService implements GameSession {
     this.stateSubject = new BehaviorSubject<GameState>(saved ?? core.initGame());
     this.state$ = this.stateSubject.asObservable();
     if (isPlatformBrowser(this.platformId)) {
-      this.stateSubject.subscribe(state => saveGameState(state));
       this.stateSubject.subscribe(state => {
-        if (state.status === 'finished' && this.currentGameId !== null) {
+        saveGameState(state);
+        if (state.status === 'finished' && this.currentGame !== null) {
           this.endGameRecord(state.correctSets);
         }
       });
@@ -76,7 +76,7 @@ export class SetGameService implements GameSession {
 
   private async startGameRecord(): Promise<void> {
     try {
-      const res = await fetch('https://34.44.229.168.sslip.io:3000/api/start-game', {
+      const res = await fetch(`${SERVER_ORIGIN}/api/start-game`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ mode: 'solo' }),
@@ -84,21 +84,18 @@ export class SetGameService implements GameSession {
       if (!res.ok) return;
       const { gameId } = await res.json() as { gameId: number };
       if (typeof gameId !== 'number') return;
-      this.currentGameId = gameId;
-      this.gameStartedAt = Date.now();
+      this.currentGame = { gameId, startedAt: Date.now() };
     } catch { /* non-fatal */ }
   }
 
   private endGameRecord(score: number): void {
-    if (this.currentGameId === null || this.gameStartedAt === null) return;
-    const duration_ms = Date.now() - this.gameStartedAt;
-    const gameId = this.currentGameId;
-    this.currentGameId = null;
-    this.gameStartedAt = null;
-    fetch(`https://34.44.229.168.sslip.io:3000/api/end-game/${gameId}`, {
+    if (this.currentGame === null) return;
+    const { gameId, startedAt } = this.currentGame;
+    this.currentGame = null;
+    fetch(`${SERVER_ORIGIN}/api/end-game/${gameId}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ duration_ms, score }),
+      body: JSON.stringify({ duration_ms: Date.now() - startedAt, score }),
     }).catch(() => {});
   }
 
@@ -122,8 +119,7 @@ export class SetGameService implements GameSession {
   }
 
   startNewGame(): void {
-    this.currentGameId = null;
-    this.gameStartedAt = null;
+    this.endGameRecord(this.getStateSnapshot().correctSets);
     void this.startGameRecord();
     this.colorPrefs.clearCardColors();
     const s = core.initGame();
