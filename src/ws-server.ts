@@ -34,6 +34,7 @@ import { randomBytes } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import Database, { type Statement } from 'better-sqlite3';
 import { isSet, findSet, dealInitialBoard, applyFoundSet } from './app/game.utils.js';
+import { log, errMsg } from './logger.js';
 import type {
   Player,
   PlayerId,
@@ -92,7 +93,7 @@ function recordGameStart(mode: 'solo' | 'multiplayer', roomId: string | null = n
     const gameId = Number(stmtInsertGame.run(mode, roomId, startedAt).lastInsertRowid);
     return { gameId, startedAt };
   } catch (err) {
-    console.error('[stats] Failed to record game start', err);
+    log.error('stats record game start failed', { err: errMsg(err) });
     return null;
   }
 }
@@ -102,7 +103,7 @@ function recordGameEnd(gameId: number, durationMs: number, score: number | null)
   try {
     stmtEndGame.run(Date.now(), durationMs, score, gameId);
   } catch (err) {
-    console.error('[stats] Failed to record game end', err);
+    log.error('stats record game end failed', { err: errMsg(err) });
   }
 }
 
@@ -214,6 +215,7 @@ function createRoom(creatorSocket: GameSocket, playerName: string, maxPlayers: n
     callLockTimer: null,
   };
   rooms.set(roomId, room);
+  log.info('room created', { roomId, playerId, playerName, maxPlayers });
   return room;
 }
 
@@ -235,6 +237,7 @@ function joinRoom(room: Room, joinerSocket: GameSocket, playerName: string): voi
   st.players = [...st.players, newPlayer];
   st.selections[playerId] = [];
   room.sockets.set(playerId, joinerSocket);
+  log.info('player joined', { roomId: st.roomId, playerId, playerName, playerCount: st.players.length });
 
   // Start once the room reaches maxPlayers.
   if (st.players.length >= st.maxPlayers) {
@@ -243,6 +246,9 @@ function joinRoom(room: Room, joinerSocket: GameSocket, playerName: string): voi
     st.board = board;
     st.deck = deck;
     room.currentGame = recordGameStart('multiplayer', st.roomId);
+    if (room.currentGame) {
+      log.info('game started', { roomId: st.roomId, gameId: room.currentGame.gameId, playerCount: st.players.length });
+    }
   }
 }
 
@@ -265,6 +271,7 @@ function evictPlayer(room: Room, playerId: PlayerId): void {
   room.sockets.delete(playerId);
   st.players = st.players.filter((p) => p.id !== playerId);
   delete st.selections[playerId];
+  log.info('player evicted', { roomId: st.roomId, playerId, remainingPlayers: st.players.length });
 
   if (st.lastSetBy === playerId) st.lastSetBy = null;
 
@@ -282,7 +289,9 @@ function evictPlayer(room: Room, playerId: PlayerId): void {
     st.status = 'finished';
     if (room.currentGame !== null) {
       const topScore = st.players.length > 0 ? Math.max(...st.players.map(p => p.correctSets)) : 0;
-      recordGameEnd(room.currentGame.gameId, Date.now() - room.currentGame.startedAt, topScore);
+      const durationMs = Date.now() - room.currentGame.startedAt;
+      log.info('game ended', { roomId: st.roomId, gameId: room.currentGame.gameId, durationMs, topScore, reason: 'all-disconnected' });
+      recordGameEnd(room.currentGame.gameId, durationMs, topScore);
       room.currentGame = null;
     }
   }
@@ -291,6 +300,7 @@ function evictPlayer(room: Room, playerId: PlayerId): void {
 function scheduleEmptyRoomDeletion(room: Room): void {
   if (room.emptyTimer !== null) return; // already scheduled
   room.emptyTimer = setTimeout(() => {
+    log.info('room deleted', { roomId: room.state.roomId });
     rooms.delete(room.state.roomId);
   }, EMPTY_ROOM_TTL_MS);
 }
@@ -375,7 +385,9 @@ function applySelection(room: Room, playerId: PlayerId, cardId: string): void {
       st.status = 'finished';
       if (room.currentGame !== null) {
         const topScore = Math.max(...st.players.map(p => p.correctSets));
-        recordGameEnd(room.currentGame.gameId, Date.now() - room.currentGame.startedAt, topScore);
+        const durationMs = Date.now() - room.currentGame.startedAt;
+        log.info('game ended', { roomId: st.roomId, gameId: room.currentGame.gameId, durationMs, topScore, reason: 'no-sets-remain' });
+        recordGameEnd(room.currentGame.gameId, durationMs, topScore);
         room.currentGame = null;
       }
     }
@@ -400,7 +412,9 @@ function resetRoom(room: Room): void {
   // topScore reflects actual play, not the zeroed-out values below.
   if (room.currentGame !== null) {
     const topScore = st.players.length > 0 ? Math.max(...st.players.map(p => p.correctSets)) : 0;
-    recordGameEnd(room.currentGame.gameId, Date.now() - room.currentGame.startedAt, topScore);
+    const durationMs = Date.now() - room.currentGame.startedAt;
+    log.info('game ended', { roomId: st.roomId, gameId: room.currentGame.gameId, durationMs, topScore, reason: 'new-game' });
+    recordGameEnd(room.currentGame.gameId, durationMs, topScore);
     room.currentGame = null;
   }
 
@@ -444,6 +458,9 @@ function resetRoom(room: Room): void {
   st.deck = deck;
   st.status = 'active';
   room.currentGame = recordGameStart('multiplayer', st.roomId);
+  if (room.currentGame) {
+    log.info('game started', { roomId: st.roomId, gameId: room.currentGame.gameId, playerCount: st.players.length });
+  }
 }
 
 // ── Message handler ──────────────────────────────────────────────────────────
@@ -453,6 +470,7 @@ function handleMessage(ws: GameSocket, raw: string): void {
   try {
     msg = JSON.parse(raw) as ClientMessage;
   } catch {
+    log.warn('invalid json from client', { roomId: ws.roomId, playerId: ws.playerId });
     send(ws, { type: 'error', message: 'Invalid JSON' });
     return;
   }
@@ -460,7 +478,7 @@ function handleMessage(ws: GameSocket, raw: string): void {
   try {
     handleParsedMessage(ws, msg);
   } catch (err) {
-    console.error('[ws] Unhandled error in handleMessage', err);
+    log.error('unhandled ws error', { err: errMsg(err), roomId: ws.roomId, playerId: ws.playerId });
     send(ws, { type: 'error', message: 'Internal server error' });
   }
 }
@@ -498,6 +516,7 @@ function handleParsedMessage(ws: GameSocket, msg: ClientMessage): void {
     player.connected = true;
     room.sockets.set(msg.playerId, ws);
 
+    log.info('player reconnected', { roomId: msg.roomId, playerId: msg.playerId });
     send(ws, { type: 'joined', playerId: msg.playerId, roomId: msg.roomId });
     broadcast(room, { type: 'room_state', state: room.state });
     broadcastEvent(room, 'reconnect', player);
@@ -565,6 +584,7 @@ function handleParsedMessage(ws: GameSocket, msg: ClientMessage): void {
   // ── leave ──────────────────────────────────────────────────────────────────
   if (msg.type === 'leave') {
     const player = room.state.players.find((p) => p.id === ws.playerId);
+    log.info('player left', { roomId: ws.roomId, playerId: ws.playerId });
     ws.intentionalClose = true; // prevent handleClose from re-processing this socket
     evictPlayer(room, ws.playerId!);
     ws.close();
@@ -656,6 +676,7 @@ function handleClose(ws: GameSocket): void {
 
   // Mark offline so the UI can show the player as disconnected.
   if (player) player.connected = false;
+  log.info('player disconnected', { roomId: ws.roomId, playerId });
 
   // Remove socket reference — the player slot stays.
   room.sockets.delete(playerId);
@@ -729,9 +750,9 @@ if (isMain || process.env['WS_STANDALONE'] === '1') {
     stmtInsertGame = db.prepare(`INSERT INTO games (mode, room_id, started_at) VALUES (?, ?, ?)`);
     stmtEndGame    = db.prepare(`UPDATE games SET ended_at=?, duration_ms=?, score=? WHERE id=?`);
     stmtCountGames = db.prepare(`SELECT COUNT(*) as total FROM games`);
-    console.log('📊 Stats DB ready');
+    log.info('stats db ready');
   } catch (err) {
-    console.error('⚠️  Stats DB failed to initialize — game tracking disabled', err);
+    log.error('stats db init failed — game tracking disabled', { err: errMsg(err) });
   }
 
   // Origin allowed to call write endpoints. Defaults to the Vercel deployment;
@@ -757,6 +778,7 @@ if (isMain || process.env['WS_STANDALONE'] === '1') {
     // Reject write requests from unlisted origins (non-browser callers send no
     // Origin header and are allowed through — this is not auth, just CORS hygiene).
     if (isWriteRequest && origin && origin !== ALLOWED_ORIGIN) {
+      log.warn('cors rejected', { origin, url: req.url });
       res.writeHead(403, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ error: 'forbidden' }));
       return;
@@ -773,7 +795,7 @@ if (isMain || process.env['WS_STANDALONE'] === '1') {
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ totalGamesPlayed: total }));
       } catch (err) {
-        console.error('[stats] Failed to query game count', err);
+        log.error('stats query failed', { err: errMsg(err) });
         res.writeHead(500, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ error: 'stats unavailable' }));
       }
@@ -788,7 +810,8 @@ if (isMain || process.env['WS_STANDALONE'] === '1') {
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ gameId: result?.gameId ?? null }));
         })
-        .catch(() => {
+        .catch((err: unknown) => {
+          log.warn('invalid request body', { url: req.url, err: errMsg(err) });
           res.writeHead(400, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ error: 'invalid body' }));
         });
@@ -807,7 +830,8 @@ if (isMain || process.env['WS_STANDALONE'] === '1') {
             res.writeHead(200, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ ok: true }));
           })
-          .catch(() => {
+          .catch((err: unknown) => {
+            log.warn('invalid request body', { url: req.url, err: errMsg(err) });
             res.writeHead(400, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ error: 'invalid body' }));
           });
@@ -827,9 +851,9 @@ if (isMain || process.env['WS_STANDALONE'] === '1') {
     const key  = readFileSync(KEY_PATH);
     httpServer = createHttpsServer({ cert, key }, requestHandler) as unknown as HttpServer;
     usingTls = true;
-    console.log(`🔒 TLS certs loaded — using HTTPS/WSS`);
+    log.info('tls certs loaded');
   } catch {
-    console.warn(`⚠️  TLS certs not found — falling back to HTTP/WS`);
+    log.warn('tls certs not found, using plain http/ws');
     httpServer = createServer(requestHandler);
   }
 
@@ -837,7 +861,6 @@ if (isMain || process.env['WS_STANDALONE'] === '1') {
 
   httpServer.listen(PORT, '0.0.0.0', () => {
     const proto = usingTls ? 'wss' : 'ws';
-    console.log(`🚀 Standalone WS server listening on 0.0.0.0:${PORT}`);
-    console.log(`   External: ${proto}://34.44.229.168.sslip.io:${PORT}`);
+    log.info('server listening', { port: PORT, tls: usingTls, url: `${proto}://34.44.229.168.sslip.io:${PORT}` });
   });
 }
