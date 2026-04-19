@@ -54,6 +54,7 @@ export class GameRoomComponent implements OnInit, OnDestroy {
 
   /** Tracks clipboard copy state for the "Copy" button label. */
   copyState: 'idle' | 'copied' | 'failed' = 'idle';
+  private copyStateTimeout: ReturnType<typeof setTimeout> | null = null;
 
   private subs = new Subscription();
 
@@ -141,6 +142,7 @@ export class GameRoomComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    if (this.copyStateTimeout) clearTimeout(this.copyStateTimeout);
     this.subs.unsubscribe();
     // Do NOT call leave() here — just silently close the socket so the server
     // keeps the player slot alive for the reconnect grace period.
@@ -163,16 +165,21 @@ export class GameRoomComponent implements OnInit, OnDestroy {
       () => {
         this.copyState = 'copied';
         this.cdr.markForCheck();
-        setTimeout(() => { this.copyState = 'idle'; this.cdr.markForCheck(); }, 2000);
+        this.scheduleCopyReset(2000);
       },
       () => {
         // Clipboard API denied (HTTP, permissions policy, etc.) — show the
         // failure so the user knows to copy the code manually.
         this.copyState = 'failed';
         this.cdr.markForCheck();
-        setTimeout(() => { this.copyState = 'idle'; this.cdr.markForCheck(); }, 3000);
+        this.scheduleCopyReset(3000);
       },
     );
+  }
+
+  private scheduleCopyReset(ms: number): void {
+    if (this.copyStateTimeout) clearTimeout(this.copyStateTimeout);
+    this.copyStateTimeout = setTimeout(() => { this.copyState = 'idle'; this.cdr.markForCheck(); }, ms);
   }
 
   // Action feed helpers
