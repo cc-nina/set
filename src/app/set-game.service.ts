@@ -55,10 +55,12 @@ export class SetGameService implements GameSession {
   readonly callerLockId$: Observable<PlayerId | null> = of(null);
 
   private currentGame: { gameId: number; startedAt: number } | null = null;
-  // True when a fresh game was initialized from the constructor (no saved state)
-  // but the record hasn't been started yet — deferred until the first selectCard
-  // so that page loads that never reach /game don't pollute solo stats.
+  // True when a game is in progress but startGameRecord() hasn't been called yet.
+  // Deferred until the first selectCard so that page loads that never reach /game
+  // don't pollute solo stats.
   private pendingInitialRecord = false;
+
+  private static readonly RECORD_KEY = 'set-solo-record';
 
   constructor(
     @Inject(PLATFORM_ID) private platformId: object,
@@ -74,7 +76,25 @@ export class SetGameService implements GameSession {
           this.endGameRecord(state.correctSets);
         }
       });
-      if (!saved) this.pendingInitialRecord = true;
+      if (saved?.status === 'active') {
+        // Resume an in-progress game: reconnect to the existing DB row so a
+        // page refresh doesn't create a duplicate start record.
+        try {
+          const raw = localStorage.getItem(SetGameService.RECORD_KEY);
+          const r = raw ? JSON.parse(raw) as { gameId: number; startedAt: number } : null;
+          if (r && typeof r.gameId === 'number') {
+            this.currentGame = { gameId: r.gameId, startedAt: r.startedAt ?? Date.now() };
+          } else {
+            this.pendingInitialRecord = true;
+          }
+        } catch {
+          this.pendingInitialRecord = true;
+        }
+      } else {
+        // No saved state or finished game — clear any stale record key.
+        localStorage.removeItem(SetGameService.RECORD_KEY);
+        if (!saved) this.pendingInitialRecord = true;
+      }
     }
   }
 
@@ -89,6 +109,7 @@ export class SetGameService implements GameSession {
       const { gameId } = await res.json() as { gameId: number };
       if (typeof gameId !== 'number') return;
       this.currentGame = { gameId, startedAt: Date.now() };
+      try { localStorage.setItem(SetGameService.RECORD_KEY, JSON.stringify(this.currentGame)); } catch { /* non-fatal */ }
     } catch { /* non-fatal */ }
   }
 
@@ -96,6 +117,7 @@ export class SetGameService implements GameSession {
     if (this.currentGame === null) return;
     const { gameId, startedAt } = this.currentGame;
     this.currentGame = null;
+    try { localStorage.removeItem(SetGameService.RECORD_KEY); } catch { /* non-fatal */ }
     fetch(`${SERVER_ORIGIN}/api/end-game/${gameId}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
