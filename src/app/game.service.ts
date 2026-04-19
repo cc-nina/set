@@ -17,9 +17,8 @@ export function initGame(): GameState {
 
 // Select or deselect a card. If 3 cards are selected, evaluate the selection:
 //   - Valid set → apply it (cards removed, deck replenished, score updated).
-//   - Invalid set → penalise (cards removed from board, score decremented,
-//     selection cleared). The component's animation layer temporarily restores
-//     the old board to show the shake animation before the removal lands.
+//   - Invalid set → penalise (cards stay on board, score decremented, selection
+//     cleared). lastNegCardIds is set so the animation layer knows which 3 to shake.
 export function selectCard(state: GameState, card: Card): GameState {
   // Shallow-copy all mutable fields to preserve immutability for callers.
   const newState: GameState = {
@@ -51,33 +50,11 @@ export function selectCard(state: GameState, card: Card): GameState {
     if (isSet(a, b, c)) {
       return applySet(newState, newState.selected);
     } else {
-      // Invalid selection: penalise and remove the 3 cards from the board.
-      // Replacement from the deck follows the same rules as applySet — in-place
-      // swap if at standard size, drop-and-drain if extended.
+      // Invalid selection: penalise but keep the 3 cards on the board.
       newState.incorrectSelections += 1;
       newState.score = newState.correctSets - newState.incorrectSelections;
-
-      const negIds = new Set(newState.selected.map((c) => c.id));
-
-      if (newState.board.length <= BOARD_SIZE && newState.deck.length > 0) {
-        // Standard size: replace in-place to keep layout stable.
-        for (let i = 0; i < newState.board.length; i++) {
-          if (negIds.has(newState.board[i].id)) {
-            newState.board[i] = newState.deck.shift() as Card;
-          }
-        }
-      } else {
-        // Extended (or deck empty): remove the 3 cards without replacing.
-        newState.board = newState.board.filter((c) => !negIds.has(c.id));
-      }
-
+      newState.lastNegCardIds = newState.selected.map((c) => c.id);
       newState.selected = [];
-
-      // Check for end-of-game: deck exhausted and no set remains.
-      if (newState.deck.length === 0 && findSet(newState.board) === null) {
-        newState.status = 'finished';
-      }
-
       return newState;
     }
   }

@@ -42,9 +42,9 @@ export interface GameSession {
 
   /**
    * Emits the PlayerId of whoever just made an incorrect 3-card selection
-   * (neg), then null after the animation window. The component uses this to
-   * show the shake animation and briefly restore the board before the cards
-   * vanish, exactly mirroring the correct-set animation flow.
+   * (neg), then null after the animation window. The component uses this
+   * together with GameState.lastNegCardIds to shake those 3 cards in place —
+   * they remain on the board after a neg.
    */
   readonly negSetBy$: Observable<PlayerId | null>;
 

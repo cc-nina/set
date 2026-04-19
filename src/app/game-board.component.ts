@@ -54,12 +54,14 @@ export class GameBoardComponent implements AfterViewInit, OnDestroy {
 
   /**
    * Snapshot of the board from the previous state emission.
-   * Used by both the set-match and neg animations to diff which cards were
-   * removed, so the old board can be temporarily restored during the animation.
-   * Only updated when no animation is currently running, to prevent a mid-
-   * animation state$ emission from clobbering the snapshot we're animating from.
+   * Used by the set-match animation to diff which cards were removed so the
+   * old board can be temporarily restored during the flash.
+   * Only updated when no set-match animation is running.
    */
   private prevBoard: Card[] = [];
+
+  /** Card IDs of the most recent incorrect selection — used by the neg animation. */
+  private lastNegCardIds: string[] | null = null;
 
   /** Colour used for the selection border ring. Stored locally (UI-only). */
   highlightColor: string = '#000000';
@@ -146,12 +148,13 @@ export class GameBoardComponent implements AfterViewInit, OnDestroy {
 
     let first = true;
     this.stateSubscription = this.game.state$.subscribe((s) => {
-      // Only update prevBoard when no animation is running — mid-animation
-      // state$ emissions must not clobber the snapshot we're animating from.
-      if (this.setMatchTimeout === null && this.negMatchTimeout === null) {
+      // Only update prevBoard when no set-match animation is running — a mid-
+      // animation state$ emission must not clobber the snapshot we're diffing from.
+      if (this.setMatchTimeout === null) {
         this.prevBoard = this.board;
       }
       this.board = s.board;
+      this.lastNegCardIds = s.lastNegCardIds ?? null;
       this.selectedIds = new Set(s.selected.map((c) => c.id));
       this.gameStatus = s.status;
 
@@ -226,36 +229,26 @@ export class GameBoardComponent implements AfterViewInit, OnDestroy {
 
     // ── Neg animation ─────────────────────────────────────────────────────────
     // negSetBy$ emits when an incorrect 3-card selection is penalised, then null
-    // after the animation window. The service (single-player) and server
-    // (multiplayer) both remove the 3 neg'd cards from the board before this
-    // fires, so we use the same prevBoard diff as the set-match animation:
-    // temporarily restore the old board so the cards are visible during the
-    // shake, then land the new board (without those cards) after the timeout.
+    // after the animation window. The neg'd cards stay on the board, so we use
+    // lastNegCardIds (set from state$ just before this fires) to identify which
+    // 3 cards to shake — no board-swapping needed.
     this.negSetBySubscription = this.game.negSetBy$.subscribe((id) => {
       if (id === null) {
-        // Tear-down signal: clear any lingering neg highlight.
         this.negMatchIds = new Set();
         this.cdr.markForCheck();
         return;
       }
 
-      const newBoardIds = new Set(this.board.map((c) => c.id));
-      const removedCards = this.prevBoard.filter((c) => !newBoardIds.has(c.id));
-      if (removedCards.length !== 3) return; // safety guard
+      // Timeout penalties have no neg cards (lastNegCardIds is null).
+      if (!this.lastNegCardIds || this.lastNegCardIds.length !== 3) return;
 
-      this.negMatchIds = new Set(removedCards.map((c) => c.id));
-
-      // Capture snapshots now — prevBoard may be overwritten before the timeout.
-      const animOldBoard = this.prevBoard.slice();
-      const animNewBoard = this.board.slice();
-      this.board = animOldBoard;
+      this.negMatchIds = new Set(this.lastNegCardIds);
       this.cdr.markForCheck();
 
       if (this.negMatchTimeout !== null) clearTimeout(this.negMatchTimeout);
       this.negMatchTimeout = setTimeout(() => {
         this.negMatchIds = new Set();
         this.negMatchTimeout = null;
-        this.board = animNewBoard;
         this.cdr.markForCheck();
       }, NEG_MATCH_DISPLAY_MS);
     });

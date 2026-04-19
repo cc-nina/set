@@ -42,6 +42,12 @@ export interface GameState {
   incorrectSelections: number; // number of incorrect selection attempts
   /** 'active' while the game is in progress; 'finished' when no moves remain. */
   status: 'active' | 'finished';
+  /**
+   * Card IDs of the 3 cards in the most recent incorrect selection.
+   * Null when the last penalty was a timeout (no 3-card selection was made).
+   * Used by the animation layer to identify which cards to shake.
+   */
+  lastNegCardIds?: string[] | null;
   /** Multiplayer only: the PlayerId of the local player, injected by MultiplayerGameSession. */
   myPlayerId?: string;
   /** Multiplayer only: all players in the room, injected by MultiplayerGameSession. */
@@ -91,6 +97,12 @@ export interface RoomState {
    * finder's name in both players' UIs.
    */
   lastSetBy: PlayerId | null;
+  /**
+   * Card IDs of the 3 cards in the most recent incorrect selection, or null
+   * when the last penalty was a timeout. Broadcast to all clients so every
+   * player's animation layer knows which cards to shake.
+   */
+  lastNegCardIds: string[] | null;
   /**
    * The id of the player who has currently called SET and holds the selection
    * lock, or null if nobody has called. While non-null, only this player may

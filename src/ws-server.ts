@@ -159,6 +159,7 @@ function createRoom(creatorSocket: GameSocket, playerName: string, maxPlayers: n
     deck: [],
     selections: { [playerId]: [] },
     lastSetBy: null,
+    lastNegCardIds: null,
     callerLockId: null,
   };
 
@@ -347,46 +348,16 @@ function applySelection(room: Room, playerId: PlayerId, cardId: string): void {
       st.status = 'finished';
     }
   } else {
-    // Penalise: remove the 3 neg cards from the board (replaced from deck if
-    // possible, otherwise the board shrinks), then clear selection.
-    const negIds = new Set([a.id, b.id, c.id]);
-    const deck = st.deck.slice();
-    const board: Card[] = [];
-    for (const boardCard of st.board) {
-      if (negIds.has(boardCard.id)) {
-        if (deck.length > 0) {
-          board.push(deck.shift()!);
-        }
-        // deck empty — slot dropped, board shrinks
-      } else {
-        board.push(boardCard);
-      }
-    }
-    st.board = board;
-    st.deck = deck;
+    // Incorrect selection: penalise but keep the 3 cards on the board.
     st.selections[playerId] = [];
-
-    // Remove ghost references from other players' selections.
-    const boardIds = new Set(board.map((bc) => bc.id));
-    for (const pid of Object.keys(st.selections)) {
-      if (pid !== playerId) {
-        st.selections[pid] = st.selections[pid].filter((sc) => boardIds.has(sc.id));
-      }
-    }
+    st.lastNegCardIds = [a.id, b.id, c.id];
 
     player.incorrectSelections += 1;
     player.score = player.correctSets - player.incorrectSelections;
     st.lastSetBy = null;
     broadcastEvent(room, 'neg', player);
 
-    // Release the call lock — player was penalised.
     clearCallLock(room);
-
-    // Check if the game should end after removing neg cards.
-    const hasSetAfterNeg = findSet(board) !== null;
-    if (deck.length === 0 && !hasSetAfterNeg) {
-      st.status = 'finished';
-    }
   }
 }
 
@@ -409,7 +380,7 @@ function resetRoom(room: Room): void {
   st.players = st.players.filter((p) => p.connected);
 
   st.lastSetBy = null;
-  // Release any active call lock before the new game starts.
+  st.lastNegCardIds = null;
   clearCallLock(room);
 
   for (const p of st.players) {
@@ -593,10 +564,11 @@ function handleParsedMessage(ws: GameSocket, msg: ClientMessage): void {
         return; // Lock was already released (e.g., by a successful set).
       }
       st.callerLockId = null;
-      // Also penalise the player for not completing the set in time.
+      // Penalise for timeout — no specific neg cards to highlight.
       player.incorrectSelections += 1;
       player.score = player.correctSets - player.incorrectSelections;
       st.selections[player.id] = [];
+      st.lastNegCardIds = null;
 
       broadcast(room, { type: 'room_state', state: room.state });
       broadcastEvent(room, 'timeout', player);

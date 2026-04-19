@@ -59,6 +59,7 @@ function roomStateToGameState(rs: RoomState, playerId: PlayerId): GameState {
     correctSets: me?.correctSets ?? 0,
     incorrectSelections: me?.incorrectSelections ?? 0,
     status: rs.status === 'finished' ? 'finished' : 'active',
+    lastNegCardIds: rs.lastNegCardIds,
     myPlayerId: playerId,
     players: rs.players,
   };
@@ -87,8 +88,7 @@ export class MultiplayerGameSession implements GameSession, OnDestroy {
 
   private negSetBySource = new Subject<PlayerId>();
   /**
-   * Emits a PlayerId when a neg happens (cards removed), then null after
-   * the animation window.
+   * Emits a PlayerId when a neg happens, then null after the animation window.
    */
   readonly negSetBy$: Observable<PlayerId | null> = merge(
     this.negSetBySource.pipe(map((id): PlayerId | null => id)),

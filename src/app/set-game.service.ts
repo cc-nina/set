@@ -110,6 +110,7 @@ export class SetGameService implements GameSession {
       ...after,
       incorrectSelections: after.incorrectSelections + 1,
       score: after.correctSets - (after.incorrectSelections + 1),
+      lastNegCardIds: null,
     };
     this.stateSubject.next(penalised);
     this.negSetBySource.next('local');
