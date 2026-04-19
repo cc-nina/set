@@ -407,7 +407,7 @@ export class GameBoardComponent implements OnInit, OnDestroy {
     this.orientation = cfg.orientation;
     this.gridClasses = cfg.gridClasses;
 
-    const boardWidth = Math.min(w - 16, cfg.maxBoardWidth);
+    const boardWidth = Math.min(w - 32, cfg.maxBoardWidth);
     const cardWFromWidth = boardWidth / (cfg.cols + GAP_RATIO * (cfg.cols - 1));
 
     const boardHeight = h - 56;

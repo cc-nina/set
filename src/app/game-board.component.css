@@ -126,8 +126,7 @@
   display: flex; align-items: center; gap: 0.5rem;
 }
 .countdown-label {
-  font-size: var(--text-sm); font-weight: 600; color: var(--danger-text); white-space: nowrap;
-  animation: pulse-label 0.6s ease-in-out infinite alternate;
+  font-size: var(--text-sm); font-weight: 600; color: var(--text-secondary); white-space: nowrap;
 }
 @keyframes pulse-label {
   from { opacity: 1; }

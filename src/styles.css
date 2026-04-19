@@ -186,6 +186,7 @@ body {
   color: var(--text-primary);
   -webkit-font-smoothing: antialiased;
   transition: var(--theme-transition);
+  scrollbar-gutter: stable;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
