@@ -111,8 +111,8 @@ export class MultiplayerGameSession implements GameSession, OnDestroy {
   private roomIdValue: string = '';
   /** Tracks the previous lastSetBy to avoid re-firing the banner on every room_state. */
   private prevLastSetBy: PlayerId | null = null;
-  /** Tracks the previous incorrectSelections to detect negs from room_state. */
-  private prevIncorrectSelections = 0;
+  /** Tracks each player's previous incorrectSelections to detect negs from room_state. */
+  private prevIncorrectSelectionsMap = new Map<PlayerId, number>();
   get roomId(): string { return this.roomIdValue; }
 
   private roomIdSubject = new BehaviorSubject<string>('');
@@ -289,13 +289,16 @@ export class MultiplayerGameSession implements GameSession, OnDestroy {
           this.lastSetBySource.next(newLastSetBy);
         }
         this.prevLastSetBy = newLastSetBy;
-        // Trigger the neg animation when any player's incorrectSelections increased.
-        // (The server has already removed the neg cards from the board, so the
-        // component can diff prevBoard vs new board to find the 3 removed cards.)
-        if (gs.incorrectSelections > this.prevIncorrectSelections) {
-          this.negSetBySource.next(this.playerId);
+        // Trigger the neg animation for whichever player's incorrectSelections increased.
+        // Iterating all players (not just local) ensures every client sees the shake
+        // regardless of who made the incorrect selection.
+        for (const player of msg.state.players) {
+          const prev = this.prevIncorrectSelectionsMap.get(player.id) ?? 0;
+          if (player.incorrectSelections > prev) {
+            this.negSetBySource.next(player.id);
+          }
+          this.prevIncorrectSelectionsMap.set(player.id, player.incorrectSelections);
         }
-        this.prevIncorrectSelections = gs.incorrectSelections;
         this.playersSubject.next(msg.state.players);
         break;
       }
