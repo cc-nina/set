@@ -399,10 +399,10 @@ export class GameBoardComponent implements OnInit, OnDestroy {
     const h = window.innerHeight;
 
     // Desktop: landscape cards (3:2), 4×3 grid, capped at 896px wide.
-    // Mobile:  portrait cards (2:3), 3×4 grid, full viewport width.
+    // Mobile:  portrait cards (2:3), 4×3 grid, full viewport width.
     const cfg = w >= 768
       ? { orientation: 'landscape' as const, gridClasses: 'grid-cols-4', cols: 4, rows: 3, cardAspect: 180 / 120, maxBoardWidth: 896 }
-      : { orientation: 'portrait'  as const, gridClasses: 'grid-cols-3', cols: 3, rows: 4, cardAspect: 120 / 180, maxBoardWidth: Infinity };
+      : { orientation: 'portrait'  as const, gridClasses: 'grid-cols-4', cols: 4, rows: 3, cardAspect: 120 / 180, maxBoardWidth: Infinity };
 
     this.orientation = cfg.orientation;
     this.gridClasses = cfg.gridClasses;
