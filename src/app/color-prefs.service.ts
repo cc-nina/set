@@ -3,7 +3,7 @@ import { isPlatformBrowser } from '@angular/common';
 import { loadColorPrefs, saveColorPrefs } from './color-prefs.storage';
 
 const DEFAULT_PALETTE: [string, string, string] = ['#db2c05', '#0c8d1b', '#4F158A'];
-const DEFAULT_HIGHLIGHT = '#000000';
+const DEFAULT_HIGHLIGHT = '';
 
 /**
  * Shared service that owns colour preferences for a game session.

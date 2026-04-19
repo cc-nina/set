@@ -68,28 +68,32 @@
       </div>
     </div>
 
-    <div *ngIf="hasConflict" class="conflict-warning" style="margin-top:12px;">
+    <div *ngIf="hasConflict" class="conflict-warning">
       <span>⚠</span> Two colours are very similar — they may be hard to tell apart.
     </div>
 
     <!-- Presets -->
-    <div class="presets-section" style="margin-top:16px;">
-      <div class="presets-label">Quick picks</div>
-      <div class="presets-grid">
-        <div
-          *ngFor="let pc of presetColors"
-          class="preset-dot"
-          [class.selected-preset]="currentSwatchColor === pc"
-          [style.background]="pc"
-          [title]="pc"
-          (click)="applyPreset(pc)"
-        ></div>
+    <div class="presets-section">
+
+      <!-- Quick picks -->
+      <div class="presets-block">
+        <div class="presets-label">Quick picks</div>
+        <div class="presets-grid">
+          <div
+            *ngFor="let pc of presetColors"
+            class="preset-dot"
+            [class.selected-preset]="currentSwatchColor === pc"
+            [style.background]="pc"
+            [title]="pc"
+            (click)="applyPreset(pc)"
+          ></div>
+        </div>
       </div>
 
       <!-- Colourblind-friendly set -->
-      <div class="cb-row">
-        <span class="cb-label">Colourblind</span>
-        <div class="cb-swatches">
+      <div class="presets-block">
+        <div class="presets-label">Colourblind</div>
+        <div class="presets-grid">
           <div
             *ngFor="let c of colorblindColors"
             class="preset-dot"
@@ -98,11 +102,12 @@
             [title]="c"
             (click)="applyPreset(c)"
           ></div>
+          <button class="cb-apply-btn" (click)="applyColorblindSet()" title="Apply all three colourblind colours to the card palette">
+            Apply all 3
+          </button>
         </div>
-        <button class="cb-apply-btn" (click)="applyColorblindSet()" title="Apply all three colourblind colours to the card palette">
-          Apply all
-        </button>
       </div>
+
     </div>
 
     <!-- Reset to defaults -->

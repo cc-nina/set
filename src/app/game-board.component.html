@@ -19,54 +19,35 @@
       {{ finalScore }} pt{{ finalScore === 1 ? '' : 's' }}
     </p>
     <div class="board-overlay-actions">
-      <button class="open-palette-btn" (click)="game.startNewGame()">Play again</button>
+      <button class="btn btn-primary" (click)="game.startNewGame()">Play again</button>
     </div>
   </div>
 </div>
 
 <!-- ── Main board ──────────────────────────────────────────────────── -->
-<main style="display:flex; justify-content:center; align-items:flex-start; min-height:100dvh; padding:1rem; box-sizing:border-box;">
-<div class="flex flex-col gap-3 items-center w-full max-w-4xl mx-auto">
+<main class="board-wrapper">
+<div class="board-inner">
 
-  <div class="w-full flex items-center justify-between" [style.padding-left]="cardGap + 'px'" [style.padding-right]="cardGap + 'px'">
-    <!-- Live score -->
+  <!-- Toolbar: stats left, colours button right -->
+  <div class="board-toolbar" [style.padding-left]="cardGap + 'px'" [style.padding-right]="cardGap + 'px'">
     <div class="solo-scorebar">
       <span class="solo-stat">{{ liveSets }} set{{ liveSets === 1 ? '' : 's' }}</span>
       <span class="solo-stat solo-stat--neg" *ngIf="liveNegs > 0">{{ liveNegs }} neg{{ liveNegs === 1 ? '' : 's' }}</span>
       <span class="solo-stat solo-stat--score">{{ liveScore }} pt{{ liveScore === 1 ? '' : 's' }}</span>
     </div>
     <div class="toolbar-right">
-      <!-- Call SET button — shown when we haven't called and nobody else has either -->
-      <button
-        *ngIf="!callingSet && !lockedByOther"
-        class="call-set-btn"
-        [disabled]="gameStatus !== 'active'"
-        (click)="callSet()"
-        title="Call SET (Space)"
-      >Call SET!</button>
-      <!-- Another player holds the lock — show a waiting indicator -->
-      <div *ngIf="lockedByOther" class="locked-by-other">
-        <span class="locked-label">Waiting for {{ getPlayerName(serverCallerLockId) }}…</span>
-      </div>
-      <!-- Countdown display — shown while we hold the lock -->
-      <div *ngIf="callingSet" class="countdown-wrap">
-        <span class="countdown-label">Pick 3 cards&hellip;</span>
-        <div class="countdown-bar-bg">
-          <div class="countdown-bar-fill" [style.width]="(callTimeLeft / callSetSeconds * 100) + '%'" [class.countdown-urgent]="callTimeLeft < 2"></div>
-        </div>
-        <span class="countdown-time">{{ callTimeLeft | number:'1.1-1' }}s</span>
-      </div>
-      <button class="open-palette-btn" (click)="openPaletteModal()">
+      <button class="btn btn-secondary open-palette-btn" (click)="openPaletteModal()">
         <div class="palette-dots-preview">
           <div *ngFor="let p of palette" class="palette-dot-sm" [style.background]="p"></div>
-          <!-- Highlight preview as a ring -->
-          <div class="palette-highlight-sm" [style.border-color]="highlightColor"></div>
+          <div class="palette-dot-divider"></div>
+          <div class="palette-dot-sm" [style.background]="highlightColor || 'var(--card-selected-default)'"></div>
         </div>
         Colours
       </button>
     </div>
   </div>
 
+  <!-- Card grid -->
   <div *ngIf="isBrowser && showBoard" class="board w-full flex justify-center">
     <div class="grid" [ngClass]="gridClasses" [ngStyle]="gridStyle">
       <div *ngFor="let c of board; trackBy: trackCard" (click)="onCardClick(c)"
@@ -88,6 +69,30 @@
           [cardBorder]="cardBorder"
         ></app-card>
       </div>
+    </div>
+  </div>
+
+  <!-- Call SET area — centered below the cards -->
+  <div class="call-set-area">
+    <!-- Call SET button — shown when we haven't called and nobody else has either -->
+    <button
+      *ngIf="!callingSet && !lockedByOther"
+      class="call-set-btn"
+      [disabled]="gameStatus !== 'active'"
+      (click)="callSet()"
+      title="Call SET (Space)"
+    >Call SET!</button>
+    <!-- Another player holds the lock — show a waiting indicator -->
+    <div *ngIf="lockedByOther" class="locked-by-other">
+      <span class="locked-label">Waiting for {{ getPlayerName(serverCallerLockId) }}…</span>
+    </div>
+    <!-- Countdown display — shown while we hold the lock -->
+    <div *ngIf="callingSet" class="countdown-wrap">
+      <span class="countdown-label">Pick 3 cards&hellip;</span>
+      <div class="countdown-bar-bg">
+        <div class="countdown-bar-fill" [style.width]="(callTimeLeft / callSetSeconds * 100) + '%'" [class.countdown-urgent]="callTimeLeft < 2"></div>
+      </div>
+      <span class="countdown-time">{{ callTimeLeft | number:'1.1-1' }}s</span>
     </div>
   </div>
 

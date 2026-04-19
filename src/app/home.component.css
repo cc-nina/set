@@ -30,9 +30,9 @@
   height: 18px;
   border-radius: 50%;
 }
-.dot-red    { background: #DB2C05; }
-.dot-green  { background: #0C8D1B; }
-.dot-purple { background: #4F158A; }
+.dot-red    { background: #DB2C05; }   /* SET card colour — intentionally fixed */
+.dot-green  { background: #0C8D1B; }   /* SET card colour — intentionally fixed */
+.dot-purple { background: var(--accent); }
 
 .home-title {
   font-size: 3.5rem;
@@ -50,7 +50,7 @@
 }
 
 .home-games-played {
-  font-size: 0.75rem;
+  font-size: var(--text-sm);
   color: var(--text-secondary);
   margin: 0;
   opacity: 0.7;
@@ -132,35 +132,7 @@
   margin-top: auto;
 }
 
-/* ── Buttons ───────────────────────────────────────────────────────── */
-.btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 9px 18px;
-  border-radius: 8px;
-  font-size: 0.875rem;
-  font-weight: 600;
-  cursor: pointer;
-  border: 1.5px solid transparent;
-  transition: background 0.12s, border-color 0.12s, transform 0.1s;
-}
-
-.btn:active { transform: scale(0.97); }
-
-.btn-primary {
-  background: var(--accent);
-  color: var(--text-inverse);
-  border-color: var(--accent);
-}
-.btn-primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
-
-.btn-secondary {
-  background: var(--btn-ghost-bg);
-  color: var(--btn-ghost-text);
-  border-color: var(--btn-ghost-border);
-}
-.btn-secondary:hover { background: var(--btn-ghost-bg-hover); border-color: var(--btn-ghost-border-hover); }
+/* ── Buttons — base rules live in styles.css globally ──────────────── */
 
 /* ── Join row ──────────────────────────────────────────────────────── */
 .join-row {

@@ -36,7 +36,7 @@
           {{ copyState === 'copied' ? '✓ Copied' : copyState === 'failed' ? '✗ Failed' : '⎘ Copy' }}
         </button>
       </div>
-      <button class="btn-home" (click)="leaveRoom()">← Leave room</button>
+      <button class="btn btn-secondary" (click)="leaveRoom()">← Leave room</button>
     </div>
   </div>
 
@@ -55,8 +55,8 @@
         </li>
       </ul>
       <div class="overlay-actions">
-        <button class="btn-primary" (click)="session.startNewGame()">Play again</button>
-        <button class="btn-home" (click)="leaveRoom()">← Leave</button>
+        <button class="btn btn-primary" (click)="session.startNewGame()">Play again</button>
+        <button class="btn btn-secondary" (click)="leaveRoom()">← Leave</button>
       </div>
     </div>
   </div>
@@ -66,7 +66,7 @@
     <div class="overlay-card">
       <p class="overlay-title">Disconnected</p>
       <p class="overlay-sub">The connection to the server was lost.</p>
-      <button class="btn-home" (click)="goHome()">← Back to home</button>
+      <button class="btn btn-secondary" (click)="goHome()">← Back to home</button>
     </div>
   </div>
 
@@ -75,7 +75,7 @@
     <div class="overlay-card">
       <p class="overlay-title">Room is full</p>
       <p class="overlay-sub">This room has already reached its maximum number of players. Ask the host to create a new room, or start your own.</p>
-      <button class="btn-home" (click)="goHome()">← Back to home</button>
+      <button class="btn btn-secondary" (click)="goHome()">← Back to home</button>
     </div>
   </div>
 

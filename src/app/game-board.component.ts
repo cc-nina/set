@@ -285,8 +285,8 @@ export class GameBoardComponent implements OnInit, OnDestroy {
       // If the user has never customised the highlight colour, seed it from the
       // CSS variable so dark mode gets a readable default automatically.
       const savedHighlight = this.game.highlightColor;
-      this.highlightColor = (savedHighlight === '#000000' || savedHighlight === '#000')
-        ? (this.cardBg === '#ffffff' ? '#000000' : this.readCssVar('--card-selected-default', '#000000'))
+      this.highlightColor = (!savedHighlight || savedHighlight === '#000000' || savedHighlight === '#000')
+        ? this.readCssVar('--card-selected-default', '#000000')
         : savedHighlight;
     }
 
@@ -298,7 +298,7 @@ export class GameBoardComponent implements OnInit, OnDestroy {
         Promise.resolve().then(() => {
           this.readCardTokens();
           const saved = this.game.highlightColor;
-          if (saved === '#000000' || saved === '#000') {
+          if (!saved || saved === '#000000' || saved === '#000') {
             this.highlightColor = this.readCssVar('--card-selected-default', '#000000');
           }
           this.cdr.markForCheck();
@@ -436,7 +436,7 @@ export class GameBoardComponent implements OnInit, OnDestroy {
 
   onPaletteColorChange(event: PaletteChangeEvent): void {
     if (event.index === 3) {
-      this.highlightColor = event.color;
+      this.highlightColor = event.color || this.readCssVar('--card-selected-default', '#000000');
       this.game.updateHighlightColor(event.color);
     } else {
       this.game.updatePaletteColor(event.index + 1, event.color);

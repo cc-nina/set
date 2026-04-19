@@ -1,5 +1,5 @@
-import { Component, Input } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, Input, Inject, PLATFORM_ID } from '@angular/core';
+import { CommonModule, isPlatformBrowser } from '@angular/common';
 
 /** Half-length (major axis) of each shape in SVG units. Increase to make shapes longer. */
 const SL = 35;
@@ -31,7 +31,7 @@ const SQUIGGLE_W = 13;
           <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#000" flood-opacity="0.25" />
         </filter>
         <filter id="card-glow" x="-30%" y="-30%" width="160%" height="160%">
-          <feDropShadow dx="0" dy="0" stdDeviation="6" [attr.flood-color]="highlightColor" flood-opacity="0.7" />
+          <feDropShadow dx="0" dy="0" stdDeviation="6" [attr.flood-color]="resolvedHighlightColor" flood-opacity="0.7" />
         </filter>
       </defs>
 
@@ -49,7 +49,7 @@ const SQUIGGLE_W = 13;
     [attr.x]="orientation==='portrait'?1:1" [attr.y]="orientation==='portrait'?1:1"
     [attr.width]="orientation==='portrait'?118:178" [attr.height]="orientation==='portrait'?178:118"
     rx="9" ry="9" fill="none"
-    [attr.stroke]="highlightColor"
+    [attr.stroke]="resolvedHighlightColor"
     [attr.stroke-width]="setMatch ? 4 : 3"
   />
 
@@ -134,14 +134,27 @@ const SQUIGGLE_W = 13;
   host: { style: 'display:block;width:100%;' },
 })
 export class CardComponent {
+  constructor(@Inject(PLATFORM_ID) private platformId: object) {}
+
   @Input() color: string = '#c00';
   @Input() shape: string = 'pill';
   @Input() number: number = 1;
   @Input() orientation: 'portrait' | 'landscape' = 'portrait';
   @Input() shading: string = 'solid';
   @Input() selected: boolean = false;
-  /** Colour used for the selection border ring. Defaults to black. */
-  @Input() highlightColor: string = '#000000';
+  /** Colour used for the selection border ring. Empty string = use CSS theme token. */
+  @Input() highlightColor: string = '';
+
+  /** Returns the effective highlight colour, falling back to the CSS theme token. */
+  get resolvedHighlightColor(): string {
+    if (this.highlightColor) return this.highlightColor;
+    if (isPlatformBrowser(this.platformId)) {
+      const v = getComputedStyle(document.documentElement)
+        .getPropertyValue('--card-selected-default').trim();
+      if (v) return v;
+    }
+    return '#000000';
+  }
   /** True when this card is the 3rd card of a valid set just completed. */
   @Input() setMatch: boolean = false;
   /** True when this card was part of an incorrect 3-card selection (neg). */
