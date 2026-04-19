@@ -32,7 +32,7 @@
 }
 .dot-red    { background: #DB2C05; }   /* SET card colour — intentionally fixed */
 .dot-green  { background: #0C8D1B; }   /* SET card colour — intentionally fixed */
-.dot-purple { background: var(--accent); }
+.dot-purple { background: #4F158A; }
 
 .home-title {
   font-size: 3.5rem;
