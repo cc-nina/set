@@ -32,6 +32,7 @@ import { createServer as createHttpsServer } from 'node:https';
 import { readFileSync } from 'node:fs';
 import { randomBytes } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
+import Database, { type Statement } from 'better-sqlite3';
 import { isSet, findSet, dealInitialBoard } from './app/game.utils.js';
 import type {
   Card,
@@ -67,6 +68,33 @@ const RECONNECT_GRACE_MS = 5 * 60_000; // 5 minutes
  */
 const EMPTY_ROOM_TTL_MS = RECONNECT_GRACE_MS;
 
+// ── Stats DB (populated in standalone mode only) ─────────────────────────────
+
+let stmtInsertGame: Statement | null = null;
+let stmtEndGame:    Statement | null = null;
+let stmtCountGames: Statement | null = null;
+
+function recordGameStart(mode: 'solo' | 'multiplayer', roomId: string | null = null): { gameId: number; startedAt: number } | null {
+  if (!stmtInsertGame) return null;
+  try {
+    const startedAt = Date.now();
+    const gameId = Number(stmtInsertGame.run(mode, roomId, startedAt).lastInsertRowid);
+    return { gameId, startedAt };
+  } catch (err) {
+    console.error('[stats] Failed to record game start', err);
+    return null;
+  }
+}
+
+function recordGameEnd(gameId: number, durationMs: number, score: number | null): void {
+  if (!stmtEndGame) return;
+  try {
+    stmtEndGame.run(Date.now(), durationMs, score, gameId);
+  } catch (err) {
+    console.error('[stats] Failed to record game end', err);
+  }
+}
+
 // ── In-memory store ──────────────────────────────────────────────────────────
 
 /** Live WebSocket connection annotated with game identity. */
@@ -81,6 +109,8 @@ type GameSocket = WebSocket & {
 /** Everything the server needs to know about a room. */
 interface Room {
   state: RoomState;
+  /** DB row id and start timestamp for the current game; null when no game is active or DB unavailable. */
+  currentGame: { gameId: number; startedAt: number } | null;
   /** playerId → live socket (only present while connected) */
   sockets: Map<PlayerId, GameSocket>;
   /** playerId → handle returned by setTimeout for the reconnect deadline */
@@ -135,7 +165,8 @@ function connectedCount(room: Room): number {
 // ── Room actions ─────────────────────────────────────────────────────────────
 
 function createRoom(creatorSocket: GameSocket, playerName: string, maxPlayers: number): Room {
-  const roomId = randomId(3);   // 3 bytes → 6 hex chars
+  let roomId: string;
+  do { roomId = randomId(3); } while (rooms.has(roomId)); // retry on collision
   const playerId = randomId(8); // 8 bytes → 16 hex chars
 
   creatorSocket.playerId = playerId;
@@ -165,6 +196,7 @@ function createRoom(creatorSocket: GameSocket, playerName: string, maxPlayers: n
 
   const room: Room = {
     state,
+    currentGame: null,
     sockets: new Map([[playerId, creatorSocket]]),
     reconnectTimers: new Map(),
     emptyTimer: null,
@@ -199,6 +231,7 @@ function joinRoom(room: Room, joinerSocket: GameSocket, playerName: string): voi
     const { board, deck } = dealInitialBoard();
     st.board = board;
     st.deck = deck;
+    room.currentGame = recordGameStart('multiplayer', st.roomId);
   }
 }
 
@@ -346,6 +379,11 @@ function applySelection(room: Room, playerId: PlayerId, cardId: string): void {
     // If no set exists now, the game is over.
     if (deck.length === 0 && !hasSet) {
       st.status = 'finished';
+      if (room.currentGame !== null) {
+        const topScore = Math.max(...st.players.map(p => p.correctSets));
+        recordGameEnd(room.currentGame.gameId, Date.now() - room.currentGame.startedAt, topScore);
+        room.currentGame = null;
+      }
     }
   } else {
     // Incorrect selection: penalise but keep the 3 cards on the board.
@@ -403,6 +441,7 @@ function resetRoom(room: Room): void {
   st.board = board;
   st.deck = deck;
   st.status = 'active';
+  room.currentGame = recordGameStart('multiplayer', st.roomId);
 }
 
 // ── Message handler ──────────────────────────────────────────────────────────
@@ -670,6 +709,29 @@ if (isMain || process.env['WS_STANDALONE'] === '1') {
   const CERT_PATH = `/etc/letsencrypt/live/34.44.229.168.sslip.io/fullchain.pem`;
   const KEY_PATH  = `/etc/letsencrypt/live/34.44.229.168.sslip.io/privkey.pem`;
 
+  // ── Initialize SQLite stats DB ───────────────────────────────────────────
+  // Wrapped in try/catch: if the DB fails to open (bad path, permissions, disk
+  // full), the server still starts and runs normally — stats just won't be tracked.
+  try {
+    const db = new Database(fileURLToPath(new URL('./game-stats.db', import.meta.url)));
+    db.pragma('journal_mode = WAL');
+    db.exec(`CREATE TABLE IF NOT EXISTS games (
+      id          INTEGER PRIMARY KEY AUTOINCREMENT,
+      mode        TEXT    NOT NULL,
+      room_id     TEXT,
+      started_at  INTEGER NOT NULL,
+      ended_at    INTEGER,
+      duration_ms INTEGER,
+      score       INTEGER
+    )`);
+    stmtInsertGame = db.prepare(`INSERT INTO games (mode, room_id, started_at) VALUES (?, ?, ?)`);
+    stmtEndGame    = db.prepare(`UPDATE games SET ended_at=?, duration_ms=?, score=? WHERE id=?`);
+    stmtCountGames = db.prepare(`SELECT COUNT(*) as total FROM games`);
+    console.log('📊 Stats DB ready');
+  } catch (err) {
+    console.error('⚠️  Stats DB failed to initialize — game tracking disabled', err);
+  }
+
   const requestHandler = (req: import('node:http').IncomingMessage, res: import('node:http').ServerResponse) => {
     // CORS headers so the Vercel-hosted frontend can reach this server.
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -680,6 +742,56 @@ if (isMain || process.env['WS_STANDALONE'] === '1') {
       res.writeHead(204);
       res.end();
       return;
+    }
+
+    if (req.method === 'GET' && req.url === '/api/stats') {
+      try {
+        const total = (stmtCountGames!.get() as { total: number }).total;
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ totalGamesPlayed: total }));
+      } catch (err) {
+        console.error('[stats] Failed to query game count', err);
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'stats unavailable' }));
+      }
+      return;
+    }
+
+    if (req.method === 'POST' && req.url === '/api/start-game') {
+      let body = '';
+      req.on('data', (c: Buffer) => { if (body.length < 1024) body += c; });
+      req.on('end', () => {
+        try {
+          const { mode } = JSON.parse(body || '{}');
+          const result = recordGameStart(mode === 'multiplayer' ? 'multiplayer' : 'solo');
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ gameId: result?.gameId ?? null }));
+        } catch {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'invalid body' }));
+        }
+      });
+      return;
+    }
+
+    if (req.method === 'POST') {
+      const endMatch = req.url?.match(/^\/api\/end-game\/(\d+)$/);
+      if (endMatch) {
+        let body = '';
+        req.on('data', (c: Buffer) => { if (body.length < 1024) body += c; });
+        req.on('end', () => {
+          try {
+            const { duration_ms, score } = JSON.parse(body || '{}');
+            recordGameEnd(Number(endMatch[1]), duration_ms ?? 0, score ?? null);
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ ok: true }));
+          } catch {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'invalid body' }));
+          }
+        });
+        return;
+      }
     }
 
     res.writeHead(200, { 'Content-Type': 'text/plain' });

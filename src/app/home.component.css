@@ -49,6 +49,14 @@
   margin: 0;
 }
 
+.home-games-played {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  margin: 0;
+  opacity: 0.7;
+  letter-spacing: 0.04em;
+}
+
 /* ── Mode grid ─────────────────────────────────────────────────────── */
 .mode-grid {
   display: grid;

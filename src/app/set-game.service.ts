@@ -53,6 +53,9 @@ export class SetGameService implements GameSession {
    */
   readonly callerLockId$: Observable<PlayerId | null> = of(null);
 
+  private currentGameId: number | null = null;
+  private gameStartedAt: number | null = null;
+
   constructor(
     @Inject(PLATFORM_ID) private platformId: object,
     public colorPrefs: ColorPrefsService,
@@ -62,7 +65,41 @@ export class SetGameService implements GameSession {
     this.state$ = this.stateSubject.asObservable();
     if (isPlatformBrowser(this.platformId)) {
       this.stateSubject.subscribe(state => saveGameState(state));
+      this.stateSubject.subscribe(state => {
+        if (state.status === 'finished' && this.currentGameId !== null) {
+          this.endGameRecord(state.correctSets);
+        }
+      });
+      if (!saved) void this.startGameRecord();
     }
+  }
+
+  private async startGameRecord(): Promise<void> {
+    try {
+      const res = await fetch('https://34.44.229.168.sslip.io:3000/api/start-game', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode: 'solo' }),
+      });
+      if (!res.ok) return;
+      const { gameId } = await res.json() as { gameId: number };
+      if (typeof gameId !== 'number') return;
+      this.currentGameId = gameId;
+      this.gameStartedAt = Date.now();
+    } catch { /* non-fatal */ }
+  }
+
+  private endGameRecord(score: number): void {
+    if (this.currentGameId === null || this.gameStartedAt === null) return;
+    const duration_ms = Date.now() - this.gameStartedAt;
+    const gameId = this.currentGameId;
+    this.currentGameId = null;
+    this.gameStartedAt = null;
+    fetch(`https://34.44.229.168.sslip.io:3000/api/end-game/${gameId}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ duration_ms, score }),
+    }).catch(() => {});
   }
 
   // ── GameSession interface — colour prefs delegated to ColorPrefsService ──
@@ -85,6 +122,9 @@ export class SetGameService implements GameSession {
   }
 
   startNewGame(): void {
+    this.currentGameId = null;
+    this.gameStartedAt = null;
+    void this.startGameRecord();
     this.colorPrefs.clearCardColors();
     const s = core.initGame();
     this.stateSubject.next(s);
