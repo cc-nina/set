@@ -170,7 +170,9 @@ export function dealInitialBoard(): { board: Card[]; deck: Card[] } {
   const full = shuffle(generateDeck());
   const board = full.slice(0, BOARD_SIZE);
   const deck  = full.slice(BOARD_SIZE);
-  while (findSet(board) === null && deck.length > 0) {
+  while (findSet(board) === null && deck.length >= 3) {
+    board.push(deck.shift()!);
+    board.push(deck.shift()!);
     board.push(deck.shift()!);
   }
   return { board, deck };
