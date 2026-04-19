@@ -1,10 +1,12 @@
-import { Injectable } from '@angular/core';
+import { Injectable, Inject, PLATFORM_ID } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { BehaviorSubject, Observable, of, Subject, merge, map, delay } from 'rxjs';
 import { Card, GameState, Player, PlayerId, LAST_SET_BANNER_MS, GameEvent } from './game.types';
 import * as core from './game.service';
 import { findSet } from './game.utils';
 import { GameSession } from './game-session.interface';
 import { ColorPrefsService } from './color-prefs.service';
+import { loadGameState, saveGameState } from './game-state.storage';
 
 @Injectable({ providedIn: 'root' })
 export class SetGameService implements GameSession {
@@ -51,10 +53,16 @@ export class SetGameService implements GameSession {
    */
   readonly callerLockId$: Observable<PlayerId | null> = of(null);
 
-  constructor(public colorPrefs: ColorPrefsService) {
-    const initial = core.initGame();
-    this.stateSubject = new BehaviorSubject<GameState>(initial);
+  constructor(
+    @Inject(PLATFORM_ID) private platformId: object,
+    public colorPrefs: ColorPrefsService,
+  ) {
+    const saved = isPlatformBrowser(this.platformId) ? loadGameState() : null;
+    this.stateSubject = new BehaviorSubject<GameState>(saved ?? core.initGame());
     this.state$ = this.stateSubject.asObservable();
+    if (isPlatformBrowser(this.platformId)) {
+      this.stateSubject.subscribe(state => saveGameState(state));
+    }
   }
 
   // ── GameSession interface — colour prefs delegated to ColorPrefsService ──

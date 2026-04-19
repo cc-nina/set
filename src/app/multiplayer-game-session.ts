@@ -33,6 +33,7 @@ import { Card, GameState, Player, PlayerId, RoomState, ServerMessage, LAST_SET_B
 import { findSet } from './game.utils';
 import { GameSession } from './game-session.interface';
 import { ColorPrefsService } from './color-prefs.service';
+import { loadMultiplayerState, saveMultiplayerState, clearMultiplayerState } from './game-state.storage';
 
 // localStorage keys for reconnection (localStorage persists across tab closes,
 // unlike sessionStorage which is cleared when the tab is closed — essential for
@@ -167,6 +168,11 @@ export class MultiplayerGameSession implements GameSession, OnDestroy {
     const savedPlayerId = localStorage.getItem(SS_PLAYER_ID);
     const isReconnect   = !!(savedRoomId && savedPlayerId && roomId === savedRoomId);
 
+    if (roomId !== 'new') {
+      const saved = loadMultiplayerState(roomId);
+      if (saved) this.stateSubject.next(saved);
+    }
+
     this.ws.onopen = () => {
       this.roomStatusSubject.next(isReconnect ? 'reconnecting' : 'connecting');
 
@@ -277,6 +283,7 @@ export class MultiplayerGameSession implements GameSession, OnDestroy {
         // can identify which player is local and show names.
         const gs = roomStateToGameState(msg.state, this.playerId);
         this.stateSubject.next(gs);
+        saveMultiplayerState(this.roomIdValue, gs);
         // Also update the caller-lock subject so the Call SET button disables correctly.
         this.callerLockIdSubject.next(msg.state.callerLockId);
         // Update the room status so the overlay transitions correctly.
@@ -346,6 +353,7 @@ export class MultiplayerGameSession implements GameSession, OnDestroy {
     if (!isPlatformBrowser(this.platformId)) return;
     localStorage.removeItem(SS_PLAYER_ID);
     localStorage.removeItem(SS_ROOM_ID);
+    clearMultiplayerState();
   }
 
   // ── GameSession actions ───────────────────────────────────────────────────
