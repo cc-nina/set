@@ -1,5 +1,5 @@
-import { Card, GameState, BOARD_SIZE } from './game.types';
-import { dealInitialBoard, isSet, findSet } from './game.utils';
+import { Card, GameState } from './game.types';
+import { dealInitialBoard, isSet, findSet, applyFoundSet } from './game.utils';
 
 // Initializes a fresh game state
 export function initGame(): GameState {
@@ -80,35 +80,8 @@ export function applySet(state: GameState, selected: Card[]): GameState {
     throw new Error('applySet called with an invalid set');
   }
 
-  const deck = state.deck.slice();
-  let board = state.board.slice();
-
   const selectedIds = new Set(selected.map((c) => c.id));
-
-  if (board.length <= BOARD_SIZE && deck.length > 0) {
-    // Board is at standard size: swap each removed card with one from the deck,
-    // preserving the positions of all other cards.
-    for (let i = 0; i < board.length; i++) {
-      if (selectedIds.has(board[i].id)) {
-        board[i] = deck.shift() as Card;
-      }
-    }
-  } else {
-    // Board is extended (or deck empty): remove the 3 cards. If a set exists
-    // in the remainder the while loop below won't fire and the board drains
-    // naturally toward 12. If no set exists the while loop replenishes.
-    board = board.filter((c) => !selectedIds.has(c.id));
-  }
-
-  // If the board has no valid set after the above, deal 3 cards at a time until
-  // one appears or the deck is exhausted. Guard deck.length >= 3 to avoid
-  // shifting undefined on a deck whose size isn't a clean multiple of 3.
-  while (findSet(board) === null && deck.length >= 3) {
-    board.push(deck.shift() as Card);
-    board.push(deck.shift() as Card);
-    board.push(deck.shift() as Card);
-  }
-
+  const { board, deck } = applyFoundSet(state.board, state.deck, selectedIds);
   const hasSet = findSet(board) !== null;
 
   return {

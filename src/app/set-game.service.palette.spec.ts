@@ -13,7 +13,7 @@
 import { TestBed } from '@angular/core/testing';
 import { firstValueFrom, skip } from 'rxjs';
 import { SetGameService } from './set-game.service';
-import { findSet } from './game.utils';
+import { findSet, isSet } from './game.utils';
 
 describe('SetGameService – additional coverage', () => {
   let service: SetGameService;
@@ -89,19 +89,14 @@ describe('SetGameService – additional coverage', () => {
     it('returns false and does not change the score when the set is invalid', () => {
       service.startNewGame();
       const snap = service.getStateSnapshot();
-      // Use the first three cards — they are almost never a valid set.
-      // applySet returns false when the three cards are not a set.
       const notASet = [snap.board[0], snap.board[1], snap.board[2]];
 
-      // Only run the expectation if they are genuinely not a set
-      import('./game.utils').then(({ isSet }) => {
-        if (!isSet(notASet[0], notASet[1], notASet[2])) {
-          const before = snap.score;
-          const result = service.applySet(notASet);
-          expect(result).toBe(false);
-          expect(service.getStateSnapshot().score).toBe(before);
-        }
-      });
+      if (!isSet(notASet[0], notASet[1], notASet[2])) {
+        const before = snap.score;
+        const result = service.applySet(notASet);
+        expect(result).toBe(false);
+        expect(service.getStateSnapshot().score).toBe(before);
+      }
     });
   });
 

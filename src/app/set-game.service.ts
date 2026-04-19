@@ -55,6 +55,10 @@ export class SetGameService implements GameSession {
   readonly callerLockId$: Observable<PlayerId | null> = of(null);
 
   private currentGame: { gameId: number; startedAt: number } | null = null;
+  // True when a fresh game was initialized from the constructor (no saved state)
+  // but the record hasn't been started yet — deferred until the first selectCard
+  // so that page loads that never reach /game don't pollute solo stats.
+  private pendingInitialRecord = false;
 
   constructor(
     @Inject(PLATFORM_ID) private platformId: object,
@@ -70,7 +74,7 @@ export class SetGameService implements GameSession {
           this.endGameRecord(state.correctSets);
         }
       });
-      if (!saved) void this.startGameRecord();
+      if (!saved) this.pendingInitialRecord = true;
     }
   }
 
@@ -161,6 +165,10 @@ export class SetGameService implements GameSession {
   }
 
   selectCard(card: Card): void {
+    if (this.pendingInitialRecord) {
+      this.pendingInitialRecord = false;
+      void this.startGameRecord();
+    }
     const prev = this.getStateSnapshot();
     const next = core.selectCard(prev, card);
     this.stateSubject.next(next);

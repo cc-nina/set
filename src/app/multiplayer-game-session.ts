@@ -29,7 +29,7 @@ import {
   delay,
   merge,
 } from 'rxjs';
-import { Card, GameState, Player, PlayerId, RoomState, ServerMessage, LAST_SET_BANNER_MS, GameEvent } from './game.types';
+import { Card, GameState, MultiplayerGameState, Player, PlayerId, RoomState, ServerMessage, LAST_SET_BANNER_MS, GameEvent } from './game.types';
 import { findSet } from './game.utils';
 import { GameSession } from './game-session.interface';
 import { ColorPrefsService } from './color-prefs.service';
@@ -41,16 +41,16 @@ import { loadMultiplayerState, saveMultiplayerState, clearMultiplayerState } fro
 const SS_PLAYER_ID = 'mp_playerId';
 const SS_ROOM_ID   = 'mp_roomId';
 
-/** Empty GameState used as a placeholder before the server deals the board. */
-function emptyState(): GameState {
-  return { deck: [], board: [], selected: [], score: 0, correctSets: 0, incorrectSelections: 0, status: 'active' };
+/** Empty MultiplayerGameState used as a placeholder before the server deals the board. */
+function emptyState(): MultiplayerGameState {
+  return { deck: [], board: [], selected: [], score: 0, correctSets: 0, incorrectSelections: 0, status: 'active', myPlayerId: '', players: [] };
 }
 
 /**
- * Map a server RoomState to the GameState shape that GameBoardComponent expects.
+ * Map a server RoomState to the MultiplayerGameState shape that GameBoardComponent expects.
  * The local player's selection becomes `selected`; score comes from the local player entry.
  */
-function roomStateToGameState(rs: RoomState, playerId: PlayerId): GameState {
+function roomStateToGameState(rs: RoomState, playerId: PlayerId): MultiplayerGameState {
   const me = rs.players.find((p) => p.id === playerId);
   return {
     deck: rs.deck,
@@ -72,7 +72,7 @@ export class MultiplayerGameSession implements GameSession, OnDestroy {
 
   readonly isMultiplayer = true;
 
-  private stateSubject = new BehaviorSubject<GameState>(emptyState());
+  private stateSubject = new BehaviorSubject<MultiplayerGameState>(emptyState());
   readonly state$: Observable<GameState> = this.stateSubject.asObservable();
 
   private playersSubject = new BehaviorSubject<Player[]>([]);
@@ -160,6 +160,16 @@ export class MultiplayerGameSession implements GameSession, OnDestroy {
   connect(roomId: string, playerName: string, maxPlayers = 2): void {
     if (!isPlatformBrowser(this.platformId)) return;
 
+    // Detach handlers from any previous socket before creating a new one.
+    // Without this, a stale onclose can fire after the new socket is assigned
+    // and spawn a second concurrent reconnect loop on flaky networks.
+    if (this.ws) {
+      this.ws.onopen = null;
+      this.ws.onmessage = null;
+      this.ws.onclose = null;
+      this.ws.onerror = null;
+    }
+
     const url = `wss://34.44.229.168.sslip.io:3000`;
 
     this.ws = new WebSocket(url);
@@ -172,7 +182,7 @@ export class MultiplayerGameSession implements GameSession, OnDestroy {
 
     if (roomId !== 'new') {
       const saved = loadMultiplayerState(roomId);
-      if (saved) this.stateSubject.next(saved);
+      if (saved) this.stateSubject.next({ ...saved, myPlayerId: '', players: [] });
     }
 
     this.ws.onopen = () => {

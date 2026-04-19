@@ -33,9 +33,8 @@ import { readFileSync } from 'node:fs';
 import { randomBytes } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import Database, { type Statement } from 'better-sqlite3';
-import { isSet, findSet, dealInitialBoard } from './app/game.utils.js';
+import { isSet, findSet, dealInitialBoard, applyFoundSet } from './app/game.utils.js';
 import type {
-  Card,
   Player,
   PlayerId,
   RoomState,
@@ -77,7 +76,10 @@ let stmtCountGames: Statement | null = null;
 function parseJsonBody(req: import('node:http').IncomingMessage, maxBytes = 1024): Promise<unknown> {
   return new Promise((resolve, reject) => {
     let body = '';
-    req.on('data', (c: Buffer) => { if (body.length < maxBytes) body += c; });
+    req.on('data', (c: Buffer) => {
+      if (body.length + c.length > maxBytes) { reject(new Error('Request too large')); req.destroy(); return; }
+      body += c;
+    });
     req.on('error', reject);
     req.on('end', () => { try { resolve(JSON.parse(body || '{}')); } catch (e) { reject(e); } });
   });
@@ -278,6 +280,11 @@ function evictPlayer(room: Room, playerId: PlayerId): void {
   // If the game was active and every remaining player is offline, finish it.
   if (st.status === 'active' && connectedCount(room) === 0) {
     st.status = 'finished';
+    if (room.currentGame !== null) {
+      const topScore = st.players.length > 0 ? Math.max(...st.players.map(p => p.correctSets)) : 0;
+      recordGameEnd(room.currentGame.gameId, Date.now() - room.currentGame.startedAt, topScore);
+      room.currentGame = null;
+    }
   }
 }
 
@@ -340,30 +347,7 @@ function applySelection(room: Room, playerId: PlayerId, cardId: string): void {
 
   if (isSet(a, b, c)) {
     const setIds = new Set([a.id, b.id, c.id]);
-    const deck = st.deck.slice();
-
-    // Replace found cards in-place if the deck has cards, otherwise remove them.
-    // Cards stay in their positions — no compacting — just like a real game.
-    const board: Card[] = [];
-    for (const boardCard of st.board) {
-      if (setIds.has(boardCard.id)) {
-        if (deck.length > 0) {
-          board.push(deck.shift()!); // replace in-place
-        }
-        // else: deck empty — slot is simply dropped (board shrinks by 1)
-      } else {
-        board.push(boardCard);
-      }
-    }
-
-    // Per official rules: if no set exists on the remaining board,
-    // deal one extra card at a time until a set is present or the deck runs out.
-    let hasSet = findSet(board) !== null;
-    while (!hasSet && deck.length > 0) {
-      board.push(deck.shift()!);
-      hasSet = findSet(board) !== null;
-    }
-
+    const { board, deck } = applyFoundSet(st.board, st.deck, setIds);
     st.board = board;
     st.deck = deck;
     st.selections[playerId] = [];
@@ -386,6 +370,7 @@ function applySelection(room: Room, playerId: PlayerId, cardId: string): void {
     clearCallLock(room);
 
     // If no set exists now, the game is over.
+    const hasSet = findSet(board) !== null;
     if (deck.length === 0 && !hasSet) {
       st.status = 'finished';
       if (room.currentGame !== null) {
@@ -410,6 +395,14 @@ function applySelection(room: Room, playerId: PlayerId, cardId: string): void {
 
 function resetRoom(room: Room): void {
   const st = room.state;
+
+  // End the current game before touching scores — must happen first so
+  // topScore reflects actual play, not the zeroed-out values below.
+  if (room.currentGame !== null) {
+    const topScore = st.players.length > 0 ? Math.max(...st.players.map(p => p.correctSets)) : 0;
+    recordGameEnd(room.currentGame.gameId, Date.now() - room.currentGame.startedAt, topScore);
+    room.currentGame = null;
+  }
 
   // Cancel reconnect timers for any disconnected players — they are being
   // dropped from the room as part of the reset and must not be evicted again.
@@ -444,12 +437,6 @@ function resetRoom(room: Room): void {
     st.deck = [];
     st.status = 'waiting';
     return;
-  }
-
-  if (room.currentGame !== null) {
-    const topScore = st.players.length > 0 ? Math.max(...st.players.map(p => p.correctSets)) : 0;
-    recordGameEnd(room.currentGame.gameId, Date.now() - room.currentGame.startedAt, topScore);
-    room.currentGame = null;
   }
 
   const { board, deck } = dealInitialBoard();
@@ -538,7 +525,7 @@ function handleParsedMessage(ws: GameSocket, msg: ClientMessage): void {
     }
 
     if (roomId === 'new') {
-      const room = createRoom(ws, playerName.trim(), maxPlayers);
+      const room = createRoom(ws, playerName.trim().slice(0, 32), maxPlayers);
       const player = room.state.players[0];
       send(ws, { type: 'joined', playerId: player.id, roomId: room.state.roomId });
       broadcast(room, { type: 'room_state', state: room.state });
@@ -560,7 +547,7 @@ function handleParsedMessage(ws: GameSocket, msg: ClientMessage): void {
       return;
     }
 
-    joinRoom(room, ws, playerName.trim());
+    joinRoom(room, ws, playerName.trim().slice(0, 32));
     const player = room.state.players.find(p => p.id === ws.playerId)!;
     send(ws, { type: 'joined', playerId: player.id, roomId });
     broadcast(room, { type: 'room_state', state: room.state });
@@ -747,15 +734,31 @@ if (isMain || process.env['WS_STANDALONE'] === '1') {
     console.error('⚠️  Stats DB failed to initialize — game tracking disabled', err);
   }
 
+  // Origin allowed to call write endpoints. Defaults to the Vercel deployment;
+  // override with ALLOWED_ORIGIN env var for staging or local dev.
+  const ALLOWED_ORIGIN = process.env['ALLOWED_ORIGIN'] ?? 'https://set-bice.vercel.app';
+
   const requestHandler = (req: import('node:http').IncomingMessage, res: import('node:http').ServerResponse) => {
-    // CORS headers so the Vercel-hosted frontend can reach this server.
-    res.setHeader('Access-Control-Allow-Origin', '*');
+    const origin = req.headers['origin'] ?? '';
+    const isWriteRequest = req.method === 'POST';
+
+    // Read endpoint is public; write endpoints are restricted to the known frontend origin.
+    res.setHeader('Access-Control-Allow-Origin', isWriteRequest ? ALLOWED_ORIGIN : '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    res.setHeader('Vary', 'Origin');
 
     if (req.method === 'OPTIONS') {
       res.writeHead(204);
       res.end();
+      return;
+    }
+
+    // Reject write requests from unlisted origins (non-browser callers send no
+    // Origin header and are allowed through — this is not auth, just CORS hygiene).
+    if (isWriteRequest && origin && origin !== ALLOWED_ORIGIN) {
+      res.writeHead(403, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'forbidden' }));
       return;
     }
 
@@ -797,8 +800,10 @@ if (isMain || process.env['WS_STANDALONE'] === '1') {
       if (endMatch) {
         parseJsonBody(req)
           .then(body => {
-            const { duration_ms, score } = body as { duration_ms?: number; score?: number };
-            recordGameEnd(Number(endMatch[1]), duration_ms ?? 0, score ?? null);
+            const b = body as Record<string, unknown>;
+            const duration_ms = typeof b['duration_ms'] === 'number' ? b['duration_ms'] : 0;
+            const score = typeof b['score'] === 'number' ? b['score'] : null;
+            recordGameEnd(Number(endMatch[1]), duration_ms, score);
             res.writeHead(200, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ ok: true }));
           })

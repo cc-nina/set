@@ -1,4 +1,4 @@
-import { Card, Attr } from './game.types';
+import { Card, Attr, BOARD_SIZE } from './game.types';
 
 // Create all 81 unique cards
 export function generateDeck(): Card[] {
@@ -120,7 +120,44 @@ export function findSet(board: Card[]): [number, number, number] | null {
   return null;
 }
 
-const INITIAL_BOARD_SIZE = 12;
+/**
+ * Apply a found set to the board and deck, returning a new board and deck.
+ * Shared between single-player (game.service.ts) and server (ws-server.ts).
+ *
+ * Rules:
+ *  - If the board is at standard size and the deck has cards, replace the 3
+ *    removed cards in-place so positions stay stable.
+ *  - If the board is extended (>12) or the deck is empty, remove the 3 cards
+ *    and let the board drain toward 12.
+ *  - In either case, if no set remains after the above, deal 3 cards at a time
+ *    until a set appears or the deck is exhausted.
+ */
+export function applyFoundSet(
+  board: Card[],
+  deck: Card[],
+  setIds: Set<string>,
+): { board: Card[]; deck: Card[] } {
+  board = board.slice();
+  deck = deck.slice();
+
+  if (board.length <= BOARD_SIZE && deck.length > 0) {
+    for (let i = 0; i < board.length; i++) {
+      if (setIds.has(board[i].id)) {
+        board[i] = deck.shift()!;
+      }
+    }
+  } else {
+    board = board.filter((c) => !setIds.has(c.id));
+  }
+
+  while (findSet(board) === null && deck.length >= 3) {
+    board.push(deck.shift()!);
+    board.push(deck.shift()!);
+    board.push(deck.shift()!);
+  }
+
+  return { board, deck };
+}
 
 /**
  * Shuffle the full deck and deal an initial board, adding extra cards one at
@@ -131,8 +168,8 @@ const INITIAL_BOARD_SIZE = 12;
  */
 export function dealInitialBoard(): { board: Card[]; deck: Card[] } {
   const full = shuffle(generateDeck());
-  const board = full.slice(0, INITIAL_BOARD_SIZE);
-  const deck  = full.slice(INITIAL_BOARD_SIZE);
+  const board = full.slice(0, BOARD_SIZE);
+  const deck  = full.slice(BOARD_SIZE);
   while (findSet(board) === null && deck.length > 0) {
     board.push(deck.shift()!);
   }

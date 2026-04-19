@@ -54,6 +54,15 @@ export interface GameState {
   players?: Player[];
 }
 
+/**
+ * Refinement of GameState with the multiplayer-only fields guaranteed present.
+ * Used internally by MultiplayerGameSession so consumers there don't need `?.`.
+ */
+export interface MultiplayerGameState extends GameState {
+  myPlayerId: string;
+  players: Player[];
+}
+
 // ── Multiplayer types ──────────────────────────────────────────────────────────
 
 /** Opaque player identifier — a nanoid assigned by the server on join. */

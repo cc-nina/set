@@ -69,7 +69,7 @@
 
   <div *ngIf="isBrowser && showBoard" class="board w-full flex justify-center">
     <div class="grid" [ngClass]="gridClasses" [ngStyle]="gridStyle">
-      <div *ngFor="let c of board" (click)="onCardClick(c)"
+      <div *ngFor="let c of board; trackBy: trackCard" (click)="onCardClick(c)"
         [class.cursor-pointer]="callingSet"
         [class.cursor-default]="!callingSet"
         [class.card-locked-out]="lockedByOther"

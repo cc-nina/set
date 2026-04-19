@@ -2,10 +2,11 @@ import {
   Component,
   Inject,
   PLATFORM_ID,
+  ChangeDetectionStrategy,
   ChangeDetectorRef,
   ViewChild,
   HostListener,
-  AfterViewInit,
+  OnInit,
   OnDestroy,
 } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
@@ -36,8 +37,9 @@ const GAP_RATIO = 0.1;
   imports: [CommonModule, DecimalPipe, CardComponent, PaletteModalComponent],
   templateUrl: './game-board.component.html',
   styleUrls: ['./game-board.component.css'],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class GameBoardComponent implements AfterViewInit, OnDestroy {
+export class GameBoardComponent implements OnInit, OnDestroy {
   board: Card[] = [];
   palette: string[] = [];
   selectedIds: Set<string> = new Set();
@@ -138,6 +140,9 @@ export class GameBoardComponent implements AfterViewInit, OnDestroy {
   /** True when this session is a live multiplayer game. Sourced from the GameSession contract. */
   readonly isMultiplayer: boolean;
 
+  /** Tracks whether the first state emission has been seen (used to defer showBoard). */
+  private firstState = true;
+
   constructor(
     @Inject(GAME_SESSION) public game: GameSession,
     @Inject(PLATFORM_ID) private platformId: object,
@@ -145,8 +150,10 @@ export class GameBoardComponent implements AfterViewInit, OnDestroy {
     private themeService: ThemeService,
   ) {
     this.isBrowser = isPlatformBrowser(this.platformId);
+    this.isMultiplayer = this.game.isMultiplayer;
+  }
 
-    let first = true;
+  ngOnInit(): void {
     this.stateSubscription = this.game.state$.subscribe((s) => {
       // Only update prevBoard when no set-match animation is running — a mid-
       // animation state$ emission must not clobber the snapshot we're diffing from.
@@ -183,8 +190,8 @@ export class GameBoardComponent implements AfterViewInit, OnDestroy {
         this.finalNegs = s.incorrectSelections;
       }
 
-      if (first) {
-        first = false;
+      if (this.firstState) {
+        this.firstState = false;
         this.scheduleShowBoard();
       }
 
@@ -298,13 +305,6 @@ export class GameBoardComponent implements AfterViewInit, OnDestroy {
         });
       }
     });
-
-    this.isMultiplayer = this.game.isMultiplayer;
-  }
-
-  ngAfterViewInit(): void {
-    // Canvas inside PaletteModalComponent is only created when the modal opens;
-    // drawing is triggered via initPicker() in openPaletteModal().
   }
 
   ngOnDestroy(): void {
@@ -390,58 +390,37 @@ export class GameBoardComponent implements AfterViewInit, OnDestroy {
     this.updateLayout();
   }
 
+  trackCard(_: number, c: Card): string {
+    return c.id;
+  }
+
   private updateLayout(): void {
     const w = window.innerWidth;
     const h = window.innerHeight;
-    const isWide = w >= 768;
 
-    if (isWide) {
-      // ── Desktop/landscape: 4 cols, landscape cards (viewBox 180×120, ratio 3:2) ──
-      this.orientation = 'landscape';
-      this.gridClasses = 'grid-cols-4';
-      const cols = 4;
-      const rows = 3;
-      const cardAspect = 180 / 120; // width / height = 1.5
+    // Desktop: landscape cards (3:2), 4×3 grid, capped at 896px wide.
+    // Mobile:  portrait cards (2:3), 3×4 grid, full viewport width.
+    const cfg = w >= 768
+      ? { orientation: 'landscape' as const, gridClasses: 'grid-cols-4', cols: 4, rows: 3, cardAspect: 180 / 120, maxBoardWidth: 896 }
+      : { orientation: 'portrait'  as const, gridClasses: 'grid-cols-3', cols: 3, rows: 4, cardAspect: 120 / 180, maxBoardWidth: Infinity };
 
-      const boardWidth = Math.min(w - 16, 896);
-      const cardWFromWidth = boardWidth / (cols + GAP_RATIO * (cols - 1));
+    this.orientation = cfg.orientation;
+    this.gridClasses = cfg.gridClasses;
 
-      const boardHeight = h - 56;
-      const cardHFromHeight = boardHeight / (rows + GAP_RATIO * (rows - 1));
-      const cardWFromHeight = cardHFromHeight * cardAspect;
+    const boardWidth = Math.min(w - 16, cfg.maxBoardWidth);
+    const cardWFromWidth = boardWidth / (cfg.cols + GAP_RATIO * (cfg.cols - 1));
 
-      const cardWidth = Math.floor(Math.min(cardWFromWidth, cardWFromHeight));
-      const gap = Math.round(GAP_RATIO * cardWidth);
-      this.cardGap = gap;
+    const boardHeight = h - 56;
+    const cardHFromHeight = boardHeight / (cfg.rows + GAP_RATIO * (cfg.rows - 1));
+    const cardWFromHeight = cardHFromHeight * cfg.cardAspect;
 
-      this.gridStyle = {
-        gap: `${gap}px`,
-        'grid-template-columns': `repeat(${cols}, ${cardWidth}px)`,
-      };
-    } else {
-      // ── Mobile/portrait: 3 cols × 4 rows, portrait cards (viewBox 120×180, ratio 2:3) ──
-      this.orientation = 'portrait';
-      this.gridClasses = 'grid-cols-3';
-      const cols = 3;
-      const rows = 4;
-      const cardAspect = 120 / 180; // width / height = 0.667
-
-      const boardWidth = w - 16;
-      const cardWFromWidth = boardWidth / (cols + GAP_RATIO * (cols - 1));
-
-      const boardHeight = h - 56;
-      const cardHFromHeight = boardHeight / (rows + GAP_RATIO * (rows - 1));
-      const cardWFromHeight = cardHFromHeight * cardAspect;
-
-      const cardWidth = Math.floor(Math.min(cardWFromWidth, cardWFromHeight));
-      const gap = Math.round(GAP_RATIO * cardWidth);
-      this.cardGap = gap;
-
-      this.gridStyle = {
-        gap: `${gap}px`,
-        'grid-template-columns': `repeat(${cols}, ${cardWidth}px)`,
-      };
-    }
+    const cardWidth = Math.floor(Math.min(cardWFromWidth, cardWFromHeight));
+    const gap = Math.round(GAP_RATIO * cardWidth);
+    this.cardGap = gap;
+    this.gridStyle = {
+      gap: `${gap}px`,
+      'grid-template-columns': `repeat(${cfg.cols}, ${cardWidth}px)`,
+    };
   }
 
   // ── Modal ─────────────────────────────────────────────────────────────────
