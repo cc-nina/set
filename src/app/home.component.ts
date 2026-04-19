@@ -1,4 +1,4 @@
-import { Component, OnInit, Inject, PLATFORM_ID } from '@angular/core';
+import { Component, OnInit, Inject, PLATFORM_ID, ChangeDetectorRef, ChangeDetectionStrategy } from '@angular/core';
 import { isPlatformBrowser, CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -10,6 +10,7 @@ import { SERVER_ORIGIN } from './server.config';
   imports: [CommonModule, FormsModule],
   templateUrl: './home.component.html',
   styleUrls: ['./home.component.css'],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class HomeComponent implements OnInit {
   maxPlayers = 2;
@@ -22,6 +23,7 @@ export class HomeComponent implements OnInit {
 
   constructor(
     private router: Router,
+    private cdr: ChangeDetectorRef,
     @Inject(PLATFORM_ID) private platformId: object,
   ) {
     // Pre-fill from localStorage if the user has played before.
@@ -38,7 +40,7 @@ export class HomeComponent implements OnInit {
         if (typeof d.totalGamesPlayed === 'number') this.gamesPlayed = d.totalGamesPlayed;
       })
       .catch((err) => console.warn('[stats] Could not load game count', err))
-      .finally(() => { this.statsReady = true; });
+      .finally(() => { this.statsReady = true; this.cdr.markForCheck(); });
   }
 
   startSinglePlayer(): void {
