@@ -114,6 +114,8 @@ export class MultiplayerGameSession implements GameSession, OnDestroy {
   private prevLastSetBy: PlayerId | null = null;
   /** Tracks each player's previous incorrectSelections to detect negs from room_state. */
   private prevIncorrectSelectionsMap = new Map<PlayerId, number>();
+  /** Tracks each player's previous connected state to detect disconnects from room_state. */
+  private prevConnectedMap = new Map<PlayerId, boolean>();
   get roomId(): string { return this.roomIdValue; }
 
   private roomIdSubject = new BehaviorSubject<string>('');
@@ -305,6 +307,12 @@ export class MultiplayerGameSession implements GameSession, OnDestroy {
             this.negSetBySource.next(player.id);
           }
           this.prevIncorrectSelectionsMap.set(player.id, player.incorrectSelections);
+
+          const wasConnected = this.prevConnectedMap.get(player.id);
+          if (wasConnected === true && !player.connected) {
+            this.eventsSubject.next({ id: `dc-${player.id}-${Date.now()}`, type: 'disconnect', playerId: player.id, playerName: player.name, timestamp: Date.now() });
+          }
+          this.prevConnectedMap.set(player.id, player.connected);
         }
         this.playersSubject.next(msg.state.players);
         break;

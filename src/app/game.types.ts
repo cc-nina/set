@@ -127,7 +127,7 @@ export type ClientMessage =
 /** A discrete event that occurred in a multiplayer game, for the action feed. */
 export interface GameEvent {
   id: string;       // unique id for ngFor tracking
-  type: 'call' | 'set' | 'neg' | 'timeout' | 'join' | 'leave' | 'reconnect';
+  type: 'call' | 'set' | 'neg' | 'timeout' | 'join' | 'leave' | 'reconnect' | 'disconnect';
   playerId: PlayerId;
   playerName: string;
   timestamp: number;  // ISO timestamp

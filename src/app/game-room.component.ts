@@ -194,6 +194,7 @@ export class GameRoomComponent implements OnInit, OnDestroy {
       case 'join': return 'joined';
       case 'leave': return 'left';
       case 'reconnect': return 'reconnected';
+      case 'disconnect': return 'disconnected';
     }
   }
 }
