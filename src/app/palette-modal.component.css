@@ -27,16 +27,49 @@
 
 .modal-title    { font-size:16px; font-weight:600; color:var(--text-primary); margin-bottom:4px; }
 .modal-subtitle { font-size:var(--text-sm); color:var(--text-secondary); margin-bottom:24px; }
-
 .close-btn {
-  position:absolute; top:16px; right:16px;
-  width:28px; height:28px; border-radius:50%;
-  border:none; background:var(--btn-icon-bg); color:var(--btn-icon-text);
-  font-size:16px; cursor:pointer;
-  display:flex; align-items:center; justify-content:center;
-  transition: background 0.12s;
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: none;
+  background: var(--btn-icon-bg);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.12s ease-in-out;
 }
-.close-btn:hover { background:var(--btn-icon-bg-hover); }
+
+/* "X" icon created using two pseudo-elements (::before and ::after) that form the cross shape. */
+.close-btn::before,
+.close-btn::after {
+  content: '';
+  position: absolute;
+  width: 12px;
+  height: 2px;
+  background-color: var(--btn-icon-text);
+  border-radius: 1px;
+  transition: background-color 0.12s ease-in-out;
+}
+
+.close-btn::before {
+  transform: rotate(45deg);
+}
+
+.close-btn::after {
+  transform: rotate(-45deg);
+}
+
+.close-btn:hover {
+  background: var(--btn-icon-bg-hover);
+}
+
+.close-btn:active {
+  transform: scale(0.95);
+}
 
 /* ── Swatch rows ────────────────────────────────────────────────── */
 .swatch-row { display:flex; gap:12px; align-items:flex-start; }
