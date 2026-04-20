@@ -43,12 +43,6 @@
   line-height: 1;
 }
 
-.home-subtitle {
-  font-size: 1rem;
-  color: var(--text-secondary);
-  margin: 0;
-}
-
 .home-games-played {
   font-size: var(--text-sm);
   color: var(--text-secondary);

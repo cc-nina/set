@@ -8,11 +8,6 @@
       <span class="dot dot-purple"></span>
     </div>
     <h1 class="home-title">SET</h1>
-    <p class="home-subtitle">The card-matching game</p>
-    <p class="home-games-played" *ngIf="statsReady">
-      <ng-container *ngIf="gamesPlayed !== null; else statsFallback">{{ gamesPlayed | number }} games played</ng-container>
-      <ng-template #statsFallback>— games played</ng-template>
-    </p>
   </header>
 
   <!-- ── Mode cards ─────────────────────────────────────────────────── -->
@@ -81,5 +76,9 @@
     </section>
 
   </div>
+  <p class="home-games-played" *ngIf="statsReady">
+    <ng-container *ngIf="gamesPlayed !== null; else statsFallback">{{ gamesPlayed | number }} games played</ng-container>
+    <ng-template #statsFallback>— games played</ng-template>
+  </p>
 
 </main>
