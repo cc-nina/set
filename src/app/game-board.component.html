@@ -72,8 +72,8 @@
     </div>
   </div>
 
-  <!-- Call SET area — centered below the cards -->
-  <div class="call-set-area">
+  <!-- Call SET area — centered below the cards (multiplayer only) -->
+  <div *ngIf="requiresCallSet" class="call-set-area">
     <!-- Call SET button — shown when we haven't called and nobody else has either -->
     <button
       *ngIf="!callingSet && !lockedByOther"

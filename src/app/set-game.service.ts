@@ -12,6 +12,7 @@ import { SERVER_ORIGIN } from './server.config';
 @Injectable({ providedIn: 'root' })
 export class SetGameService implements GameSession {
   readonly isMultiplayer = false;
+  readonly requiresCallSet = false;
 
   private stateSubject: BehaviorSubject<GameState>;
   public state$: Observable<GameState>;

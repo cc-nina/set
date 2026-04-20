@@ -71,6 +71,7 @@ export class MultiplayerGameSession implements GameSession, OnDestroy {
   // ── Public streams ────────────────────────────────────────────────────────
 
   readonly isMultiplayer = true;
+  readonly requiresCallSet = true;
 
   private stateSubject = new BehaviorSubject<MultiplayerGameState>(emptyState());
   readonly state$: Observable<GameState> = this.stateSubject.asObservable();

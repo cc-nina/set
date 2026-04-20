@@ -19,6 +19,13 @@ export interface GameSession {
    */
   readonly isMultiplayer: boolean;
 
+  /**
+   * Whether this session requires the player to press "Call SET" before
+   * selecting cards. True in multiplayer (server-enforced lock); false in
+   * single-player (cards are always directly clickable).
+   */
+  readonly requiresCallSet: boolean;
+
   // ── State stream ──────────────────────────────────────────────────────────
   /**
    * Emits the latest GameState whenever anything changes.

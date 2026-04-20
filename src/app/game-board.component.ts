@@ -140,6 +140,9 @@ export class GameBoardComponent implements OnInit, OnDestroy {
   /** True when this session is a live multiplayer game. Sourced from the GameSession contract. */
   readonly isMultiplayer: boolean;
 
+  /** True when card selection requires pressing "Call SET" first. */
+  readonly requiresCallSet: boolean;
+
   /** Tracks whether the first state emission has been seen (used to defer showBoard). */
   private firstState = true;
 
@@ -151,6 +154,7 @@ export class GameBoardComponent implements OnInit, OnDestroy {
   ) {
     this.isBrowser = isPlatformBrowser(this.platformId);
     this.isMultiplayer = this.game.isMultiplayer;
+    this.requiresCallSet = this.game.requiresCallSet;
   }
 
   ngOnInit(): void {
@@ -345,7 +349,7 @@ export class GameBoardComponent implements OnInit, OnDestroy {
 
   @HostListener('window:keydown', ['$event'])
   onKeyDown(event: KeyboardEvent): void {
-    if (event.code === 'Space' && !this.callingSet && !this.lockedByOther && this.gameStatus === 'active') {
+    if (event.code === 'Space' && this.requiresCallSet && !this.callingSet && !this.lockedByOther && this.gameStatus === 'active') {
       event.preventDefault();
       this.callSet();
     }
@@ -450,7 +454,8 @@ export class GameBoardComponent implements OnInit, OnDestroy {
     // Cards are only selectable while the local countdown is running.
     // In multiplayer: only the player who called SET holds the lock.
     // In single-player: same — must press "Call SET" first.
-    if (!this.callingSet) return;
+    if (!this.requiresCallSet && this.gameStatus !== 'active') return;
+    if (this.requiresCallSet && !this.callingSet) return;
     this.game.selectCard(card);
   }
 
