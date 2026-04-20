@@ -26,6 +26,12 @@
   justify-content: space-between;
 }
 
+.toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+}
+
 .toolbar-right {
   display: flex;
   align-items: center;
@@ -83,7 +89,7 @@
 /* ── "Locked by other player" indicator ─────────────────────────── */
 .locked-by-other {
   display: inline-flex; align-items: center;
-  padding: 9px 18px; border-radius: 8px; min-height: 36px;
+  padding: 9px 18px; border-radius: 8px; min-height: 44px;
   border: 1.5px solid var(--danger-border);
   background: var(--danger-bg); color: var(--danger-text);
   font-size: var(--text-sm); font-weight: 700;
@@ -104,7 +110,7 @@
 /* ── Call SET button ────────────────────────────────────────────── */
 .call-set-btn {
   display: inline-flex; align-items: center; justify-content: center;
-  padding: 11px 36px; border-radius: 8px; min-height: 40px;
+  padding: 11px 36px; border-radius: 8px; min-height: 44px;
   border: none;
   background: var(--accent);
   color: var(--text-inverse);
@@ -114,26 +120,42 @@
   transition: background 0.12s, transform 0.1s, box-shadow 0.12s;
   user-select: none;
 }
-.call-set-btn:hover:not(:disabled) {
-  background: var(--accent-hover);
-  box-shadow: 0 3px 14px var(--accent-focus-ring);
+
+@media (hover: hover) {
+  .call-set-btn:hover:not(:disabled) {
+    background: var(--accent-hover);
+    box-shadow: 0 3px 14px var(--accent-focus-ring);
+  }
 }
+
 .call-set-btn:active:not(:disabled) { transform: scale(0.96); }
 .call-set-btn:disabled { opacity: 0.35; cursor: not-allowed; }
 
 /* ── Countdown widget ───────────────────────────────────────────── */
 .countdown-wrap {
-  display: flex; align-items: center; gap: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;        /* wraps gracefully on very narrow screens */
+  justify-content: center;
+  min-width: 0;
 }
 .countdown-label {
-  font-size: var(--text-sm); font-weight: 600; color: var(--text-secondary); white-space: nowrap;
+  font-size: var(--text-sm); font-weight: 600; color: var(--text-secondary);
+  white-space: nowrap;
+  flex-shrink: 1;
+  min-width: 0;
 }
+
 @keyframes pulse-label {
   from { opacity: 1; }
   to   { opacity: 0.55; }
 }
 .countdown-bar-bg {
-  width: 80px; height: 6px; border-radius: 3px;
+  width: 80px;
+  min-width: 40px;   /* ensures bar stays visible even when space is tight */
+  flex-shrink: 1;
+  height: 6px; border-radius: 3px;
   background: var(--border); overflow: hidden;
 }
 .countdown-bar-fill {

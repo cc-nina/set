@@ -10,6 +10,23 @@
   gap: 2.5rem;
 }
 
+/* On mobile, switch to top-aligned so opening the keyboard doesn't
+   push centered content behind it */
+@media (max-width: 559px) {
+  .home-shell {
+    justify-content: flex-start;
+    padding-top: 4rem;
+  }
+}
+
+/* ── Theme toggle ──────────────────────────────────────────────────── */
+.home-theme-toggle-wrap {
+  position: fixed;
+  top: 14px;
+  right: 14px;
+  z-index: 10;
+}
+
 /* ── Header ────────────────────────────────────────────────────────── */
 .home-header {
   display: flex;
@@ -84,14 +101,22 @@
   outline-offset: 3px;
 }
 
-.mode-card:hover,
+/* Hover only on pointer devices — prevents sticky state after touch tap */
+@media (hover: hover) {
+  .mode-card:hover {
+    box-shadow: var(--shadow-md);
+    border-color: var(--border-strong);
+  }
+}
+
 .mode-card:focus-visible {
   box-shadow: var(--shadow-md);
   border-color: var(--border-strong);
 }
 
 .mode-card:active {
-  transform: scale(0.98);
+  background-color: var(--bg-surface-alt);
+  transform: translateY(1px);
 }
 
 /* Multiplayer card is not itself a click target — only its buttons are */
@@ -100,28 +125,28 @@
 }
 .mode-card--multi:active {
   transform: none;
+  background-color: transparent;
+}
+
+/* Primary action inside the multiplayer card spans the full width */
+.mode-card--multi .btn-primary {
+  width: 100%;
 }
 
 .mode-icon {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 24px;   /* Fixed box size */
-  height: 24px;  /* Fixed box size */
-  margin-bottom: 4px; /* Tight gap to the title */
-  pointer-events: none; /* Makes the icon 'invisible' to clicks so the card handles everything */
+  width: 44px;
+  height: 44px;
+  margin-bottom: 4px;
+  pointer-events: none;
 }
 
 .mode-icon svg {
   display: block;
   width: 100%;
   height: 100%;
-}
-
-/* Feedback for the WHOLE card when tapped on mobile */
-.mode-card:active {
-  background-color: var(--bg-surface-alt);
-  transform: translateY(1px); /* Subtle 'push' feel */
 }
 
 .mode-title {
@@ -177,9 +202,8 @@
 /* ── Player count picker ────────────────────────────────────────────── */
 .players-row {
   display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  justify-content: center;
+  flex-direction: column;
+  gap: 0.35rem;
 }
 
 .players-label {
@@ -197,6 +221,7 @@
   background: var(--bg-input);
   cursor: pointer;
   outline: none;
+  align-self: flex-start;  /* don't stretch to full card width */
   transition: border-color 0.12s, var(--theme-transition);
 }
 

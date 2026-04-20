@@ -200,12 +200,13 @@ body {
   align-items: center;
   justify-content: center;
   padding: 9px 18px;
-  min-height: 36px;
+  min-height: 44px;  /* meets minimum touch target size on mobile */
   border-radius: 8px;
   font-size: var(--text-base);
   font-weight: 600;
   cursor: pointer;
   border: 1.5px solid transparent;
+  text-decoration: none;  /* for <a> elements styled as buttons */
   transition: background 0.12s, border-color 0.12s, transform 0.1s, opacity 0.15s;
   user-select: none;
   white-space: nowrap;
@@ -214,12 +215,19 @@ body {
 .btn:active { transform: scale(0.97); }
 .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
 
+/* Square icon-only button variant: overrides padding and sets explicit size */
+.btn.btn-icon {
+  padding: 0;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+}
+
 .btn-primary {
   background: var(--accent);
   color: var(--text-inverse);
   border-color: var(--accent);
 }
-.btn-primary:hover:not(:disabled) { background: var(--accent-hover); border-color: var(--accent-hover); }
 
 .btn-secondary {
   background: var(--btn-ghost-bg);
@@ -227,5 +235,10 @@ body {
   border-color: var(--btn-ghost-border);
   box-shadow: var(--shadow-sm);
 }
-.btn-secondary:hover:not(:disabled) { background: var(--btn-ghost-bg-hover); border-color: var(--btn-ghost-border-hover); }
+
+/* Scope hover effects to pointer devices — prevents sticky hover on touch */
+@media (hover: hover) {
+  .btn-primary:hover:not(:disabled) { background: var(--accent-hover); border-color: var(--accent-hover); }
+  .btn-secondary:hover:not(:disabled) { background: var(--btn-ghost-bg-hover); border-color: var(--btn-ghost-border-hover); }
+}
 

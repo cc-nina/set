@@ -14,6 +14,7 @@ import { Subscription } from 'rxjs';
 
 import { GameBoardComponent } from './game-board.component';
 import { MultiplayerGameSession } from './multiplayer-game-session';
+import { ThemeToggleComponent } from './theme-toggle.component';
 import { GAME_SESSION } from './game-session.interface';
 import { PlayerId, Player, GameEvent } from './game.types';
 import { generateDefaultPlayerName } from './game.utils';
@@ -21,7 +22,7 @@ import { generateDefaultPlayerName } from './game.utils';
 @Component({
   selector: 'app-game-room',
   standalone: true,
-  imports: [CommonModule, FormsModule, GameBoardComponent],
+  imports: [CommonModule, FormsModule, GameBoardComponent, ThemeToggleComponent],
   /**
    * Provide MultiplayerGameSession under the GAME_SESSION token so that
    * GameBoardComponent (which injects GAME_SESSION) gets the multiplayer

@@ -3,6 +3,14 @@
   min-height: 100dvh;
 }
 
+/* ── Theme toggle (shown only during overlay states; game board has its own) ── */
+.room-theme-toggle-wrap {
+  position: fixed;
+  top: 14px;
+  right: 14px;
+  z-index: 10;
+}
+
 /* ── "Found a set!" banner ───────────────────────────────────────────────── */
 .set-banner {
   position: fixed;

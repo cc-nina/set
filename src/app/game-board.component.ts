@@ -12,8 +12,10 @@ import {
 import { isPlatformBrowser } from '@angular/common';
 import { CommonModule, DecimalPipe } from '@angular/common';
 import { Subscription } from 'rxjs';
+import { RouterLink } from '@angular/router';
 import { CardComponent } from './card.component';
 import { PaletteModalComponent, PaletteChangeEvent } from './palette-modal.component';
+import { ThemeToggleComponent } from './theme-toggle.component';
 import { GameSession, GAME_SESSION } from './game-session.interface';
 import { Card, CALL_SET_SECONDS } from './game.types';
 import { shapeFor, shadingFor } from './game.utils';
@@ -34,7 +36,7 @@ const GAP_RATIO = 0.1;
 @Component({
   selector: 'app-game-board',
   standalone: true,
-  imports: [CommonModule, DecimalPipe, CardComponent, PaletteModalComponent],
+  imports: [CommonModule, DecimalPipe, CardComponent, PaletteModalComponent, RouterLink, ThemeToggleComponent],
   templateUrl: './game-board.component.html',
   styleUrls: ['./game-board.component.css'],
   changeDetection: ChangeDetectionStrategy.OnPush,
