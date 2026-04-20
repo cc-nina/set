@@ -15,16 +15,12 @@
 @media (max-width: 559px) {
   .home-shell {
     justify-content: flex-start;
-    padding-top: 4rem;
   }
 }
 
 /* ── Theme toggle ──────────────────────────────────────────────────── */
 .home-theme-toggle-wrap {
-  position: fixed;
-  top: 14px;
-  right: 14px;
-  z-index: 10;
+  align-self: flex-end;
 }
 
 /* ── Header ────────────────────────────────────────────────────────── */

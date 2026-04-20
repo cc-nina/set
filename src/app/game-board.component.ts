@@ -416,7 +416,7 @@ export class GameBoardComponent implements OnInit, OnDestroy {
     const boardWidth = Math.min(w - 32, cfg.maxBoardWidth);
     const cardWFromWidth = boardWidth / (cfg.cols + GAP_RATIO * (cfg.cols - 1));
 
-    const boardHeight = h - 56;
+    const boardHeight = h - 88; // 16px wrapper padding × 2 + 44px toolbar + 12px gap
     const cardHFromHeight = boardHeight / (cfg.rows + GAP_RATIO * (cfg.rows - 1));
     const cardWFromHeight = cardHFromHeight * cfg.cardAspect;
 

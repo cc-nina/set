@@ -2,7 +2,7 @@
 .palette-modal-overlay {
   position: fixed; inset: 0;
   background: rgba(0,0,0,0.35);
-  z-index: 100;
+  z-index: 200;   /* above all fixed UI controls */
   display: flex; align-items: center; justify-content: center;
   animation: fadeIn 0.15s ease;
 }
@@ -31,8 +31,8 @@
   position: absolute;
   top: 16px;
   right: 16px;
-  width: 28px;
-  height: 28px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   border: none;
   background: var(--btn-icon-bg);
@@ -55,21 +55,14 @@
   transition: background-color 0.12s ease-in-out;
 }
 
-.close-btn::before {
-  transform: rotate(45deg);
+.close-btn::before { transform: rotate(45deg); }
+.close-btn::after  { transform: rotate(-45deg); }
+
+@media (hover: hover) {
+  .close-btn:hover { background: var(--btn-icon-bg-hover); }
 }
 
-.close-btn::after {
-  transform: rotate(-45deg);
-}
-
-.close-btn:hover {
-  background: var(--btn-icon-bg-hover);
-}
-
-.close-btn:active {
-  transform: scale(0.95);
-}
+.close-btn:active { transform: scale(0.95); }
 
 /* ── Swatch rows ────────────────────────────────────────────────── */
 .swatch-row { display:flex; gap:12px; align-items:flex-start; }
@@ -79,13 +72,21 @@
   width:56px; height:56px; border-radius:14px;
   border:2px solid transparent;
   cursor:pointer;
-  transition:transform 0.12s, border-color 0.12s;
+  /* Box-shadow ring is always visible regardless of swatch fill color:
+     inner shadow creates a gap, outer ring is the active indicator */
+  transition:transform 0.12s, box-shadow 0.12s;
 }
-.swatch-well:hover { transform:scale(1.06); }
-.swatch-well.active { border-color:var(--swatch-active-border); }
 
-/* Resting border so the highlight swatch is visible on any background.
-   Must come BEFORE .active so the active ring takes precedence. */
+@media (hover: hover) {
+  .swatch-well:hover { transform:scale(1.06); }
+}
+
+/* Active: a two-layer ring (gap + accent) that's visible on any swatch color */
+.swatch-well.active {
+  box-shadow: 0 0 0 3px var(--bg-surface), 0 0 0 5px var(--accent);
+}
+
+/* Resting border so the highlight swatch is visible against any background */
 .swatch-well.highlight-swatch { border-color: var(--border-strong); }
 
 .swatch-label { font-size:var(--text-sm); color:var(--picker-label); text-align:center; }
@@ -171,12 +172,26 @@
   letter-spacing:0.04em; text-transform:uppercase;
 }
 .presets-grid { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+
 .preset-dot {
+  position: relative;   /* needed for the ::after touch-area expansion */
   width:24px; height:24px; border-radius:50%;
   border:2px solid transparent;
   cursor:pointer; transition:transform 0.1s;
+  flex-shrink: 0;
 }
-.preset-dot:hover { transform:scale(1.2); }
+
+/* Expand the tap target to 44px without changing the visual size */
+.preset-dot::after {
+  content: '';
+  position: absolute;
+  inset: -10px;
+}
+
+@media (hover: hover) {
+  .preset-dot:hover { transform:scale(1.2); }
+}
+
 .preset-dot.selected-preset { border-color:var(--swatch-active-border); }
 
 /* ── Conflict warning ───────────────────────────────────────────── */
@@ -193,15 +208,19 @@
   background: none;
   border: 1px solid var(--border);
   border-radius: 8px;
-  padding: 4px 9px;
+  padding: 6px 12px;
+  min-height: 44px;
   cursor: pointer; white-space: nowrap;
   margin-left: auto;
   transition: color 0.12s, border-color 0.12s, background 0.12s;
 }
-.cb-apply-btn:hover {
-  color: var(--text-primary);
-  border-color: var(--border-strong);
-  background: var(--bg-surface-alt);
+
+@media (hover: hover) {
+  .cb-apply-btn:hover {
+    color: var(--text-primary);
+    border-color: var(--border-strong);
+    background: var(--bg-surface-alt);
+  }
 }
 
 /* ── Reset row ──────────────────────────────────────────────────── */
@@ -217,12 +236,16 @@
   background: none;
   border: 1px solid var(--border);
   border-radius: 8px;
-  padding: 6px 14px;
+  padding: 8px 16px;
+  min-height: 44px;
   cursor: pointer;
   transition: color 0.12s, border-color 0.12s, background 0.12s;
 }
-.reset-btn:hover {
-  color: var(--text-primary);
-  border-color: var(--border-strong);
-  background: var(--bg-surface-alt);
+
+@media (hover: hover) {
+  .reset-btn:hover {
+    color: var(--text-primary);
+    border-color: var(--border-strong);
+    background: var(--bg-surface-alt);
+  }
 }

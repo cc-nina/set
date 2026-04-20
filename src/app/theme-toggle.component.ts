@@ -21,7 +21,7 @@ import { ThemeService, THEME_META } from './theme.service';
     .theme-toggle-btn {
       width: 44px;
       height: 44px;
-      border-radius: 50%;
+      border-radius: 8px;
       border: 1.5px solid var(--border-strong);
       background: var(--bg-surface);
       color: var(--text-primary);

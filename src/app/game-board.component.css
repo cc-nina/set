@@ -39,13 +39,8 @@
 }
 
 /* ── Colours button ─────────────────────────────────────────────── */
-.open-palette-btn {
-  gap: 0.5rem;
-}
-
-.palette-dots-preview { display:flex; gap:4px; align-items:center; }
-.palette-dot-sm { width:11px; height:11px; border-radius:50%; }
-.palette-dot-divider { width:1px; height:11px; background:var(--btn-ghost-border); margin:0 1px; }
+.palette-dot-grid { display:grid; grid-template-columns:1fr 1fr; gap:4px; }
+.palette-dot-sm { width:10px; height:10px; border-radius:50%; }
 
 /* ── Game-over overlay (solo) ───────────────────────────────────── */
 .board-overlay {

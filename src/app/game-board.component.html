@@ -36,7 +36,7 @@
           <path d="m313-440 224 224-57 56-320-320 320-320 57 56-224 224h487v80H313Z"/>
         </svg>
       </a>
-      <div class="solo-scorebar">
+      <div class="solo-scorebar" *ngIf="liveSets > 0 || liveNegs > 0">
         <span class="solo-stat">{{ liveSets }} set{{ liveSets === 1 ? '' : 's' }}</span>
         <span class="solo-stat solo-stat--neg" *ngIf="liveNegs > 0">{{ liveNegs }} neg{{ liveNegs === 1 ? '' : 's' }}</span>
         <span class="solo-stat solo-stat--score">{{ liveScore }} pt{{ liveScore === 1 ? '' : 's' }}</span>
@@ -44,13 +44,13 @@
     </div>
     <div class="toolbar-right">
       <app-theme-toggle></app-theme-toggle>
-      <button class="btn btn-secondary open-palette-btn" (click)="openPaletteModal()">
-        <div class="palette-dots-preview">
-          <div *ngFor="let p of palette" class="palette-dot-sm" [style.background]="p"></div>
-          <div class="palette-dot-divider"></div>
+      <button class="btn btn-secondary btn-icon open-palette-btn" (click)="openPaletteModal()" aria-label="Colour palette">
+        <div class="palette-dot-grid">
+          <div class="palette-dot-sm" [style.background]="palette[0]"></div>
+          <div class="palette-dot-sm" [style.background]="palette[1]"></div>
+          <div class="palette-dot-sm" [style.background]="palette[2]"></div>
           <div class="palette-dot-sm" [style.background]="highlightColor || 'var(--card-selected-default)'"></div>
         </div>
-        Colours
       </button>
     </div>
   </div>
