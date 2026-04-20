@@ -77,7 +77,7 @@
 
   </div>
   <p class="home-games-played" *ngIf="statsReady">
-    <ng-container *ngIf="gamesPlayed !== null; else statsFallback">{{ gamesPlayed | number }} games played</ng-container>
+    <ng-container *ngIf="gamesPlayed !== null; else statsFallback">Total games played: {{ gamesPlayed | number }}</ng-container>
     <ng-template #statsFallback>— games played</ng-template>
   </p>
 
