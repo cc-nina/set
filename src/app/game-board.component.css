@@ -52,7 +52,7 @@
   background: var(--bg-surface); border-radius: 1rem;
   padding: 2rem 2.5rem; text-align: center;
   box-shadow: var(--shadow-lg);
-  min-width: 240px; max-width: calc(100vw - 2rem);
+  width: 90%; max-width: 22rem;
   transition: var(--theme-transition);
 }
 .board-overlay-title {
