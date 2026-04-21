@@ -38,7 +38,18 @@
                 [class.btn-copy--err]="copyState === 'failed'"
                 (click)="copyRoomCode()"
                 title="Copy to clipboard">
-          {{ copyState === 'copied' ? '✓ Copied' : copyState === 'failed' ? '✗ Failed' : '⎘ Copy' }}
+          <ng-container *ngIf="copyState !== 'copied' && copyState !== 'failed'">
+            <svg xmlns="http://www.w3.org/2000/svg" height="18px" viewBox="0 -960 960 960" width="18px" fill="currentColor"><path d="M760-200H320q-33 0-56.5-23.5T240-280v-560q0-33 23.5-56.5T320-920h280l240 240v400q0 33-23.5 56.5T760-200ZM560-640v-200H320v560h440v-360H560ZM160-40q-33 0-56.5-23.5T80-120v-560h80v560h440v80H160Zm160-800v200-200 560-560Z"/></svg>
+            Copy
+          </ng-container>
+          <ng-container *ngIf="copyState === 'copied'">
+            <svg xmlns="http://www.w3.org/2000/svg" height="18px" viewBox="0 -960 960 960" width="18px" fill="currentColor"><path d="M382-240 154-468l57-57 171 171 367-367 57 57-424 424Z"/></svg>
+            Copied
+          </ng-container>
+          <ng-container *ngIf="copyState === 'failed'">
+            <svg xmlns="http://www.w3.org/2000/svg" height="18px" viewBox="0 -960 960 960" width="18px" fill="currentColor"><path d="m256-200-56-56 224-224-224-224 56-56 224 224 224-224 56 56-224 224 224 224-56 56-224-224-224 224Z"/></svg>
+            Failed
+          </ng-container>
         </button>
       </div>
       <button class="btn btn-secondary" (click)="leaveRoom()">← Leave room</button>

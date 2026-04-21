@@ -20,7 +20,7 @@
   z-index: 50;
   background: var(--text-primary);
   color: var(--bg-page);
-  font-size: 1rem;
+  font-size: var(--text-base);
   font-weight: 700;
   padding: 0.5rem 1.25rem;
   border-radius: 9999px;
@@ -102,6 +102,9 @@
   color: var(--text-primary);
   transition: background 0.15s, var(--theme-transition);
   min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
 }
 .btn-copy:hover { background: var(--border); }
 

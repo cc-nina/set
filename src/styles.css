@@ -95,8 +95,9 @@
   --score-offline-dot:    #ff6b6b;
 
   /* ── Typography scale ──────────────────────────────────────────────────── */
-  --text-sm:   0.8125rem;   /* 13px — stats, small labels */
-  --text-base: 0.875rem;    /* 14px — buttons, body text  */
+  --text-sm:   0.8125rem;   /* 13px — stats, small labels  */
+  --text-base: 0.875rem;    /* 14px — buttons, body text   */
+  --text-lg:   1.125rem;    /* 18px — subheadings, scores  */
 
   /* ── Transition applied to all themed elements ─────────────────────────── */
   --theme-transition: background-color 0.2s ease, color 0.2s ease,

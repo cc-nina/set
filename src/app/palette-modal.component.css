@@ -25,7 +25,7 @@
   to   { opacity:1; transform:translateY(0) }
 }
 
-.modal-title    { font-size:16px; font-weight:600; color:var(--text-primary); margin-bottom:4px; }
+.modal-title    { font-size:1rem; font-weight:600; color:var(--text-primary); margin-bottom:4px; }
 .modal-subtitle { font-size:var(--text-sm); color:var(--text-secondary); margin-bottom:24px; }
 .close-btn {
   position: absolute;

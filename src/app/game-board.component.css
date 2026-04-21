@@ -46,7 +46,8 @@
 .board-overlay {
   position: fixed; inset: 0;
   display: flex; align-items: center; justify-content: center;
-  background: rgba(0,0,0,0.45);
+  background: rgba(0,0,0,0.55);
+  backdrop-filter: blur(4px);
   z-index: 50;
 }
 .board-overlay-card {
@@ -54,17 +55,18 @@
   padding: 2rem 2.5rem; text-align: center;
   box-shadow: var(--shadow-lg);
   width: 90%; max-width: 22rem;
+  display: flex; flex-direction: column; gap: 0.5rem;
   transition: var(--theme-transition);
 }
 .board-overlay-title {
-  font-size: 1.6rem; font-weight: 700; margin: 0 0 0.25rem;
+  font-size: 1.5rem; font-weight: 800; margin: 0;
   color: var(--text-primary);
 }
 .board-overlay-sub {
-  color: var(--text-secondary); margin: 0 0 0.5rem; font-size: var(--text-base);
+  color: var(--text-secondary); margin: 0; font-size: var(--text-base);
 }
 .board-overlay-score {
-  font-size: 1.1rem; font-weight: 600; margin: 0 0 1.25rem;
+  font-size: var(--text-lg); font-weight: 600; margin: 0.25rem 0 0.5rem;
   color: var(--text-primary);
 }
 .board-overlay-actions {
@@ -74,7 +76,9 @@
 /* ── Live solo scorebar ─────────────────────────────────────────── */
 .solo-scorebar {
   display: flex; align-items: center; gap: 0.75rem;
+  transition: opacity 0.25s ease;
 }
+.solo-scorebar--hidden { opacity: 0; pointer-events: none; }
 .solo-stat {
   font-size: var(--text-sm); font-weight: 600; color: var(--text-secondary);
 }

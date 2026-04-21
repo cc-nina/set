@@ -1,5 +1,6 @@
 import {
   Component,
+  ElementRef,
   Inject,
   PLATFORM_ID,
   ChangeDetectionStrategy,
@@ -7,6 +8,7 @@ import {
   ViewChild,
   HostListener,
   OnInit,
+  AfterViewInit,
   OnDestroy,
 } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
@@ -41,7 +43,7 @@ const GAP_RATIO = 0.1;
   styleUrls: ['./game-board.component.css'],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class GameBoardComponent implements OnInit, OnDestroy {
+export class GameBoardComponent implements OnInit, AfterViewInit, OnDestroy {
   board: Card[] = [];
   palette: string[] = [];
   selectedIds: Set<string> = new Set();
@@ -133,6 +135,7 @@ export class GameBoardComponent implements OnInit, OnDestroy {
   }
 
   @ViewChild('paletteModal') paletteModalRef?: PaletteModalComponent;
+  @ViewChild('toolbarRef') toolbarRef?: ElementRef<HTMLElement>;
 
   private stateSubscription!: Subscription;
   private lastSetBySubscription!: Subscription;
@@ -285,7 +288,6 @@ export class GameBoardComponent implements OnInit, OnDestroy {
     });
 
     if (this.isBrowser) {
-      this.updateLayout();
       this.palette = this.game.getPalette();
       this.readCardTokens();
       // If the user has never customised the highlight colour, seed it from the
@@ -311,6 +313,10 @@ export class GameBoardComponent implements OnInit, OnDestroy {
         });
       }
     });
+  }
+
+  ngAfterViewInit(): void {
+    if (this.isBrowser) this.updateLayout();
   }
 
   ngOnDestroy(): void {
@@ -416,7 +422,11 @@ export class GameBoardComponent implements OnInit, OnDestroy {
     const boardWidth = Math.min(w - 32, cfg.maxBoardWidth);
     const cardWFromWidth = boardWidth / (cfg.cols + GAP_RATIO * (cfg.cols - 1));
 
-    const boardHeight = h - 88; // 16px wrapper padding × 2 + 44px toolbar + 12px gap
+    const remPx = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+    const wrapperPadding = remPx * 2;              // 1rem top + 1rem bottom
+    const toolbarH = this.toolbarRef?.nativeElement.offsetHeight ?? 44;
+    const innerGap = remPx * 0.75;                 // gap between toolbar and card grid
+    const boardHeight = h - wrapperPadding - toolbarH - innerGap;
     const cardHFromHeight = boardHeight / (cfg.rows + GAP_RATIO * (cfg.rows - 1));
     const cardWFromHeight = cardHFromHeight * cfg.cardAspect;
 
