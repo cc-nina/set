@@ -16,7 +16,7 @@ import { GameBoardComponent } from './game-board.component';
 import { MultiplayerGameSession } from './multiplayer-game-session';
 import { ThemeToggleComponent } from './theme-toggle.component';
 import { GAME_SESSION } from './game-session.interface';
-import { PlayerId, Player, GameEvent } from './game.types';
+import { Player, PlayerId, GameEvent, PLAYER_COLORS } from './game.types';
 import { generateDefaultPlayerName } from './game.utils';
 
 @Component({
@@ -42,20 +42,17 @@ export class GameRoomComponent implements OnInit, OnDestroy {
   roomStatus = 'connecting';
   /** The 6-char room code shown to the user to share with others. */
   roomCode = '';
-  /** The PlayerId of whoever just found a set (for the banner). */
+  /** The PlayerId of whoever just found a set — used to pulse their score chip. */
   lastSetBy: PlayerId | null = null;
-  /** Display name of whoever just found a set. */
-  lastSetByName = '';
   /** Feed of recent actions in the room. */
   events: GameEvent[] = [];
-
-  /** Cached player list — updated by the players$ subscription so the
-   *  lastSetBy$ handler can look up names without creating a nested subscribe. */
-  private latestPlayers: Player[] = [];
+  /** IDs of feed items currently fading out before DOM removal. */
+  fadingEventIds = new Set<string>();
 
   /** Tracks clipboard copy state for the "Copy" button label. */
   copyState: 'idle' | 'copied' | 'failed' = 'idle';
   private copyStateTimeout: ReturnType<typeof setTimeout> | null = null;
+  private fadeTimers = new Set<ReturnType<typeof setTimeout>>();
 
   private subs = new Subscription();
 
@@ -76,9 +73,12 @@ export class GameRoomComponent implements OnInit, OnDestroy {
     this.playerName =
       nameFromQuery || localStorage.getItem('playerName') || generateDefaultPlayerName();
     // Persist so direct room links and reconnects remember the name.
-    if (this.playerName) {
-      localStorage.setItem('playerName', this.playerName);
-    }
+    if (this.playerName) localStorage.setItem('playerName', this.playerName);
+
+    const playerColor =
+      this.route.snapshot.queryParamMap.get('playerColor') ||
+      localStorage.getItem('playerColor') ||
+      PLAYER_COLORS[0];
 
     const roomId = this.route.snapshot.paramMap.get('roomId') ?? 'new';
     // maxPlayers is passed as a query param when creating a room: /room/new?maxPlayers=4
@@ -108,22 +108,10 @@ export class GameRoomComponent implements OnInit, OnDestroy {
       }),
     );
 
-    // Keep latestPlayers in sync so the lastSetBy$ handler can do a simple
-    // array lookup rather than spawning a nested subscription.
-    this.subs.add(
-      this.session.players$.subscribe((players) => {
-        this.latestPlayers = players;
-      }),
-    );
-
-    // "Player X found a set!" banner.
+    // Chip highlight — no banner, just the score chip pulse.
     this.subs.add(
       this.session.lastSetBy$.subscribe((id) => {
         this.lastSetBy = id;
-        if (id) {
-          this.lastSetByName =
-            this.latestPlayers.find((p) => p.id === id)?.name ?? 'Someone';
-        }
         this.cdr.markForCheck();
       }),
     );
@@ -131,19 +119,33 @@ export class GameRoomComponent implements OnInit, OnDestroy {
     this.subs.add(
       this.session.events$.subscribe(event => {
         this.events.unshift(event);
-        // Keep the feed to a reasonable size
-        if (this.events.length > 10) {
-          this.events.pop();
-        }
+        if (this.events.length > 5) this.events.pop();
+        // Fade out, then remove from DOM. Both timers are tracked so ngOnDestroy
+        // can cancel them if the component is torn down before they fire.
+        const fadeTimer = setTimeout(() => {
+          this.fadeTimers.delete(fadeTimer);
+          this.fadingEventIds.add(event.id);
+          this.cdr.markForCheck();
+          const removeTimer = setTimeout(() => {
+            this.fadeTimers.delete(removeTimer);
+            this.fadingEventIds.delete(event.id);
+            const idx = this.events.findIndex(e => e.id === event.id);
+            if (idx >= 0) this.events.splice(idx, 1);
+            this.cdr.markForCheck();
+          }, 400);
+          this.fadeTimers.add(removeTimer);
+        }, 4600);
+        this.fadeTimers.add(fadeTimer);
         this.cdr.markForCheck();
-      })
+      }),
     );
 
-    this.session.connect(roomId, this.playerName, maxPlayers);
+    this.session.connect(roomId, this.playerName, maxPlayers, playerColor);
   }
 
   ngOnDestroy(): void {
     if (this.copyStateTimeout) clearTimeout(this.copyStateTimeout);
+    for (const t of this.fadeTimers) clearTimeout(t);
     this.subs.unsubscribe();
     // Do NOT call leave() here — just silently close the socket so the server
     // keeps the player slot alive for the reconnect grace period.
@@ -183,19 +185,32 @@ export class GameRoomComponent implements OnInit, OnDestroy {
     this.copyStateTimeout = setTimeout(() => { this.copyState = 'idle'; this.cdr.markForCheck(); }, ms);
   }
 
-  // Action feed helpers
-  trackEvent(index: number, event: GameEvent): string { return event.id; }
-  isStale(event: GameEvent): boolean { return Date.now() - event.timestamp > 5000; }
+  // ── Feed helpers ──────────────────────────────────────────────────────────
+
+  trackEvent(_index: number, event: GameEvent): string { return event.id; }
+
   actionText(type: GameEvent['type']): string {
     switch (type) {
-      case 'call': return 'called SET';
-      case 'set': return 'found a SET';
-      case 'neg': return 'negged';
-      case 'timeout': return 'timed out';
-      case 'join': return 'joined';
-      case 'leave': return 'left';
-      case 'reconnect': return 'reconnected';
+      case 'call':       return 'called SET';
+      case 'set':        return 'found a SET';
+      case 'neg':        return 'negged';
+      case 'timeout':    return 'timed out';
+      case 'join':       return 'joined';
+      case 'leave':      return 'left';
+      case 'reconnect':  return 'reconnected';
       case 'disconnect': return 'disconnected';
     }
+  }
+
+  isStructuralEvent(type: GameEvent['type']): boolean {
+    return type === 'join' || type === 'leave' || type === 'reconnect' || type === 'disconnect';
+  }
+
+  // ── Scoreboard helpers ────────────────────────────────────────────────────
+
+  isWinner(player: Player, players: Player[]): boolean {
+    if (players.length === 0) return false;
+    const top = Math.max(...players.map(p => p.score));
+    return top > 0 && player.score === top;
   }
 }

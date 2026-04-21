@@ -68,9 +68,29 @@ export interface MultiplayerGameState extends GameState {
 /** Opaque player identifier — a nanoid assigned by the server on join. */
 export type PlayerId = string;
 
+/**
+ * Fixed palette of player identity colours.
+ * Chosen to be visually distinct from each other and from the three SET card
+ * colours (red #DB2C05, green #0C8D1B, purple #4F158A).
+ */
+export const PLAYER_COLORS = [
+  '#F97316', // orange
+  '#EAB308', // amber
+  '#14B8A6', // teal
+  '#0EA5E9', // sky
+  '#8B5CF6', // violet
+  '#EC4899', // pink
+  '#84CC16', // lime
+  '#06B6D4', // cyan
+] as const;
+
+export type PlayerColor = typeof PLAYER_COLORS[number];
+
 export interface Player {
   id: PlayerId;
   name: string;
+  /** Hex colour chosen by the player on the home screen. */
+  color: string;
   score: number;
   correctSets: number;
   incorrectSelections: number;
@@ -126,7 +146,7 @@ export interface RoomState {
 
 /** Messages sent from a browser client to the server. */
 export type ClientMessage =
-  | { type: 'join';        roomId: string; playerName: string; maxPlayers?: number }
+  | { type: 'join';        roomId: string; playerName: string; playerColor?: string; maxPlayers?: number }
   | { type: 'reconnect';   roomId: string; playerId: PlayerId }
   | { type: 'call_set' }
   | { type: 'select_card'; cardId: string }
@@ -135,11 +155,12 @@ export type ClientMessage =
 
 /** A discrete event that occurred in a multiplayer game, for the action feed. */
 export interface GameEvent {
-  id: string;       // unique id for ngFor tracking
+  id: string;           // unique id for ngFor tracking
   type: 'call' | 'set' | 'neg' | 'timeout' | 'join' | 'leave' | 'reconnect' | 'disconnect';
   playerId: PlayerId;
   playerName: string;
-  timestamp: number;  // ISO timestamp
+  playerColor: string;  // player's chosen identity colour
+  timestamp: number;
 }
 
 /** Messages sent from the server to a browser client. */

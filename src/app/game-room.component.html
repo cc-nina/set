@@ -5,11 +5,6 @@
     <app-theme-toggle></app-theme-toggle>
   </div>
 
-  <!-- ── "Found a set!" banner ─────────────────────────────────────────── -->
-  <div *ngIf="lastSetBy" class="set-banner">
-    {{ lastSetByName }} found a SET!
-  </div>
-
   <!-- ── Connecting overlay ────────────────────────────────────────────── -->
   <div *ngIf="roomStatus === 'connecting'" class="overlay">
     <div class="overlay-card">
@@ -60,16 +55,21 @@
   <div *ngIf="roomStatus === 'finished'" class="overlay">
     <div class="overlay-card">
       <p class="overlay-title">Game over!</p>
-      <!-- Scoreboard -->
-      <ul class="scoreboard">
-        <li *ngFor="let p of session.players$ | async" class="score-row">
-          <span class="score-name">
-            {{ p.name }}
-            <span *ngIf="!p.connected" class="badge-offline" title="Disconnected">●</span>
-          </span>
-          <span class="score-val">{{ p.correctSets }} sets &mdash; {{ p.incorrectSelections }} negs &mdash; {{ p.score }} pts</span>
-        </li>
-      </ul>
+      <ng-container *ngIf="session.players$ | async as players">
+        <ul class="scoreboard">
+          <li *ngFor="let p of players"
+              class="score-row"
+              [class.score-row--winner]="isWinner(p, players)">
+            <span class="score-name">
+              <span class="score-name-dot" [style.background]="p.color"></span>
+              {{ p.name }}
+              <span *ngIf="isWinner(p, players)" class="winner-badge" aria-label="Winner">✦</span>
+              <span *ngIf="!p.connected" class="badge-offline" title="Disconnected">●</span>
+            </span>
+            <span class="score-val">{{ p.correctSets }} sets &mdash; {{ p.incorrectSelections }} negs &mdash; {{ p.score }} pts</span>
+          </li>
+        </ul>
+      </ng-container>
       <div class="overlay-actions">
         <button class="btn btn-primary" (click)="session.startNewGame()">Play again</button>
         <button class="btn btn-secondary" (click)="leaveRoom()">← Leave</button>
@@ -102,9 +102,10 @@
         class="score-chip"
         [class.score-chip--highlight]="p.id === lastSetBy"
         [class.score-chip--offline]="!p.connected"
+        [style.--chip-color]="p.color"
         [title]="p.connected ? '' : p.name + ' disconnected'"
       >
-        {{ p.name }}<span *ngIf="!p.connected" class="chip-offline-dot" aria-label="offline"> ●</span>: {{ p.score }}
+        <span class="chip-dot"></span>{{ p.name }}<span *ngIf="!p.connected" class="chip-offline-dot" aria-label="offline"> ●</span>: {{ p.score }}
       </span>
     </ng-container>
     <button class="btn-leave" (click)="leaveRoom()" title="Leave room">✕ Leave</button>
@@ -114,8 +115,14 @@
   <app-game-board *ngIf="roomStatus === 'active'"></app-game-board>
 
   <!-- ── Action feed ───────────────────────────────────────────────────── -->
-  <div *ngIf="events.length > 0" class="action-feed">
-    <div *ngFor="let e of events; trackBy: trackEvent" class="feed-item" [class.feed-item--stale]="isStale(e)">
+  <div *ngIf="roomStatus === 'active' && events.length > 0" class="action-feed">
+    <div
+      *ngFor="let e of events; trackBy: trackEvent"
+      class="feed-item"
+      [class.feed-item--structural]="isStructuralEvent(e.type)"
+      [class.feed-item--fading]="fadingEventIds.has(e.id)"
+      [style.--player-color]="e.playerColor"
+    >
       <span class="feed-player">{{ e.playerName }}</span>
       <span class="feed-action"> {{ actionText(e.type) }}</span>
     </div>

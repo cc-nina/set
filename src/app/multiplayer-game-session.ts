@@ -29,7 +29,7 @@ import {
   delay,
   merge,
 } from 'rxjs';
-import { Card, GameState, MultiplayerGameState, Player, PlayerId, RoomState, ServerMessage, LAST_SET_BANNER_MS, GameEvent } from './game.types';
+import { Card, GameState, MultiplayerGameState, Player, PlayerId, RoomState, ServerMessage, LAST_SET_BANNER_MS, GameEvent, PLAYER_COLORS } from './game.types';
 import { findSet } from './game.utils';
 import { GameSession } from './game-session.interface';
 import { ColorPrefsService } from './color-prefs.service';
@@ -154,11 +154,12 @@ export class MultiplayerGameSession implements GameSession, OnDestroy {
 
   /**
    * Open the WebSocket and join (or reconnect to) a room.
-   * @param roomId      The room ID from the URL, or 'new' to create a fresh room.
-   * @param playerName  Display name chosen by the local player.
-   * @param maxPlayers  Only used when creating a new room. Default 2.
+   * @param roomId       The room ID from the URL, or 'new' to create a fresh room.
+   * @param playerName   Display name chosen by the local player.
+   * @param maxPlayers   Only used when creating a new room. Default 2.
+   * @param playerColor  Identity colour chosen on the home screen.
    */
-  connect(roomId: string, playerName: string, maxPlayers = 2): void {
+  connect(roomId: string, playerName: string, maxPlayers = 2, playerColor: string = PLAYER_COLORS[0]): void {
     if (!isPlatformBrowser(this.platformId)) return;
 
     // Detach handlers from any previous socket before creating a new one.
@@ -200,6 +201,7 @@ export class MultiplayerGameSession implements GameSession, OnDestroy {
           type: 'join',
           roomId,
           playerName,
+          playerColor,
           maxPlayers,
         }));
       }
@@ -208,7 +210,7 @@ export class MultiplayerGameSession implements GameSession, OnDestroy {
     this.ws.onmessage = (event: MessageEvent) => {
       try {
         const msg = JSON.parse(event.data as string) as ServerMessage;
-        this.handleServerMessage(msg, { roomId, playerName, maxPlayers });
+        this.handleServerMessage(msg, { roomId, playerName, maxPlayers, playerColor });
       } catch {
         console.error('[MultiplayerGameSession] Failed to parse server message', event.data);
       }
@@ -224,7 +226,7 @@ export class MultiplayerGameSession implements GameSession, OnDestroy {
       ) {
         this.reconnectAttempts++;
         const delayMs = Math.min(1000 * 2 ** (this.reconnectAttempts - 1), 8000);
-        setTimeout(() => this.connect(roomId, playerName, maxPlayers), delayMs);
+        setTimeout(() => this.connect(roomId, playerName, maxPlayers, playerColor), delayMs);
         return;
       }
       this.roomStatusSubject.next('disconnected');
@@ -275,7 +277,7 @@ export class MultiplayerGameSession implements GameSession, OnDestroy {
 
   private handleServerMessage(
     msg: ServerMessage,
-    connectArgs: { roomId: string; playerName: string; maxPlayers: number },
+    connectArgs: { roomId: string; playerName: string; maxPlayers: number; playerColor: string },
   ): void {
     if (msg.type === 'joined') {
       this.playerId = msg.playerId;
@@ -321,7 +323,7 @@ export class MultiplayerGameSession implements GameSession, OnDestroy {
 
           const wasConnected = this.prevConnectedMap.get(player.id);
           if (wasConnected === true && !player.connected) {
-            this.eventsSubject.next({ id: `dc-${player.id}-${Date.now()}`, type: 'disconnect', playerId: player.id, playerName: player.name, timestamp: Date.now() });
+            this.eventsSubject.next({ id: `dc-${player.id}-${Date.now()}`, type: 'disconnect', playerId: player.id, playerName: player.name, playerColor: player.color, timestamp: Date.now() });
           }
           this.prevConnectedMap.set(player.id, player.connected);
         }
@@ -345,6 +347,7 @@ export class MultiplayerGameSession implements GameSession, OnDestroy {
             type: 'join',
             roomId: 'new',
             playerName: connectArgs.playerName,
+            playerColor: connectArgs.playerColor,
             maxPlayers: connectArgs.maxPlayers,
           }));
           return;
