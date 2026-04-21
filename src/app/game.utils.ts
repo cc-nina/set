@@ -160,8 +160,8 @@ export function applyFoundSet(
 }
 
 /**
- * Shuffle the full deck and deal an initial board, adding extra cards one at
- * a time (per official rules) until a valid set is present or the deck runs out.
+ * Shuffle the full deck and deal an initial board, extending by 3 cards at a
+ * time until a valid set is present or the deck runs out.
  *
  * Returns the dealt board and the remaining deck.
  * Used by both `initGame()` (single-player) and the WebSocket server.
@@ -171,10 +171,7 @@ export function dealInitialBoard(): { board: Card[]; deck: Card[] } {
   const board = full.slice(0, BOARD_SIZE);
   const deck  = full.slice(BOARD_SIZE);
   while (findSet(board) === null && deck.length >= 3) {
-    const triplet = deck.splice(0, 3);
-    
-    // use the 'spread' operator (...) to push all 3 into the board 
-    board.push(...triplet);
+    board.push(...deck.splice(0, 3));
   }
 
   return { board, deck };

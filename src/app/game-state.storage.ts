@@ -33,6 +33,8 @@ function validate(raw: unknown): raw is PersistedGameState {
   const r = raw as Record<string, unknown>;
   if (!isCardArray(r['deck'])) return false;
   if (!isCardArray(r['board'])) return false;
+  const boardLen = (r['board'] as Card[]).length;
+  if (boardLen % 3 !== 0 || boardLen < 3) return false;
   if (!isCardArray(r['selected'])) return false;
   if (typeof r['score'] !== 'number') return false;
   if (typeof r['correctSets'] !== 'number') return false;
