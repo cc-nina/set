@@ -29,7 +29,7 @@
 <div class="board-inner">
 
   <!-- Toolbar: left side (back + score), right side (theme toggle + colours) -->
-  <div class="board-toolbar" #toolbarRef [style.padding-left]="cardGap + 'px'" [style.padding-right]="cardGap + 'px'">
+  <div class="board-toolbar" #toolbarRef [style.padding-left]="toolbarPad + 'px'" [style.padding-right]="toolbarPad + 'px'">
     <div class="toolbar-left">
       <a *ngIf="!isMultiplayer" routerLink="/" class="btn btn-secondary btn-icon" aria-label="Back to home">
         <svg xmlns="http://www.w3.org/2000/svg" height="20px" viewBox="0 -960 960 960" width="20px" fill="currentColor">

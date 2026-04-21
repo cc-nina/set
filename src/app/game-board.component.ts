@@ -90,8 +90,9 @@ export class GameBoardComponent implements OnInit, AfterViewInit, OnDestroy {
   gridClasses = 'grid-cols-3';
   /** Inline style object for the card grid — sets gap to card-width × GAP_RATIO. */
   gridStyle: Record<string, string> = {};
-  /** Current card gap in px — used to match toolbar padding to card spacing. */
   cardGap = 0;
+  /** Horizontal padding for the toolbar so its edges align with the card grid edges. */
+  toolbarPad = 0;
 
   showPaletteModal = false;
 
@@ -433,6 +434,8 @@ export class GameBoardComponent implements OnInit, AfterViewInit, OnDestroy {
     const cardWidth = Math.floor(Math.min(cardWFromWidth, cardWFromHeight));
     const gap = Math.round(GAP_RATIO * cardWidth);
     this.cardGap = gap;
+    const gridWidth = cfg.cols * cardWidth + (cfg.cols - 1) * gap;
+    this.toolbarPad = Math.max(0, Math.round((boardWidth - gridWidth) / 2));
     this.gridStyle = {
       gap: `${gap}px`,
       'grid-template-columns': `repeat(${cfg.cols}, ${cardWidth}px)`,
