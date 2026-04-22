@@ -90,7 +90,6 @@ export class GameBoardComponent implements OnInit, AfterViewInit, OnDestroy {
   gridClasses = 'grid-cols-3';
   /** Inline style object for the card grid — sets gap to card-width × GAP_RATIO. */
   gridStyle: Record<string, string> = {};
-  cardGap = 0;
   /** Horizontal padding for the toolbar so its edges align with the card grid edges. */
   toolbarPad = 0;
 
@@ -410,20 +409,21 @@ export class GameBoardComponent implements OnInit, AfterViewInit, OnDestroy {
   private updateLayout(): void {
     const w = window.innerWidth;
     const h = window.innerHeight;
+    const remPx = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
 
-    // Desktop: landscape cards (3:2), 4×3 grid, capped at 896px wide.
+    // Desktop: landscape cards (3:2), 4×3 grid, capped at 56rem wide (matches CSS max-width).
     // Mobile:  portrait cards (2:3), 4×3 grid, full viewport width.
     const cfg = w >= 768
-      ? { orientation: 'landscape' as const, gridClasses: 'grid-cols-4', cols: 4, rows: 3, cardAspect: 180 / 120, maxBoardWidth: 896 }
+      ? { orientation: 'landscape' as const, gridClasses: 'grid-cols-4', cols: 4, rows: 3, cardAspect: 180 / 120, maxBoardWidth: remPx * 56 }
       : { orientation: 'portrait'  as const, gridClasses: 'grid-cols-4', cols: 4, rows: 3, cardAspect: 120 / 180, maxBoardWidth: Infinity };
 
     this.orientation = cfg.orientation;
     this.gridClasses = cfg.gridClasses;
 
-    const boardWidth = Math.min(w - 32, cfg.maxBoardWidth);
+    // board-wrapper has padding: 1rem on each side; board-inner has max-width: 56rem.
+    const boardWidth = Math.min(w - 2 * remPx, cfg.maxBoardWidth);
     const cardWFromWidth = boardWidth / (cfg.cols + GAP_RATIO * (cfg.cols - 1));
 
-    const remPx = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
     const wrapperPadding = remPx * 2;              // 1rem top + 1rem bottom
     const toolbarH = this.toolbarRef?.nativeElement.offsetHeight ?? 44;
     const innerGap = remPx * 0.75;                 // gap between toolbar and card grid
@@ -433,7 +433,6 @@ export class GameBoardComponent implements OnInit, AfterViewInit, OnDestroy {
 
     const cardWidth = Math.floor(Math.min(cardWFromWidth, cardWFromHeight));
     const gap = Math.round(GAP_RATIO * cardWidth);
-    this.cardGap = gap;
     const gridWidth = cfg.cols * cardWidth + (cfg.cols - 1) * gap;
     this.toolbarPad = Math.max(0, Math.round((boardWidth - gridWidth) / 2));
     this.gridStyle = {

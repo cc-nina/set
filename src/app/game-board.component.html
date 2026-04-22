@@ -31,12 +31,12 @@
   <!-- Toolbar: left side (back + score), right side (theme toggle + colours) -->
   <div class="board-toolbar" #toolbarRef [style.padding-left]="toolbarPad + 'px'" [style.padding-right]="toolbarPad + 'px'">
     <div class="toolbar-left">
-      <a *ngIf="!isMultiplayer" routerLink="/" class="btn btn-secondary btn-icon" aria-label="Back to home">
+      <a routerLink="/" class="btn btn-secondary btn-icon" aria-label="Back to home">
         <svg xmlns="http://www.w3.org/2000/svg" height="20px" viewBox="0 -960 960 960" width="20px" fill="currentColor">
           <path d="m313-440 224 224-57 56-320-320 320-320 57 56-224 224h487v80H313Z"/>
         </svg>
       </a>
-      <div class="solo-scorebar" [class.solo-scorebar--hidden]="liveSets === 0 && liveNegs === 0">
+      <div *ngIf="!isMultiplayer" class="solo-scorebar" [class.solo-scorebar--hidden]="liveSets === 0 && liveNegs === 0">
         <span class="solo-stat">{{ liveSets }} set{{ liveSets === 1 ? '' : 's' }}</span>
         <span class="solo-stat solo-stat--neg" *ngIf="liveNegs > 0">{{ liveNegs }} neg{{ liveNegs === 1 ? '' : 's' }}</span>
         <span class="solo-stat solo-stat--score">{{ liveScore }} pt{{ liveScore === 1 ? '' : 's' }}</span>
