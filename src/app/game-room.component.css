@@ -217,8 +217,9 @@
 }
 
 .score-chip--highlight {
-  background: var(--score-highlight-bg);
-  color: var(--score-highlight-text);
+  background: color-mix(in srgb, var(--chip-color) 70%, transparent);
+  border-color: var(--chip-color);
+  color: #fff;
   animation: chip-pulse 0.35s ease;
 }
 
