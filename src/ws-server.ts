@@ -43,7 +43,7 @@ import type {
   ServerMessage,
   GameEvent,
 } from './app/game.types.js';
-import { CALL_SET_SECONDS, PLAYER_COLORS } from './app/game.types.js';
+import { CALL_SET_SECONDS, PLAYER_COLORS_LIGHT } from './app/game.types.js';
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
@@ -164,7 +164,7 @@ function broadcastEvent(room: Room, type: GameEvent['type'], player: Player): vo
     type,
     playerId: player.id,
     playerName: player.name,
-    playerColor: player.color,
+    playerColorIndex: player.colorIndex,
     timestamp: Date.now(),
   };
   broadcast(room, { type: 'game_event', event });
@@ -175,9 +175,16 @@ function connectedCount(room: Room): number {
   return room.state.players.filter((p) => p.connected).length;
 }
 
+function nextColorIndex(players: Player[]): number {
+  const used = new Set(players.map((p) => p.colorIndex));
+  let i = 0;
+  while (used.has(i)) i++;
+  return i % PLAYER_COLORS_LIGHT.length;
+}
+
 // ── Room actions ─────────────────────────────────────────────────────────────
 
-function createRoom(creatorSocket: GameSocket, playerName: string, maxPlayers: number, playerColor: string): Room {
+function createRoom(creatorSocket: GameSocket, playerName: string, maxPlayers: number): Room {
   let roomId: string;
   do { roomId = randomId(3); } while (rooms.has(roomId)); // retry on collision
   const playerId = randomId(8); // 8 bytes → 16 hex chars
@@ -188,7 +195,7 @@ function createRoom(creatorSocket: GameSocket, playerName: string, maxPlayers: n
   const player: Player = {
     id: playerId,
     name: playerName,
-    color: playerColor,
+    colorIndex: 0,
     score: 0,
     correctSets: 0,
     incorrectSelections: 0,
@@ -221,7 +228,7 @@ function createRoom(creatorSocket: GameSocket, playerName: string, maxPlayers: n
   return room;
 }
 
-function joinRoom(room: Room, joinerSocket: GameSocket, playerName: string, playerColor: string): void {
+function joinRoom(room: Room, joinerSocket: GameSocket, playerName: string): void {
   const playerId = randomId(8);
   joinerSocket.playerId = playerId;
   joinerSocket.roomId = room.state.roomId;
@@ -229,7 +236,7 @@ function joinRoom(room: Room, joinerSocket: GameSocket, playerName: string, play
   const newPlayer: Player = {
     id: playerId,
     name: playerName,
-    color: playerColor,
+    colorIndex: nextColorIndex(room.state.players),
     score: 0,
     correctSets: 0,
     incorrectSelections: 0,
@@ -546,12 +553,8 @@ function handleParsedMessage(ws: GameSocket, msg: ClientMessage): void {
       return;
     }
 
-    const playerColor = typeof msg.playerColor === 'string' && msg.playerColor
-      ? msg.playerColor
-      : PLAYER_COLORS[0];
-
     if (roomId === 'new') {
-      const room = createRoom(ws, playerName.trim().slice(0, 32), maxPlayers, playerColor);
+      const room = createRoom(ws, playerName.trim().slice(0, 32), maxPlayers);
       const player = room.state.players[0];
       send(ws, { type: 'joined', playerId: player.id, roomId: room.state.roomId });
       broadcast(room, { type: 'room_state', state: room.state });
@@ -573,7 +576,7 @@ function handleParsedMessage(ws: GameSocket, msg: ClientMessage): void {
       return;
     }
 
-    joinRoom(room, ws, playerName.trim().slice(0, 32), playerColor);
+    joinRoom(room, ws, playerName.trim().slice(0, 32));
     const player = room.state.players.find(p => p.id === ws.playerId)!;
     send(ws, { type: 'joined', playerId: player.id, roomId });
     broadcast(room, { type: 'room_state', state: room.state });

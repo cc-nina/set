@@ -61,7 +61,7 @@
               class="score-row"
               [class.score-row--winner]="isWinner(p, players)">
             <span class="score-name">
-              <span class="score-name-dot" [style.background]="p.color"></span>
+              <span class="score-name-dot" [style.background]="colorFor(p.colorIndex)"></span>
               {{ p.name }}
               <span *ngIf="isWinner(p, players)" class="winner-badge" aria-label="Winner">✦</span>
               <span *ngIf="!p.connected" class="badge-offline" title="Disconnected">●</span>
@@ -102,7 +102,7 @@
         class="score-chip"
         [class.score-chip--highlight]="p.id === lastSetBy"
         [class.score-chip--offline]="!p.connected"
-        [style.--chip-color]="p.color"
+        [style.--chip-color]="colorFor(p.colorIndex)"
         [title]="p.connected ? '' : p.name + ' disconnected'"
       >
         <span class="chip-dot"></span>{{ p.name }}<span *ngIf="!p.connected" class="chip-offline-dot" aria-label="offline"> ●</span>: {{ p.score }}
@@ -121,7 +121,7 @@
       class="feed-item"
       [class.feed-item--structural]="isStructuralEvent(e.type)"
       [class.feed-item--fading]="fadingEventIds.has(e.id)"
-      [style.--player-color]="e.playerColor"
+      [style.--player-color]="colorFor(e.playerColorIndex)"
     >
       <span class="feed-player">{{ e.playerName }}</span>
       <span class="feed-action"> {{ actionText(e.type) }}</span>

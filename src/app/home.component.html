@@ -55,22 +55,6 @@
         />
       </div>
 
-      <div class="color-row">
-        <span class="color-label">Colour:</span>
-        <div class="color-swatches" role="group" aria-label="Player colour">
-          <button
-            *ngFor="let c of playerColors"
-            type="button"
-            class="color-swatch"
-            [class.color-swatch--active]="playerColor === c"
-            [style.background]="c"
-            (click)="playerColor = c"
-            [attr.aria-label]="'Colour ' + c"
-            [attr.aria-pressed]="playerColor === c"
-          ></button>
-        </div>
-      </div>
-
       <div class="players-row">
         <label class="players-label" for="maxPlayers">Players:</label>
         <select id="maxPlayers" class="players-select" [(ngModel)]="maxPlayers">

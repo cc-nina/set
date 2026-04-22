@@ -16,7 +16,8 @@ import { GameBoardComponent } from './game-board.component';
 import { MultiplayerGameSession } from './multiplayer-game-session';
 import { ThemeToggleComponent } from './theme-toggle.component';
 import { GAME_SESSION } from './game-session.interface';
-import { Player, PlayerId, GameEvent, PLAYER_COLORS } from './game.types';
+import { Player, PlayerId, GameEvent, PLAYER_COLORS_LIGHT, PLAYER_COLORS_DARK } from './game.types';
+import { ThemeService } from './theme.service';
 import { generateDefaultPlayerName } from './game.utils';
 
 @Component({
@@ -60,6 +61,7 @@ export class GameRoomComponent implements OnInit, OnDestroy {
     private route: ActivatedRoute,
     private router: Router,
     public session: MultiplayerGameSession,
+    public themeService: ThemeService,
     @Inject(PLATFORM_ID) private platformId: object,
     private cdr: ChangeDetectorRef,
   ) {}
@@ -74,11 +76,6 @@ export class GameRoomComponent implements OnInit, OnDestroy {
       nameFromQuery || localStorage.getItem('playerName') || generateDefaultPlayerName();
     // Persist so direct room links and reconnects remember the name.
     if (this.playerName) localStorage.setItem('playerName', this.playerName);
-
-    const playerColor =
-      this.route.snapshot.queryParamMap.get('playerColor') ||
-      localStorage.getItem('playerColor') ||
-      PLAYER_COLORS[0];
 
     const roomId = this.route.snapshot.paramMap.get('roomId') ?? 'new';
     // maxPlayers is passed as a query param when creating a room: /room/new?maxPlayers=4
@@ -140,7 +137,11 @@ export class GameRoomComponent implements OnInit, OnDestroy {
       }),
     );
 
-    this.session.connect(roomId, this.playerName, maxPlayers, playerColor);
+    this.subs.add(
+      this.themeService.theme$.subscribe(() => this.cdr.markForCheck()),
+    );
+
+    this.session.connect(roomId, this.playerName, maxPlayers);
   }
 
   ngOnDestroy(): void {
@@ -183,6 +184,13 @@ export class GameRoomComponent implements OnInit, OnDestroy {
   private scheduleCopyReset(ms: number): void {
     if (this.copyStateTimeout) clearTimeout(this.copyStateTimeout);
     this.copyStateTimeout = setTimeout(() => { this.copyState = 'idle'; this.cdr.markForCheck(); }, ms);
+  }
+
+  // ── Colour helpers ────────────────────────────────────────────────────────
+
+  colorFor(colorIndex: number): string {
+    const palette = this.themeService.current === 'dark' ? PLAYER_COLORS_DARK : PLAYER_COLORS_LIGHT;
+    return palette[colorIndex % palette.length];
   }
 
   // ── Feed helpers ──────────────────────────────────────────────────────────

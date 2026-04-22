@@ -68,29 +68,38 @@ export interface MultiplayerGameState extends GameState {
 /** Opaque player identifier — a nanoid assigned by the server on join. */
 export type PlayerId = string;
 
-/**
- * Fixed palette of player identity colours.
- * Chosen to be visually distinct from each other and from the three SET card
- * colours (red #DB2C05, green #0C8D1B, purple #4F158A).
- */
-export const PLAYER_COLORS = [
-  '#F97316', // orange
-  '#EAB308', // amber
-  '#14B8A6', // teal
-  '#0EA5E9', // sky
-  '#8B5CF6', // violet
-  '#EC4899', // pink
-  '#84CC16', // lime
-  '#06B6D4', // cyan
+/** Okabe-Ito-based player identity colours for light mode. */
+export const PLAYER_COLORS_LIGHT = [
+  '#E69F00', // orange
+  '#56B4E9', // sky blue
+  '#009E73', // green
+  '#B8960A', // yellow (darkened for light-bg readability)
+  '#0072B2', // blue
+  '#D55E00', // vermillion
+  '#CC79A7', // pink
+  '#000000', // black
 ] as const;
 
-export type PlayerColor = typeof PLAYER_COLORS[number];
+/** Okabe-Ito-based player identity colours for dark mode. */
+export const PLAYER_COLORS_DARK = [
+  '#E69F00', // orange
+  '#56B4E9', // sky blue
+  '#00BA88', // green (brightened for dark bg)
+  '#F0E442', // yellow
+  '#0099DD', // blue (brightened for dark bg)
+  '#D55E00', // vermillion
+  '#CC79A7', // pink
+  '#FFFFFF', // white
+] as const;
+
+/** @deprecated Use PLAYER_COLORS_LIGHT / PLAYER_COLORS_DARK. Kept for server-side event colour. */
+export const PLAYER_COLORS = PLAYER_COLORS_LIGHT;
 
 export interface Player {
   id: PlayerId;
   name: string;
-  /** Hex colour chosen by the player on the home screen. */
-  color: string;
+  /** Server-assigned colour index (0–7) into PLAYER_COLORS_LIGHT / PLAYER_COLORS_DARK. */
+  colorIndex: number;
   score: number;
   correctSets: number;
   incorrectSelections: number;
@@ -146,7 +155,7 @@ export interface RoomState {
 
 /** Messages sent from a browser client to the server. */
 export type ClientMessage =
-  | { type: 'join';        roomId: string; playerName: string; playerColor?: string; maxPlayers?: number }
+  | { type: 'join';        roomId: string; playerName: string; maxPlayers?: number }
   | { type: 'reconnect';   roomId: string; playerId: PlayerId }
   | { type: 'call_set' }
   | { type: 'select_card'; cardId: string }
@@ -159,7 +168,7 @@ export interface GameEvent {
   type: 'call' | 'set' | 'neg' | 'timeout' | 'join' | 'leave' | 'reconnect' | 'disconnect';
   playerId: PlayerId;
   playerName: string;
-  playerColor: string;  // player's chosen identity colour
+  playerColorIndex: number;
   timestamp: number;
 }
 

@@ -4,7 +4,6 @@ import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { SERVER_ORIGIN } from './server.config';
 import { ThemeToggleComponent } from './theme-toggle.component';
-import { PLAYER_COLORS } from './game.types';
 
 @Component({
   selector: 'app-home',
@@ -19,9 +18,7 @@ export class HomeComponent implements OnInit {
   /** Options rendered in the player-count selector. Defined here to avoid
    *  allocating a new array on every change-detection cycle. */
   readonly playerCountOptions = [2, 3, 4, 5, 6, 7, 8];
-  readonly playerColors = PLAYER_COLORS;
   playerName = '';
-  playerColor: string = PLAYER_COLORS[0];
   gamesPlayed: number | null = null;
   statsReady = false;
 
@@ -33,7 +30,6 @@ export class HomeComponent implements OnInit {
     // Pre-fill from localStorage if the user has played before.
     if (typeof localStorage !== 'undefined') {
       this.playerName = localStorage.getItem('playerName') ?? '';
-      this.playerColor = localStorage.getItem('playerColor') ?? PLAYER_COLORS[0];
     }
   }
 
@@ -55,7 +51,7 @@ export class HomeComponent implements OnInit {
   createRoom(): void {
     this.savePreferences();
     this.router.navigate(['/room', 'new'], {
-      queryParams: { maxPlayers: this.maxPlayers, playerName: this.playerName.trim() || null, playerColor: this.playerColor },
+      queryParams: { maxPlayers: this.maxPlayers, playerName: this.playerName.trim() || null },
     });
   }
 
@@ -63,7 +59,7 @@ export class HomeComponent implements OnInit {
     if (!roomId.trim()) return;
     this.savePreferences();
     this.router.navigate(['/room', roomId.trim()], {
-      queryParams: { playerName: this.playerName.trim() || null, playerColor: this.playerColor },
+      queryParams: { playerName: this.playerName.trim() || null },
     });
   }
 
@@ -71,6 +67,5 @@ export class HomeComponent implements OnInit {
     if (typeof localStorage === 'undefined') return;
     const name = this.playerName.trim();
     if (name) localStorage.setItem('playerName', name);
-    localStorage.setItem('playerColor', this.playerColor);
   }
 }
