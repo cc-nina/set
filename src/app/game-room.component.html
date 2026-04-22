@@ -95,6 +95,15 @@
     </div>
   </div>
 
+  <!-- ── Room not found overlay ────────────────────────────────────────── -->
+  <div *ngIf="roomStatus === 'room_not_found'" class="overlay">
+    <div class="overlay-card">
+      <p class="overlay-title">Room not found</p>
+      <p class="overlay-sub">That room code doesn't exist or has expired. Double-check the code, or go back and create a new room.</p>
+      <button class="btn btn-secondary" (click)="goHome()">← Back to home</button>
+    </div>
+  </div>
+
   <!-- ── Scorebar (visible while active) ───────────────────────────────── -->
   <div *ngIf="roomStatus === 'active'" class="scorebar">
     <div class="scorebar-chips">

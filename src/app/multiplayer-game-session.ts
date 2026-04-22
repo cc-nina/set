@@ -125,6 +125,8 @@ export class MultiplayerGameSession implements GameSession, OnDestroy {
   private roomStatusSubject = new BehaviorSubject<string>('connecting');
   readonly roomStatus$: Observable<string> = this.roomStatusSubject.asObservable();
 
+  private isReconnectAttempt = false;
+
   // ── WebSocket ─────────────────────────────────────────────────────────────
 
   private ws: WebSocket | null = null;
@@ -174,6 +176,7 @@ export class MultiplayerGameSession implements GameSession, OnDestroy {
     const savedRoomId   = localStorage.getItem(SS_ROOM_ID);
     const savedPlayerId = localStorage.getItem(SS_PLAYER_ID);
     const isReconnect   = !!(savedRoomId && savedPlayerId && roomId === savedRoomId);
+    this.isReconnectAttempt = isReconnect;
 
     if (roomId !== 'new') {
       const saved = loadMultiplayerState(roomId);
@@ -329,18 +332,23 @@ export class MultiplayerGameSession implements GameSession, OnDestroy {
 
       case 'error': {
         console.error('[MultiplayerGameSession] Server error:', msg.message);
-        // If the reconnect was rejected (room expired / player evicted), fall
-        // back to a fresh room creation so the player isn't stuck on a blank
-        // screen.  Always use 'new' — the original room no longer exists, so
-        // retrying with the old roomId would just produce another error.
+        // Reconnect rejected (room expired / player evicted) → fall back to a
+        // fresh room so the player isn't stuck on a blank screen.
+        // User-entered invalid room code → show an error overlay instead of
+        // silently creating a new room they didn't ask for.
         if (msg.message.includes('not found') || msg.message.includes('Player not found')) {
-          this.clearStoredSession();
-          this.ws?.send(JSON.stringify({
-            type: 'join',
-            roomId: 'new',
-            playerName: connectArgs.playerName,
-            maxPlayers: connectArgs.maxPlayers,
-          }));
+          if (this.isReconnectAttempt) {
+            this.clearStoredSession();
+            this.ws?.send(JSON.stringify({
+              type: 'join',
+              roomId: 'new',
+              playerName: connectArgs.playerName,
+              maxPlayers: connectArgs.maxPlayers,
+            }));
+          } else {
+            this.roomStatusSubject.next('room_not_found');
+            this.reconnectAttempts = MultiplayerGameSession.MAX_RECONNECT_ATTEMPTS;
+          }
           return;
         }
         // Room is full or no longer accepting players — show a specific overlay
