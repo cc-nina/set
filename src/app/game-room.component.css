@@ -67,6 +67,12 @@
   line-height: 1.5;
 }
 
+/* ── Waiting overlay player count ───────────────────────────────────────── */
+.player-count {
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
 /* ── Room code display ───────────────────────────────────────────────────── */
 .room-code-row {
   display: flex;
@@ -189,15 +195,17 @@
   align-items: center;
   gap: 0.5rem;
   overflow-x: auto;
+  overflow-y: visible;
   min-width: 0;
   scrollbar-width: none;
+  padding: 4px 4px;
 }
 .scorebar-chips::-webkit-scrollbar { display: none; }
 
 .score-chip {
   display: inline-flex;
   align-items: center;
-  color: rgba(255,255,255,0.88);
+  color: var(--text-primary);
   font-size: var(--text-base);
   font-weight: 600;
   padding: 0.35rem 0.8rem;
@@ -219,18 +227,34 @@
 .score-chip--highlight {
   background: color-mix(in srgb, var(--chip-color) 70%, transparent);
   border-color: var(--chip-color);
-  color: #fff;
-  animation: chip-pulse 0.35s ease;
+  animation: chip-pulse 0.5s ease-out;
 }
 
 @keyframes chip-pulse {
-  0%   { transform: scale(1); }
-  45%  { transform: scale(1.13); }
-  100% { transform: scale(1); }
+  0%   { box-shadow: 0 0 0 0   color-mix(in srgb, var(--chip-color) 80%, transparent); }
+  35%  { box-shadow: 0 0 0 4px color-mix(in srgb, var(--chip-color) 50%, transparent); }
+  100% { box-shadow: 0 0 0 6px transparent; }
+}
+
+.score-chip--penalty {
+  animation: chip-penalty 0.5s ease-out;
+}
+
+@keyframes chip-penalty {
+  0%   { box-shadow: 0 0 0 0   rgba(220, 38, 38, 0.9); }
+  35%  { box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.5); }
+  100% { box-shadow: 0 0 0 6px transparent; }
 }
 
 .score-chip--offline {
   opacity: 0.45;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .score-chip--highlight,
+  .score-chip--penalty {
+    animation: none;
+  }
 }
 
 

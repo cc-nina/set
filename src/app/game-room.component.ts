@@ -45,6 +45,9 @@ export class GameRoomComponent implements OnInit, OnDestroy {
   roomCode = '';
   /** The PlayerId of whoever just found a set — used to pulse their score chip. */
   lastSetBy: PlayerId | null = null;
+  /** The PlayerId of whoever just got penalised — used to flash their score chip red. */
+  lastNegBy: PlayerId | null = null;
+  maxPlayers = 2;
   /** Feed of recent actions in the room. */
   events: GameEvent[] = [];
   /** IDs of feed items currently fading out before DOM removal. */
@@ -81,7 +84,7 @@ export class GameRoomComponent implements OnInit, OnDestroy {
     // maxPlayers is passed as a query param when creating a room: /room/new?maxPlayers=4
     // Clamp to [2, 8] and fall back to 2 for absent / non-numeric / out-of-range values.
     const rawMax = Number(this.route.snapshot.queryParamMap.get('maxPlayers'));
-    const maxPlayers = Number.isFinite(rawMax) && rawMax >= 2 && rawMax <= 8
+    this.maxPlayers = Number.isFinite(rawMax) && rawMax >= 2 && rawMax <= 8
       ? Math.floor(rawMax)
       : 2;
 
@@ -114,6 +117,13 @@ export class GameRoomComponent implements OnInit, OnDestroy {
     );
 
     this.subs.add(
+      this.session.negSetBy$.subscribe((id) => {
+        this.lastNegBy = id;
+        this.cdr.markForCheck();
+      }),
+    );
+
+    this.subs.add(
       this.session.events$.subscribe(event => {
         this.events.unshift(event);
         if (this.events.length > 5) this.events.pop();
@@ -141,7 +151,7 @@ export class GameRoomComponent implements OnInit, OnDestroy {
       this.themeService.theme$.subscribe(() => this.cdr.markForCheck()),
     );
 
-    this.session.connect(roomId, this.playerName, maxPlayers);
+    this.session.connect(roomId, this.playerName, this.maxPlayers);
   }
 
   ngOnDestroy(): void {
@@ -193,8 +203,13 @@ export class GameRoomComponent implements OnInit, OnDestroy {
     return palette[colorIndex % palette.length];
   }
 
-  // ── Feed helpers ──────────────────────────────────────────────────────────
+  get overlayStatus(): string {
+    return this.roomStatus === 'error' ? 'disconnected' : this.roomStatus;
+  }
 
+  // ── TrackBy helpers ───────────────────────────────────────────────────────
+
+  trackPlayer(_index: number, player: Player): PlayerId { return player.id; }
   trackEvent(_index: number, event: GameEvent): string { return event.id; }
 
   actionText(type: GameEvent['type']): string {

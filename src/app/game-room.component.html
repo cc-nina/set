@@ -5,112 +5,123 @@
     <app-theme-toggle></app-theme-toggle>
   </div>
 
-  <!-- ── Connecting overlay ────────────────────────────────────────────── -->
-  <div *ngIf="roomStatus === 'connecting'" class="overlay">
-    <div class="overlay-card">
-      <p class="overlay-title">Connecting…</p>
-      <p class="overlay-sub">Setting up your room, just a moment.</p>
-    </div>
-  </div>
+  <!-- ── Overlays ───────────────────────────────────────────────────────────── -->
+  <ng-container [ngSwitch]="overlayStatus">
 
-  <!-- ── Reconnecting overlay ──────────────────────────────────────────── -->
-  <div *ngIf="roomStatus === 'reconnecting'" class="overlay">
-    <div class="overlay-card">
-      <p class="overlay-title">Rejoining…</p>
-      <p class="overlay-sub">Reconnecting to your game, hang tight.</p>
-    </div>
-  </div>
-
-  <!-- ── Waiting overlay ───────────────────────────────────────────────── -->
-  <div *ngIf="roomStatus === 'waiting' && roomCode" class="overlay">
-    <div class="overlay-card">
-      <p class="overlay-title">Waiting for players…</p>
-      <p class="overlay-sub">Share this room code with your opponent:</p>
-      <div class="room-code-row">
-        <span class="room-code">{{ roomCode }}</span>
-        <button class="btn-copy"
-                [class.btn-copy--ok]="copyState === 'copied'"
-                [class.btn-copy--err]="copyState === 'failed'"
-                (click)="copyRoomCode()"
-                title="Copy to clipboard">
-          <ng-container *ngIf="copyState !== 'copied' && copyState !== 'failed'">
-            <svg xmlns="http://www.w3.org/2000/svg" height="18px" viewBox="0 -960 960 960" width="18px" fill="currentColor"><path d="M760-200H320q-33 0-56.5-23.5T240-280v-560q0-33 23.5-56.5T320-920h280l240 240v400q0 33-23.5 56.5T760-200ZM560-640v-200H320v560h440v-360H560ZM160-40q-33 0-56.5-23.5T80-120v-560h80v560h440v80H160Zm160-800v200-200 560-560Z"/></svg>
-            Copy
-          </ng-container>
-          <ng-container *ngIf="copyState === 'copied'">
-            <svg xmlns="http://www.w3.org/2000/svg" height="18px" viewBox="0 -960 960 960" width="18px" fill="currentColor"><path d="M382-240 154-468l57-57 171 171 367-367 57 57-424 424Z"/></svg>
-            Copied
-          </ng-container>
-          <ng-container *ngIf="copyState === 'failed'">
-            <svg xmlns="http://www.w3.org/2000/svg" height="18px" viewBox="0 -960 960 960" width="18px" fill="currentColor"><path d="m256-200-56-56 224-224-224-224 56-56 224 224 224-224 56 56-224 224 224 224-56 56-224-224-224 224Z"/></svg>
-            Failed
-          </ng-container>
-        </button>
+    <!-- Connecting -->
+    <div *ngSwitchCase="'connecting'" class="overlay">
+      <div class="overlay-card">
+        <p class="overlay-title">Connecting…</p>
+        <p class="overlay-sub">Setting up your room, just a moment.</p>
       </div>
-      <button class="btn btn-secondary" (click)="leaveRoom()">← Leave room</button>
     </div>
-  </div>
 
-  <!-- ── Finished overlay ──────────────────────────────────────────────── -->
-  <div *ngIf="roomStatus === 'finished'" class="overlay">
-    <div class="overlay-card">
-      <p class="overlay-title">Game over!</p>
-      <ng-container *ngIf="session.players$ | async as players">
-        <ul class="scoreboard">
-          <li *ngFor="let p of players"
-              class="score-row"
-              [class.score-row--winner]="isWinner(p, players)">
-            <span class="score-name">
-              <span class="score-name-dot" [style.background]="colorFor(p.colorIndex)"></span>
-              {{ p.name }}
-              <span *ngIf="isWinner(p, players)" class="winner-badge" aria-label="Winner">✦</span>
-              <span *ngIf="!p.connected" class="badge-offline" title="Disconnected">●</span>
-            </span>
-            <span class="score-val">{{ p.correctSets }} sets &mdash; {{ p.incorrectSelections }} negs &mdash; {{ p.score }} pts</span>
-          </li>
-        </ul>
-      </ng-container>
-      <div class="overlay-actions">
-        <button class="btn btn-primary" (click)="session.startNewGame()">Play again</button>
+    <!-- Reconnecting -->
+    <div *ngSwitchCase="'reconnecting'" class="overlay">
+      <div class="overlay-card">
+        <p class="overlay-title">Rejoining…</p>
+        <p class="overlay-sub">Reconnecting to your game, hang tight.</p>
+      </div>
+    </div>
+
+    <!-- Waiting -->
+    <div *ngSwitchCase="'waiting'" class="overlay">
+      <div class="overlay-card">
+        <p class="overlay-title">Waiting for players…</p>
+        <ng-container *ngIf="session.players$ | async as players">
+          <p class="overlay-sub player-count">{{ players.length }} / {{ maxPlayers }} players joined</p>
+        </ng-container>
+        <ng-container *ngIf="roomCode">
+          <p class="overlay-sub">Share this room code:</p>
+          <div class="room-code-row">
+            <span class="room-code">{{ roomCode }}</span>
+            <button class="btn-copy"
+                    [class.btn-copy--ok]="copyState === 'copied'"
+                    [class.btn-copy--err]="copyState === 'failed'"
+                    (click)="copyRoomCode()"
+                    title="Copy to clipboard">
+              <ng-container *ngIf="copyState !== 'copied' && copyState !== 'failed'">
+                <svg xmlns="http://www.w3.org/2000/svg" height="18px" viewBox="0 -960 960 960" width="18px" fill="currentColor"><path d="M760-200H320q-33 0-56.5-23.5T240-280v-560q0-33 23.5-56.5T320-920h280l240 240v400q0 33-23.5 56.5T760-200ZM560-640v-200H320v560h440v-360H560ZM160-40q-33 0-56.5-23.5T80-120v-560h80v560h440v80H160Zm160-800v200-200 560-560Z"/></svg>
+                Copy
+              </ng-container>
+              <ng-container *ngIf="copyState === 'copied'">
+                <svg xmlns="http://www.w3.org/2000/svg" height="18px" viewBox="0 -960 960 960" width="18px" fill="currentColor"><path d="M382-240 154-468l57-57 171 171 367-367 57 57-424 424Z"/></svg>
+                Copied
+              </ng-container>
+              <ng-container *ngIf="copyState === 'failed'">
+                <svg xmlns="http://www.w3.org/2000/svg" height="18px" viewBox="0 -960 960 960" width="18px" fill="currentColor"><path d="m256-200-56-56 224-224-224-224 56-56 224 224 224-224 56 56-224 224 224 224-56 56-224-224-224 224Z"/></svg>
+                Failed
+              </ng-container>
+            </button>
+          </div>
+        </ng-container>
         <button class="btn btn-secondary" (click)="leaveRoom()">← Leave</button>
       </div>
     </div>
-  </div>
 
-  <!-- ── Disconnected / error overlay ─────────────────────────────────── -->
-  <div *ngIf="roomStatus === 'disconnected' || roomStatus === 'error'" class="overlay">
-    <div class="overlay-card">
-      <p class="overlay-title">Disconnected</p>
-      <p class="overlay-sub">The connection to the server was lost.</p>
-      <button class="btn btn-secondary" (click)="goHome()">← Back to home</button>
+    <!-- Finished -->
+    <div *ngSwitchCase="'finished'" class="overlay">
+      <div class="overlay-card">
+        <p class="overlay-title">Game over!</p>
+        <ng-container *ngIf="session.players$ | async as players">
+          <ul class="scoreboard">
+            <li *ngFor="let p of players"
+                class="score-row"
+                [class.score-row--winner]="isWinner(p, players)">
+              <span class="score-name">
+                <span class="score-name-dot" [style.background]="colorFor(p.colorIndex)"></span>
+                {{ p.name }}
+                <span *ngIf="isWinner(p, players)" class="winner-badge" aria-label="Winner">✦</span>
+                <span *ngIf="!p.connected" class="badge-offline" aria-hidden="true" title="Disconnected">●</span>
+              </span>
+              <span class="score-val">{{ p.correctSets }} sets &mdash; {{ p.incorrectSelections }} negs &mdash; {{ p.score }} pts</span>
+            </li>
+          </ul>
+        </ng-container>
+        <div class="overlay-actions">
+          <button class="btn btn-primary" (click)="session.startNewGame()">Play again</button>
+          <button class="btn btn-secondary" (click)="leaveRoom()">← Leave</button>
+        </div>
+      </div>
     </div>
-  </div>
 
-  <!-- ── Room full overlay ──────────────────────────────────────────────── -->
-  <div *ngIf="roomStatus === 'room_full'" class="overlay">
-    <div class="overlay-card">
-      <p class="overlay-title">Room is full</p>
-      <p class="overlay-sub">This room has already reached its maximum number of players. Ask the host to create a new room, or start your own.</p>
-      <button class="btn btn-secondary" (click)="goHome()">← Back to home</button>
+    <!-- Disconnected / error -->
+    <div *ngSwitchCase="'disconnected'" class="overlay">
+      <div class="overlay-card">
+        <p class="overlay-title">Disconnected</p>
+        <p class="overlay-sub">The connection to the server was lost.</p>
+        <button class="btn btn-secondary" (click)="goHome()">← Back to home</button>
+      </div>
     </div>
-  </div>
 
-  <!-- ── Room not found overlay ────────────────────────────────────────── -->
-  <div *ngIf="roomStatus === 'room_not_found'" class="overlay">
-    <div class="overlay-card">
-      <p class="overlay-title">Room not found</p>
-      <p class="overlay-sub">That room code doesn't exist or has expired. Double-check the code, or go back and create a new room.</p>
-      <button class="btn btn-secondary" (click)="goHome()">← Back to home</button>
+    <!-- Room full -->
+    <div *ngSwitchCase="'room_full'" class="overlay">
+      <div class="overlay-card">
+        <p class="overlay-title">Room is full</p>
+        <p class="overlay-sub">This room has already reached its maximum number of players. Ask the host to create a new room, or start your own.</p>
+        <button class="btn btn-secondary" (click)="goHome()">← Back to home</button>
+      </div>
     </div>
-  </div>
+
+    <!-- Room not found -->
+    <div *ngSwitchCase="'room_not_found'" class="overlay">
+      <div class="overlay-card">
+        <p class="overlay-title">Room not found</p>
+        <p class="overlay-sub">That room code doesn't exist or has expired. Double-check the code, or go back and create a new room.</p>
+        <button class="btn btn-secondary" (click)="goHome()">← Back to home</button>
+      </div>
+    </div>
+
+  </ng-container>
 
   <!-- ── Scorebar (visible while active) ───────────────────────────────── -->
   <div *ngIf="roomStatus === 'active'" class="scorebar">
     <div class="scorebar-chips">
-      <ng-container *ngFor="let p of session.players$ | async">
+      <ng-container *ngFor="let p of session.players$ | async; trackBy: trackPlayer">
         <span
           class="score-chip"
           [class.score-chip--highlight]="p.id === lastSetBy"
+          [class.score-chip--penalty]="p.id === lastNegBy"
           [class.score-chip--offline]="!p.connected"
           [style.--chip-color]="colorFor(p.colorIndex)"
           [title]="p.connected ? '' : p.name + ' disconnected'"
@@ -119,7 +130,7 @@
         </span>
       </ng-container>
     </div>
-    <button class="btn-leave" (click)="leaveRoom()" title="Leave room">✕ Leave</button>
+    <button class="btn-leave" (click)="leaveRoom()" title="Leave room">← Leave</button>
   </div>
 
   <!-- ── Game board ────────────────────────────────────────────────────── -->
