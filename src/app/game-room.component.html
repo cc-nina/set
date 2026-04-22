@@ -134,6 +134,7 @@
       [class.feed-item--fading]="fadingEventIds.has(e.id)"
       [style.--player-color]="colorFor(e.playerColorIndex)"
     >
+      <span class="feed-dot"></span>
       <span class="feed-player">{{ e.playerName }}</span>
       <span class="feed-action"> {{ actionText(e.type) }}</span>
     </div>

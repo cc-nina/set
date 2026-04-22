@@ -100,6 +100,17 @@
   width: 100%;
 }
 
+/* Grid-stack: both children occupy the same cell so height never collapses */
+.call-set-slot {
+  display: grid;
+  place-items: center;
+}
+
+.call-set-btn,
+.countdown-wrap {
+  grid-area: 1 / 1;
+}
+
 /* ── Call SET button ────────────────────────────────────────────── */
 .call-set-btn {
   display: inline-flex; align-items: center; justify-content: center;
@@ -110,19 +121,25 @@
   font-size: var(--text-base); font-weight: 700; letter-spacing: 0.04em;
   cursor: pointer;
   box-shadow: 0 2px 10px var(--accent-focus-ring);
-  transition: background 0.12s, transform 0.1s, box-shadow 0.12s;
+  transition: background 0.12s, box-shadow 0.12s, opacity 0.18s ease, transform 0.18s ease;
   user-select: none;
 }
 
 @media (hover: hover) {
-  .call-set-btn:hover:not(:disabled) {
+  .call-set-btn:hover:not(:disabled):not(.call-set-btn--hidden) {
     background: var(--accent-hover);
     box-shadow: 0 3px 14px var(--accent-focus-ring);
   }
 }
 
-.call-set-btn:active:not(:disabled) { transform: scale(0.96); }
-.call-set-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.call-set-btn:active:not(:disabled):not(.call-set-btn--hidden) { transform: scale(0.96); }
+.call-set-btn:disabled:not(.call-set-btn--hidden) { opacity: 0.35; cursor: not-allowed; }
+
+.call-set-btn--hidden {
+  opacity: 0;
+  pointer-events: none;
+  transform: scale(0.88);
+}
 
 /* ── Countdown widget ───────────────────────────────────────────── */
 .countdown-wrap {
@@ -132,6 +149,13 @@
   flex-wrap: wrap;        /* wraps gracefully on very narrow screens */
   justify-content: center;
   min-width: 0;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+
+.countdown-wrap--hidden {
+  opacity: 0;
+  pointer-events: none;
+  transform: scale(0.88);
 }
 .countdown-label {
   font-size: var(--text-sm); font-weight: 600; color: var(--text-secondary);

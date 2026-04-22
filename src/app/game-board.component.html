@@ -82,21 +82,22 @@
 
   <!-- Call SET area — centered below the cards (multiplayer only) -->
   <div *ngIf="requiresCallSet" class="call-set-area">
-    <!-- Call SET button — shown while nobody has called yet (disabled when another player holds the lock) -->
-    <button
-      *ngIf="!callingSet"
-      class="call-set-btn"
-      [disabled]="gameStatus !== 'active' || lockedByOther"
-      (click)="callSet()"
-      title="Call SET (Space)"
-    >Call SET!</button>
-    <!-- Countdown display — shown while we hold the lock -->
-    <div *ngIf="callingSet" class="countdown-wrap">
-      <span class="countdown-label">Pick 3 cards&hellip;</span>
-      <div class="countdown-bar-bg">
-        <div class="countdown-bar-fill" [style.width]="(callTimeLeft / callSetSeconds * 100) + '%'" [class.countdown-urgent]="callTimeLeft < 2"></div>
+    <div class="call-set-slot">
+      <!-- Both rendered always; CSS transitions between them with no layout shift -->
+      <button
+        class="call-set-btn"
+        [class.call-set-btn--hidden]="callingSet"
+        [disabled]="gameStatus !== 'active' || lockedByOther || callingSet"
+        (click)="callSet()"
+        title="Call SET (Space)"
+      >Call SET!</button>
+      <div class="countdown-wrap" [class.countdown-wrap--hidden]="!callingSet">
+        <span class="countdown-label">Pick 3 cards&hellip;</span>
+        <div class="countdown-bar-bg">
+          <div class="countdown-bar-fill" [style.width]="(callTimeLeft / callSetSeconds * 100) + '%'" [class.countdown-urgent]="callTimeLeft < 2"></div>
+        </div>
+        <span class="countdown-time">{{ callTimeLeft | number:'1.1-1' }}s</span>
       </div>
-      <span class="countdown-time">{{ callTimeLeft | number:'1.1-1' }}s</span>
     </div>
   </div>
 
