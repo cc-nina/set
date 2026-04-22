@@ -58,7 +58,15 @@
   <!-- Card grid -->
   <div *ngIf="isBrowser && showBoard" class="board w-full flex justify-center">
     <div class="grid" [ngClass]="gridClasses" [ngStyle]="gridStyle">
-      <div *ngFor="let c of board; trackBy: trackCard" (click)="onCardClick(c)"
+      <div *ngFor="let c of board; trackBy: trackCard"
+        role="button"
+        [attr.tabindex]="isCardInteractive ? '0' : '-1'"
+        [attr.aria-pressed]="selectedIds.has(c.id)"
+        [attr.aria-label]="cardAriaLabel(c)"
+        [attr.aria-disabled]="!isCardInteractive ? 'true' : null"
+        (click)="onCardClick(c)"
+        (keydown.enter)="onCardKeydown($any($event), c)"
+        (keydown.space)="onCardKeydown($any($event), c)"
         [class.cursor-pointer]="callingSet"
         [class.cursor-default]="!callingSet"
         [class.card-locked-out]="lockedByOther"

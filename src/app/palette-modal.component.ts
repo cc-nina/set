@@ -6,6 +6,7 @@ import {
   ViewChild,
   ElementRef,
   OnChanges,
+  OnDestroy,
   SimpleChanges,
   HostListener,
   NgZone,
@@ -29,7 +30,7 @@ export interface PaletteChangeEvent {
   templateUrl: './palette-modal.component.html',
   styleUrls: ['./palette-modal.component.css'],
 })
-export class PaletteModalComponent implements OnChanges {
+export class PaletteModalComponent implements OnChanges, OnDestroy {
   /** The three card colours (palette slots 0–2). */
   @Input() palette: string[] = [];
   /** The selection highlight colour (slot 3). */
@@ -51,6 +52,9 @@ export class PaletteModalComponent implements OnChanges {
   svY = 1;   // value 0–1
 
   @ViewChild('svCanvas') svCanvasRef!: ElementRef<HTMLCanvasElement>;
+  @ViewChild('modal') modalRef!: ElementRef<HTMLElement>;
+
+  private previouslyFocused: HTMLElement | null = null;
 
   constructor(private ngZone: NgZone) {}
 
@@ -87,10 +91,17 @@ export class PaletteModalComponent implements OnChanges {
 
   /** Called by the parent immediately after making the component visible. */
   initPicker(): void {
+    this.previouslyFocused = document.activeElement as HTMLElement;
     this.activeSwatchIdx = 0;
     this.syncHsvFromColor(this.currentSwatchColor);
-    // Let the canvas render before drawing.
-    setTimeout(() => this.drawSvCanvas(), 0);
+    setTimeout(() => {
+      this.drawSvCanvas();
+      this.modalRef?.nativeElement.querySelector<HTMLElement>('button')?.focus();
+    }, 0);
+  }
+
+  ngOnDestroy(): void {
+    this.previouslyFocused?.focus();
   }
 
   // ── Swatch selection ──────────────────────────────────────────────────────
@@ -285,9 +296,37 @@ export class PaletteModalComponent implements OnChanges {
     this.close.emit();
   }
 
-  @HostListener('document:keydown.escape')
-  onEscape(): void {
-    this.close.emit();
+  @HostListener('document:keydown', ['$event'])
+  onDocumentKeydown(event: KeyboardEvent): void {
+    if (event.key === 'Escape') {
+      this.close.emit();
+      return;
+    }
+    if (event.key !== 'Tab') return;
+
+    const modal = this.modalRef?.nativeElement;
+    if (!modal) return;
+
+    const focusable = Array.from(
+      modal.querySelectorAll<HTMLElement>('button:not([disabled]), input:not([disabled])')
+    );
+    if (focusable.length === 0) return;
+
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    const active = document.activeElement;
+
+    if (event.shiftKey) {
+      if (active === first || !modal.contains(active)) {
+        event.preventDefault();
+        last.focus();
+      }
+    } else {
+      if (active === last || !modal.contains(active)) {
+        event.preventDefault();
+        first.focus();
+      }
+    }
   }
 
   // ── Helpers ───────────────────────────────────────────────────────────────

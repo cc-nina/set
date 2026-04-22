@@ -357,9 +357,11 @@ export class GameBoardComponent implements OnInit, AfterViewInit, OnDestroy {
 
   @HostListener('window:keydown', ['$event'])
   onKeyDown(event: KeyboardEvent): void {
-    if (event.code === 'Space' && this.requiresCallSet && !this.callingSet && !this.lockedByOther && this.gameStatus === 'active') {
+    if (event.code === 'Space' && this.gameStatus === 'active') {
       event.preventDefault();
-      this.callSet();
+      if (this.requiresCallSet && !this.callingSet && !this.lockedByOther) {
+        this.callSet();
+      }
     }
   }
 
@@ -463,6 +465,23 @@ export class GameBoardComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   // ── Card helpers ──────────────────────────────────────────────────────────
+
+  get isCardInteractive(): boolean {
+    if (this.gameStatus !== 'active') return false;
+    if (this.lockedByOther) return false;
+    if (this.requiresCallSet && !this.callingSet) return false;
+    return true;
+  }
+
+  onCardKeydown(event: KeyboardEvent, card: Card): void {
+    event.preventDefault();
+    this.onCardClick(card);
+  }
+
+  cardAriaLabel(c: Card): string {
+    const n = c.number;
+    return `${n} ${shadingFor(c)} ${shapeFor(c)}${n > 1 ? 's' : ''}, color ${c.color}`;
+  }
 
   onCardClick(card: Card): void {
     // Cards are only selectable while the local countdown is running.

@@ -1,5 +1,5 @@
 <div class="palette-modal-overlay" (click)="onOverlayClick($event)">
-  <div class="palette-modal" (click)="$event.stopPropagation()">
+  <div class="palette-modal" #modal (click)="$event.stopPropagation()">
     <button class="close-btn" (click)="close.emit()" aria-label="Close"></button>
 
     <div class="modal-title">Colours</div>

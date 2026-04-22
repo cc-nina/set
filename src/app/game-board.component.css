@@ -184,6 +184,9 @@
   from { opacity: 1; }
   to   { opacity: 0.6; }
 }
+@media (prefers-reduced-motion: reduce) {
+  .countdown-bar-fill.countdown-urgent { animation: none; }
+}
 .countdown-time {
   font-size: var(--text-sm); font-weight: 700; color: var(--accent); min-width: 28px;
 }
