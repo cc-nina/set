@@ -97,17 +97,19 @@
 
   <!-- ── Scorebar (visible while active) ───────────────────────────────── -->
   <div *ngIf="roomStatus === 'active'" class="scorebar">
-    <ng-container *ngFor="let p of session.players$ | async">
-      <span
-        class="score-chip"
-        [class.score-chip--highlight]="p.id === lastSetBy"
-        [class.score-chip--offline]="!p.connected"
-        [style.--chip-color]="colorFor(p.colorIndex)"
-        [title]="p.connected ? '' : p.name + ' disconnected'"
-      >
-        <span class="chip-dot"></span>{{ p.name }}<span *ngIf="!p.connected" class="chip-offline-dot" aria-label="offline"> ●</span>: {{ p.score }}
-      </span>
-    </ng-container>
+    <div class="scorebar-chips">
+      <ng-container *ngFor="let p of session.players$ | async">
+        <span
+          class="score-chip"
+          [class.score-chip--highlight]="p.id === lastSetBy"
+          [class.score-chip--offline]="!p.connected"
+          [style.--chip-color]="colorFor(p.colorIndex)"
+          [title]="p.connected ? '' : p.name + ' disconnected'"
+        >
+          <span class="chip-dot"></span>{{ p.name }}: {{ p.score }}
+        </span>
+      </ng-container>
+    </div>
     <button class="btn-leave" (click)="leaveRoom()" title="Leave room">✕ Leave</button>
   </div>
 

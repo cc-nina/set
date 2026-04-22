@@ -25,7 +25,7 @@
 </div>
 
 <!-- ── Main board ──────────────────────────────────────────────────── -->
-<main class="board-wrapper">
+<main class="board-wrapper" [class.board-wrapper--room]="isMultiplayer">
 <div class="board-inner">
 
   <!-- Toolbar: left side (back + score), right side (theme toggle + colours) -->
@@ -82,18 +82,14 @@
 
   <!-- Call SET area — centered below the cards (multiplayer only) -->
   <div *ngIf="requiresCallSet" class="call-set-area">
-    <!-- Call SET button — shown when we haven't called and nobody else has either -->
+    <!-- Call SET button — shown while nobody has called yet (disabled when another player holds the lock) -->
     <button
-      *ngIf="!callingSet && !lockedByOther"
+      *ngIf="!callingSet"
       class="call-set-btn"
-      [disabled]="gameStatus !== 'active'"
+      [disabled]="gameStatus !== 'active' || lockedByOther"
       (click)="callSet()"
       title="Call SET (Space)"
     >Call SET!</button>
-    <!-- Another player holds the lock — show a waiting indicator -->
-    <div *ngIf="lockedByOther" class="locked-by-other">
-      <span class="locked-label">Waiting for {{ getPlayerName(serverCallerLockId) }}…</span>
-    </div>
     <!-- Countdown display — shown while we hold the lock -->
     <div *ngIf="callingSet" class="countdown-wrap">
       <span class="countdown-label">Pick 3 cards&hellip;</span>

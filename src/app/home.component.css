@@ -61,12 +61,22 @@
   line-height: 1;
 }
 
-.home-games-played {
+.home-footer {
   font-size: var(--text-sm);
-  color: var(--text-secondary);
+  color: var(--text-muted);
   margin: 0;
-  opacity: 0.7;
   letter-spacing: 0.04em;
+  text-align: center;
+  width: 100%;
+  max-width: 640px;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border);
+}
+
+@media (max-width: 559px) {
+  .home-footer {
+    margin-top: auto;
+  }
 }
 
 /* ── Mode grid ─────────────────────────────────────────────────────── */

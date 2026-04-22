@@ -161,8 +161,9 @@
 /* ── Badge used in finished scoreboard ──────────────────────────────────── */
 .badge-offline {
   display: inline-block;
-  color: var(--stat-neg);
-  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  opacity: 0.6;
+  font-size: 0.6em;
   vertical-align: middle;
   margin-left: 0.25rem;
 }
@@ -176,13 +177,22 @@
   z-index: 30;
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 0.75rem;
-  padding: 0.5rem 1rem max(0.5rem, env(safe-area-inset-bottom));
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem max(0.5rem, env(safe-area-inset-bottom));
   background: var(--scorebar-bg);
   backdrop-filter: blur(6px);
-  flex-wrap: wrap;
 }
+
+.scorebar-chips {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  overflow-x: auto;
+  min-width: 0;
+  scrollbar-width: none;
+}
+.scorebar-chips::-webkit-scrollbar { display: none; }
 
 .score-chip {
   display: inline-flex;
@@ -222,13 +232,10 @@
   opacity: 0.45;
 }
 
-.chip-offline-dot {
-  color: var(--score-offline-dot);
-  font-size: var(--text-sm);
-}
 
 /* ── Leave button in scorebar ────────────────────────────────────────────── */
 .btn-leave {
+  flex-shrink: 0;
   background: transparent;
   border: 1px solid rgba(255,255,255,0.3);
   border-radius: 9999px;
@@ -239,7 +246,6 @@
   min-height: 32px;
   cursor: pointer;
   transition: background 0.15s, color 0.15s, border-color 0.15s;
-  margin-left: auto;
 }
 .btn-leave:hover {
   background: rgba(255,107,107,0.25);
@@ -250,48 +256,46 @@
 /* ── Action feed ─────────────────────────────────────────────────────────── */
 .action-feed {
   position: fixed;
-  bottom: 3.75rem;  /* clears the scorebar */
+  top: 4rem;
   left: 0;
   right: 0;
-  z-index: 35;
+  z-index: 45;
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
+  gap: 0.3rem;
   align-items: center;
-  max-height: 9rem;
+  max-height: 8rem;
   overflow: hidden;
   pointer-events: none;
-}
-
-@media (max-width: 600px) {
-  .action-feed { bottom: 3.5rem; }
 }
 
 .feed-item {
   background: var(--bg-surface);
   border: 1px solid var(--border);
   color: var(--text-primary);
-  padding: 0.3rem 0.85rem;
+  padding: 0.3rem 0.9rem;
   border-radius: 9999px;
   font-size: var(--text-sm);
-  box-shadow: var(--shadow-sm);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.12);
   white-space: nowrap;
-  animation: feed-in 0.2s ease;
-  transition: opacity 0.35s ease, transform 0.35s ease;
+  max-width: calc(100vw - 2rem);
+  overflow: hidden;
+  animation: feed-in 0.18s ease;
+  transition: opacity 0.3s ease, transform 0.3s ease;
 }
 
 .feed-item--structural {
-  opacity: 0.6;
-  font-size: 0.75rem;
+  opacity: 0.55;
+  font-size: 0.72rem;
 }
 
 .feed-item--fading {
   opacity: 0;
-  transform: translateY(-4px);
+  transform: translateY(-5px);
 }
 
 @keyframes feed-in {
-  from { opacity: 0; transform: translateY(6px); }
+  from { opacity: 0; transform: translateY(-8px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 

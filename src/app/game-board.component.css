@@ -9,6 +9,11 @@
   box-sizing: border-box;
 }
 
+/* Extra clearance for the fixed scorebar in room mode */
+.board-wrapper--room {
+  padding-bottom: calc(max(1rem, env(safe-area-inset-bottom)) + 3.5rem);
+}
+
 .board-inner {
   display: flex;
   flex-direction: column;
@@ -85,17 +90,6 @@
 .solo-stat--neg   { color: var(--stat-neg); }
 .solo-stat--score { color: var(--stat-pos); }
 
-/* ── "Locked by other player" indicator ─────────────────────────── */
-.locked-by-other {
-  display: inline-flex; align-items: center;
-  padding: 9px 18px; border-radius: 8px; min-height: 44px;
-  border: 1.5px solid var(--danger-border);
-  background: var(--danger-bg); color: var(--danger-text);
-  font-size: var(--text-sm); font-weight: 700;
-}
-.locked-label {
-  animation: pulse-label 0.6s ease-in-out infinite alternate;
-}
 
 /* ── Call SET area ──────────────────────────────────────────────── */
 .call-set-area {
@@ -146,10 +140,6 @@
   min-width: 0;
 }
 
-@keyframes pulse-label {
-  from { opacity: 1; }
-  to   { opacity: 0.55; }
-}
 .countdown-bar-bg {
   width: 80px;
   min-width: 40px;   /* ensures bar stays visible even when space is tight */
