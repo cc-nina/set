@@ -22,7 +22,7 @@ export const CALL_SET_SECONDS = 7;
  * Used by both SetGameService and MultiplayerGameSession to auto-clear
  * the lastSetBy$ signal, and by GameBoardComponent to time the match animation.
  */
-export const LAST_SET_BANNER_MS = 2000;
+export const LAST_SET_BANNER_MS = 1400;
 
 /**
  * How many cards are on the board at the start of the game

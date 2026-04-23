@@ -243,6 +243,7 @@
 }
 
 .score-chip--penalty {
+  border-color: rgba(220, 38, 38, 0.8);
   animation: chip-penalty 0.5s ease-out;
 }
 

@@ -111,8 +111,8 @@ export class MultiplayerGameSession implements GameSession, OnDestroy {
 
   private playerId: PlayerId = '';
   private roomIdValue: string = '';
-  /** Tracks the previous lastSetBy to avoid re-firing the banner on every room_state. */
-  private prevLastSetBy: PlayerId | null = null;
+  /** Tracks each player's previous score to detect correct sets from room_state. */
+  private prevScoreMap = new Map<PlayerId, number>();
   /** Tracks each player's previous incorrectSelections to detect negs from room_state. */
   private prevIncorrectSelectionsMap = new Map<PlayerId, number>();
   /** Tracks each player's previous connected state to detect disconnects from room_state. */
@@ -311,14 +311,14 @@ export class MultiplayerGameSession implements GameSession, OnDestroy {
         this.callerLockIdSubject.next(msg.state.callerLockId);
         // Update the room status so the overlay transitions correctly.
         this.roomStatusSubject.next(msg.state.status);
-        // Trigger the lastSetBy banner only when it changes to a NEW non-null value.
-        // Without this guard, every room_state broadcast (e.g. when someone calls SET)
-        // would re-fire the banner for the previous set finder.
-        const newLastSetBy = msg.state.lastSetBy;
-        if (newLastSetBy && newLastSetBy !== this.prevLastSetBy) {
-          this.lastSetBySource.next(newLastSetBy);
+        // Trigger the lastSetBy banner whenever a player's score increases.
+        for (const player of msg.state.players) {
+          const prev = this.prevScoreMap.get(player.id) ?? 0;
+          if (player.score > prev) {
+            this.lastSetBySource.next(player.id);
+          }
+          this.prevScoreMap.set(player.id, player.score);
         }
-        this.prevLastSetBy = newLastSetBy;
         // Trigger the neg animation for whichever player's incorrectSelections increased.
         // Iterating all players (not just local) ensures every client sees the shake
         // regardless of who made the incorrect selection.

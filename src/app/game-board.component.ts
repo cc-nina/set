@@ -53,6 +53,7 @@ export class GameBoardComponent implements OnInit, AfterViewInit, OnDestroy {
 
   /** Timeout handle for clearing setMatchIds after the match animation. */
   private setMatchTimeout: ReturnType<typeof setTimeout> | null = null;
+  private negMatchTimeout: ReturnType<typeof setTimeout> | null = null;
 
   /**
    * Snapshot of the board from the previous state emission.
@@ -244,17 +245,18 @@ export class GameBoardComponent implements OnInit, AfterViewInit, OnDestroy {
     // lastNegCardIds (set from state$ just before this fires) to identify which
     // 3 cards to shake — no board-swapping needed.
     this.negSetBySubscription = this.game.negSetBy$.subscribe((id) => {
-      if (id === null) {
-        this.negMatchIds = new Set();
-        this.cdr.markForCheck();
-        return;
-      }
+      if (id === null) return;
 
       // Timeout penalties have no neg cards (lastNegCardIds is null).
       if (!this.lastNegCardIds || this.lastNegCardIds.length !== 3) return;
 
       this.negMatchIds = new Set(this.lastNegCardIds);
       this.cdr.markForCheck();
+      if (this.negMatchTimeout !== null) clearTimeout(this.negMatchTimeout);
+      this.negMatchTimeout = setTimeout(() => {
+        this.negMatchIds = new Set();
+        this.cdr.markForCheck();
+      }, 700);
     });
 
     // ── Caller lock ───────────────────────────────────────────────────────────
@@ -316,6 +318,10 @@ export class GameBoardComponent implements OnInit, AfterViewInit, OnDestroy {
     if (this.setMatchTimeout !== null) {
       clearTimeout(this.setMatchTimeout);
       this.setMatchTimeout = null;
+    }
+    if (this.negMatchTimeout !== null) {
+      clearTimeout(this.negMatchTimeout);
+      this.negMatchTimeout = null;
     }
   }
 
