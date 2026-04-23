@@ -90,6 +90,7 @@
 
   <!-- Call SET area — centered below the cards (multiplayer only) -->
   <div *ngIf="requiresCallSet" class="call-set-area">
+    <span class="sr-only" aria-live="assertive" aria-atomic="true">{{ ariaCountdownAnnouncement }}</span>
     <div class="call-set-slot">
       <!-- Both rendered always; CSS transitions between them with no layout shift -->
       <button

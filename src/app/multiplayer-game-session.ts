@@ -133,6 +133,7 @@ export class MultiplayerGameSession implements GameSession, OnDestroy {
   /** Number of automatic reconnection attempts made in a row. */
   private reconnectAttempts = 0;
   private static readonly MAX_RECONNECT_ATTEMPTS = 5;
+  private lastConnectArgs: { roomId: string; playerName: string; maxPlayers: number } | null = null;
 
   constructor(
     @Inject(PLATFORM_ID) private platformId: object,
@@ -154,8 +155,20 @@ export class MultiplayerGameSession implements GameSession, OnDestroy {
 
   // ── Connection ────────────────────────────────────────────────────────────
 
+  /** Manually retry after a disconnect — resets the attempt counter and reconnects. */
+  retry(): void {
+    if (!this.lastConnectArgs) return;
+    this.reconnectAttempts = 0;
+    this.roomStatusSubject.next('connecting');
+    // Prefer the server-assigned room ID (roomIdValue) over the original connect arg,
+    // which may be 'new' for rooms that were created and assigned a real ID mid-session.
+    const roomId = this.roomIdValue || this.lastConnectArgs.roomId;
+    this.connect(roomId, this.lastConnectArgs.playerName, this.lastConnectArgs.maxPlayers);
+  }
+
   connect(roomId: string, playerName: string, maxPlayers = 2): void {
     if (!isPlatformBrowser(this.platformId)) return;
+    this.lastConnectArgs = { roomId, playerName, maxPlayers };
 
     // Detach handlers from any previous socket before creating a new one.
     // Without this, a stale onclose can fire after the new socket is assigned

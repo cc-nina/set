@@ -197,10 +197,16 @@
   overflow-x: auto;
   overflow-y: visible;
   min-width: 0;
-  scrollbar-width: none;
-  padding: 4px 4px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.25) transparent;
+  padding: 4px 4px 8px;
 }
-.scorebar-chips::-webkit-scrollbar { display: none; }
+.scorebar-chips::-webkit-scrollbar { height: 3px; }
+.scorebar-chips::-webkit-scrollbar-track { background: transparent; }
+.scorebar-chips::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.25);
+  border-radius: 9999px;
+}
 
 .score-chip {
   display: inline-flex;

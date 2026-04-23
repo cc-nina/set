@@ -26,8 +26,6 @@ import { ThemeService } from './theme.service';
 /** How long (ms) the set-match highlight stays visible before cards are replaced. */
 const SET_MATCH_DISPLAY_MS = 700;
 
-/** How long (ms) the neg-set shake animation plays before the new board lands. */
-const NEG_MATCH_DISPLAY_MS = 700;
 
 /** How long (ms) each tick interval is for the countdown. */
 const COUNTDOWN_TICK_MS = 100;
@@ -53,8 +51,6 @@ export class GameBoardComponent implements OnInit, AfterViewInit, OnDestroy {
   /** Cards that were just part of an incorrect selection (neg) — show shake animation. */
   negMatchIds: Set<string> = new Set();
 
-  /** Timeout handle for clearing negMatchIds — tracked so rapid negs don't stomp each other. */
-  private negMatchTimeout: ReturnType<typeof setTimeout> | null = null;
   /** Timeout handle for clearing setMatchIds after the match animation. */
   private setMatchTimeout: ReturnType<typeof setTimeout> | null = null;
 
@@ -110,6 +106,9 @@ export class GameBoardComponent implements OnInit, AfterViewInit, OnDestroy {
   callTimeLeft = CALL_SET_SECONDS;
   /** Interval handle for the countdown ticker. */
   private countdownInterval: ReturnType<typeof setInterval> | null = null;
+  /** Text piped to a visually-hidden aria-live region to announce countdown milestones. */
+  ariaCountdownAnnouncement = '';
+  private prevAnnouncedSecond = -1;
 
   /**
    * In multiplayer: the PlayerId of whoever currently holds the call lock
@@ -186,11 +185,7 @@ export class GameBoardComponent implements OnInit, AfterViewInit, OnDestroy {
       // When a correct set OR a neg is applied, cancel the local countdown —
       // the call window is over either way.
       if ((s.correctSets > prevSets || s.incorrectSelections > prevNegs) && this.callingSet) {
-        if (this.countdownInterval !== null) {
-          clearInterval(this.countdownInterval);
-          this.countdownInterval = null;
-        }
-        this.callingSet = false;
+        this.cancelCountdown();
       }
 
       if (s.status === 'finished') {
@@ -260,13 +255,6 @@ export class GameBoardComponent implements OnInit, AfterViewInit, OnDestroy {
 
       this.negMatchIds = new Set(this.lastNegCardIds);
       this.cdr.markForCheck();
-
-      if (this.negMatchTimeout !== null) clearTimeout(this.negMatchTimeout);
-      this.negMatchTimeout = setTimeout(() => {
-        this.negMatchIds = new Set();
-        this.negMatchTimeout = null;
-        this.cdr.markForCheck();
-      }, NEG_MATCH_DISPLAY_MS);
     });
 
     // ── Caller lock ───────────────────────────────────────────────────────────
@@ -278,11 +266,7 @@ export class GameBoardComponent implements OnInit, AfterViewInit, OnDestroy {
       // If the server cleared a lock we held (timeout penalty), cancel the
       // local countdown so the UI stays in sync.
       if (lockId === null && this.callingSet) {
-        if (this.countdownInterval !== null) {
-          clearInterval(this.countdownInterval);
-          this.countdownInterval = null;
-        }
-        this.callingSet = false;
+        this.cancelCountdown();
       }
       this.cdr.markForCheck();
     });
@@ -329,10 +313,6 @@ export class GameBoardComponent implements OnInit, AfterViewInit, OnDestroy {
       clearInterval(this.countdownInterval);
       this.countdownInterval = null;
     }
-    if (this.negMatchTimeout !== null) {
-      clearTimeout(this.negMatchTimeout);
-      this.negMatchTimeout = null;
-    }
     if (this.setMatchTimeout !== null) {
       clearTimeout(this.setMatchTimeout);
       this.setMatchTimeout = null;
@@ -373,10 +353,17 @@ export class GameBoardComponent implements OnInit, AfterViewInit, OnDestroy {
     this.game.callSet();
     this.callingSet = true;
     this.callTimeLeft = CALL_SET_SECONDS;
+    this.ariaCountdownAnnouncement = `You called SET! Pick 3 cards. ${CALL_SET_SECONDS} seconds`;
+    this.prevAnnouncedSecond = CALL_SET_SECONDS;
     this.cdr.markForCheck();
 
     this.countdownInterval = setInterval(() => {
       this.callTimeLeft = Math.max(0, this.callTimeLeft - COUNTDOWN_TICK_MS / 1000);
+      const currSec = Math.ceil(this.callTimeLeft);
+      if (currSec !== this.prevAnnouncedSecond) {
+        this.prevAnnouncedSecond = currSec;
+        this.ariaCountdownAnnouncement = currSec > 0 ? `${currSec} second${currSec === 1 ? '' : 's'}` : 'Time up';
+      }
       this.cdr.markForCheck();
       if (this.callTimeLeft <= 0) {
         this.cancelCountdown();
@@ -390,6 +377,8 @@ export class GameBoardComponent implements OnInit, AfterViewInit, OnDestroy {
       this.countdownInterval = null;
     }
     this.callingSet = false;
+    this.ariaCountdownAnnouncement = '';
+    this.prevAnnouncedSecond = -1;
     // Delegate post-cancel cleanup to the session — behaviour differs by
     // implementation: single-player deselects cards, multiplayer is a no-op
     // (the server broadcasts the penalty and clears selections via room_state).

@@ -90,7 +90,10 @@
       <div class="overlay-card">
         <p class="overlay-title">Disconnected</p>
         <p class="overlay-sub">The connection to the server was lost.</p>
-        <button class="btn btn-secondary" (click)="goHome()">← Back to home</button>
+        <div class="overlay-actions">
+          <button class="btn btn-primary" (click)="session.retry()">Retry</button>
+          <button class="btn btn-secondary" (click)="goHome()">← Back to home</button>
+        </div>
       </div>
     </div>
 

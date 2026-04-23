@@ -55,6 +55,10 @@
   --btn-icon-bg-hover:  #e0e0e0;
   --btn-icon-text:      #555555;
 
+  --btn-disabled-bg:     #e5e7eb;
+  --btn-disabled-text:   #6b7280;
+  --btn-disabled-border: #e5e7eb;
+
   /* ── Palette modal specific ─────────────────────────────────────────────── */
   --modal-divider:      #e8e8e8;
   --swatch-active-border: #111111;
@@ -141,6 +145,10 @@ html.dark {
   --btn-icon-bg-hover:  #383d4e;
   --btn-icon-text:      #a0a8b8;
 
+  --btn-disabled-bg:     #2e3240;
+  --btn-disabled-text:   #636d7e;
+  --btn-disabled-border: #2e3240;
+
   --modal-divider:      #2e3240;
   --swatch-active-border: #c8b8e8;
   --picker-label:       #636d7e;
@@ -214,7 +222,13 @@ body {
 }
 
 .btn:active { transform: scale(0.97); }
-.btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+.btn:disabled {
+  background: var(--btn-disabled-bg);
+  color: var(--btn-disabled-text);
+  border-color: var(--btn-disabled-border);
+  cursor: not-allowed;
+  transform: none;
+}
 
 /* Square icon-only button variant: overrides padding and sets explicit size */
 .btn.btn-icon {

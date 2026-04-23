@@ -137,6 +137,17 @@
   background-color: var(--bg-surface);
 }
 
+@media (hover: hover) {
+  .mode-card--multi:hover {
+    box-shadow: var(--shadow-sm);
+    border-color: var(--border);
+  }
+}
+
+.mode-card--multi:hover .mode-icon svg {
+  color: var(--text-secondary);
+}
+
 /* Primary action inside the multiplayer card spans the full width */
 .mode-card--multi .btn-primary {
   width: 100%;
@@ -213,7 +224,7 @@
   box-shadow: 0 0 0 3px var(--accent-focus-ring);
 }
 
-.join-input::placeholder { color: var(--text-muted); }
+.join-input::placeholder { color: var(--text-secondary); }
 
 
 /* ── Player count picker ────────────────────────────────────────────── */
@@ -278,4 +289,4 @@
   box-shadow: 0 0 0 3px var(--accent-focus-ring);
 }
 
-.name-input::placeholder { color: var(--text-muted); }
+.name-input::placeholder { color: var(--text-secondary); }
