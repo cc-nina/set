@@ -26,10 +26,10 @@
 
 <!-- ── Main board ──────────────────────────────────────────────────── -->
 <main class="board-wrapper" [class.board-wrapper--room]="isMultiplayer">
-<div class="board-inner">
+<div class="board-inner" [style.width]="boardInnerWidth">
 
   <!-- Toolbar: left side (back + score), right side (theme toggle + colours) -->
-  <div class="board-toolbar" #toolbarRef [style.padding-left]="toolbarPad + 'px'" [style.padding-right]="toolbarPad + 'px'">
+  <div class="board-toolbar" #toolbarRef>
     <div class="toolbar-left">
       <a routerLink="/" class="btn btn-secondary btn-icon" aria-label="Back to home">
         <svg xmlns="http://www.w3.org/2000/svg" height="20px" viewBox="0 -960 960 960" width="20px" fill="currentColor">
@@ -56,35 +56,33 @@
   </div>
 
   <!-- Card grid -->
-  <div *ngIf="isBrowser && showBoard" class="board w-full flex justify-center">
-    <div class="grid" [ngClass]="gridClasses" [ngStyle]="gridStyle">
-      <div *ngFor="let c of board; trackBy: trackCard"
-        role="button"
-        [attr.tabindex]="isCardInteractive ? '0' : '-1'"
-        [attr.aria-pressed]="selectedIds.has(c.id)"
-        [attr.aria-label]="cardAriaLabel(c)"
-        [attr.aria-disabled]="!isCardInteractive ? 'true' : null"
-        (click)="onCardClick(c)"
-        (keydown.enter)="onCardKeydown($any($event), c)"
-        (keydown.space)="onCardKeydown($any($event), c)"
-        [class.cursor-pointer]="callingSet"
-        [class.cursor-default]="!callingSet"
-        [class.card-locked-out]="lockedByOther"
-      >
-        <app-card
-          [orientation]="orientation"
-          [color]="colorFor(c)"
-          [shape]="shapeFor(c)"
-          [number]="c.number"
-          [shading]="shadingFor(c)"
-          [selected]="selectedIds.has(c.id)"
-          [setMatch]="setMatchIds.has(c.id)"
-          [negMatch]="negMatchIds.has(c.id)"
-          [highlightColor]="highlightColor"
-          [cardBg]="cardBg"
-          [cardBorder]="cardBorder"
-        ></app-card>
-      </div>
+  <div *ngIf="isBrowser && showBoard" class="grid" [ngClass]="gridClasses" [ngStyle]="gridStyle">
+    <div *ngFor="let c of board; trackBy: trackCard"
+      role="button"
+      [attr.tabindex]="isCardInteractive ? '0' : '-1'"
+      [attr.aria-pressed]="selectedIds.has(c.id)"
+      [attr.aria-label]="cardAriaLabel(c)"
+      [attr.aria-disabled]="!isCardInteractive ? 'true' : null"
+      (click)="onCardClick(c)"
+      (keydown.enter)="onCardKeydown($any($event), c)"
+      (keydown.space)="onCardKeydown($any($event), c)"
+      [class.cursor-pointer]="callingSet"
+      [class.cursor-default]="!callingSet"
+      [class.card-locked-out]="lockedByOther"
+    >
+      <app-card
+        [orientation]="orientation"
+        [color]="colorFor(c)"
+        [shape]="shapeFor(c)"
+        [number]="c.number"
+        [shading]="shadingFor(c)"
+        [selected]="selectedIds.has(c.id)"
+        [setMatch]="setMatchIds.has(c.id)"
+        [negMatch]="negMatchIds.has(c.id)"
+        [highlightColor]="highlightColor"
+        [cardBg]="cardBg"
+        [cardBorder]="cardBorder"
+      ></app-card>
     </div>
   </div>
 
