@@ -70,7 +70,7 @@
                 [class.score-row--winner]="isWinner(p, players)">
               <span class="score-name">
                 <span class="score-name-dot" [style.background]="colorFor(p.colorIndex)"></span>
-                {{ p.name }}
+                <span class="score-name-text">{{ p.name }}</span>
                 <span *ngIf="isWinner(p, players)" class="winner-badge" aria-label="Winner">✦</span>
                 <span *ngIf="!p.connected" class="badge-offline" aria-hidden="true" title="Disconnected">●</span>
               </span>

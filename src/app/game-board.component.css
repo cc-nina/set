@@ -118,7 +118,7 @@
   border: none;
   background: var(--accent);
   color: var(--text-inverse);
-  font-size: var(--text-base); font-weight: 700; letter-spacing: 0.04em;
+  font-size: var(--text-lg); font-weight: 700; letter-spacing: 0.04em;
   cursor: pointer;
   box-shadow: 0 2px 10px var(--accent-focus-ring);
   transition: background 0.12s, box-shadow 0.12s, opacity 0.18s ease, transform 0.18s ease;

@@ -79,9 +79,10 @@
     </section>
 
   </div>
-  <footer class="home-footer" *ngIf="statsReady">
-    <ng-container *ngIf="gamesPlayed !== null; else statsFallback">{{ gamesPlayed | number }} games played</ng-container>
-    <ng-template #statsFallback>— games played</ng-template>
+  <footer class="home-footer">
+    <ng-container *ngIf="!statsReady"><span class="stats-loading">loading stats…</span></ng-container>
+    <ng-container *ngIf="statsReady && gamesPlayed !== null">{{ gamesPlayed | number }} games played</ng-container>
+    <ng-container *ngIf="statsReady && gamesPlayed === null">— games played</ng-container>
   </footer>
 
 </main>

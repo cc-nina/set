@@ -13,7 +13,7 @@
 
 /* On mobile, switch to top-aligned so opening the keyboard doesn't
    push centered content behind it */
-@media (max-width: 559px) {
+@media (max-width: 599px) {
   .home-shell {
     justify-content: flex-start;
   }
@@ -73,10 +73,24 @@
   border-top: 1px solid var(--border);
 }
 
-@media (max-width: 559px) {
+@media (max-width: 599px) {
   .home-footer {
     margin-top: auto;
   }
+}
+
+.stats-loading {
+  opacity: 0.45;
+  animation: stats-fade 1.2s ease-in-out infinite alternate;
+}
+
+@keyframes stats-fade {
+  from { opacity: 0.3; }
+  to   { opacity: 0.6; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stats-loading { animation: none; }
 }
 
 /* ── Mode grid ─────────────────────────────────────────────────────── */
@@ -88,7 +102,7 @@
   max-width: 640px;
 }
 
-@media (min-width: 560px) {
+@media (min-width: 600px) {
   .mode-grid {
     grid-template-columns: 1fr 1fr;
   }
