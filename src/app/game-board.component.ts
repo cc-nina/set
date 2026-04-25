@@ -151,6 +151,13 @@ export class GameBoardComponent implements OnInit, AfterViewInit, OnDestroy {
   /** Tracks whether the first state emission has been seen (used to defer showBoard). */
   private firstState = true;
 
+  /**
+   * Settled board size used for layout calculations.
+   * Kept separate from `board` so animation board-swaps don't trigger a
+   * resize mid-flash — only real state emissions update this.
+   */
+  private layoutBoardSize = 12;
+
   constructor(
     @Inject(GAME_SESSION) public game: GameSession,
     @Inject(PLATFORM_ID) private platformId: object,
@@ -198,6 +205,12 @@ export class GameBoardComponent implements OnInit, AfterViewInit, OnDestroy {
       if (this.firstState) {
         this.firstState = false;
         this.scheduleShowBoard();
+      }
+
+      if (this.isBrowser && s.board.length !== this.layoutBoardSize) {
+        this.layoutBoardSize = s.board.length;
+        // toolbarRef is undefined before ngAfterViewInit; that call handles initial sizing.
+        if (this.toolbarRef) this.updateLayout();
       }
 
       this.cdr.markForCheck();
@@ -408,33 +421,41 @@ export class GameBoardComponent implements OnInit, AfterViewInit, OnDestroy {
     const h = window.innerHeight;
     const remPx = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
 
-    // Desktop: landscape cards (3:2), 4×3 grid, capped at 56rem wide (matches CSS max-width).
-    // Mobile:  portrait cards (2:3), 4×3 grid, full viewport width.
-    const cfg = w >= 768
-      ? { orientation: 'landscape' as const, gridClasses: 'grid-cols-4', cols: 4, rows: 3, cardAspect: 180 / 120, maxBoardWidth: remPx * 56 }
-      : { orientation: 'portrait'  as const, gridClasses: 'grid-cols-4', cols: 4, rows: 3, cardAspect: 120 / 180, maxBoardWidth: Infinity };
+    // Desktop: landscape cards (3:2), capped at 56rem wide (matches CSS max-width).
+    // Mobile:  portrait cards (2:3), full viewport width.
+    const isDesktop = w >= 768;
+    this.orientation = isDesktop ? 'landscape' : 'portrait';
+    const cardAspect   = isDesktop ? 180 / 120 : 120 / 180; // width / height
+    const maxBoardWidth = isDesktop ? remPx * 56 : Infinity;
 
-    this.orientation = cfg.orientation;
-    this.gridClasses = cfg.gridClasses;
+    const cols = 4;
+    // Grow beyond 3 rows when cards are added; never go below 3 (standard board).
+    const rows = Math.max(3, Math.ceil(this.layoutBoardSize / cols));
+    this.gridClasses = 'grid-cols-4';
 
-    // board-wrapper has padding: 1rem on each side; board-inner has max-width: 56rem.
-    const boardWidth = Math.min(w - 2 * remPx, cfg.maxBoardWidth);
-    const cardWFromWidth = boardWidth / (cfg.cols + GAP_RATIO * (cfg.cols - 1));
+    const boardWidth = Math.min(w - 2 * remPx, maxBoardWidth);
+    const cardWFromWidth = boardWidth / (cols + GAP_RATIO * (cols - 1));
 
-    const wrapperPadding = remPx * 2;              // 1rem top + 1rem bottom
+    // Wrapper padding: 1rem top always; bottom is 1rem solo / 4.5rem room mode
+    // (board-wrapper--room adds 3.5rem extra to clear the fixed scorebar).
+    const wrapperPadding = remPx + (this.isMultiplayer ? remPx * 4.5 : remPx);
     const toolbarH = this.toolbarRef?.nativeElement.offsetHeight ?? 44;
-    const innerGap = remPx * 0.75;                 // gap between toolbar and card grid
-    const boardHeight = h - wrapperPadding - toolbarH - innerGap;
-    const cardHFromHeight = boardHeight / (cfg.rows + GAP_RATIO * (cfg.rows - 1));
-    const cardWFromHeight = cardHFromHeight * cfg.cardAspect;
+    const innerGap = remPx * 0.75;
+    // In multiplayer the call-set area sits below the grid: 0.75rem board-inner gap
+    // + 0.25rem area padding-top + 44px button + 0.75rem area padding-bottom.
+    const callSetAreaH = this.requiresCallSet ? (44 + remPx * 1.75) : 0;
+    const boardHeight = h - wrapperPadding - toolbarH - innerGap - callSetAreaH;
+
+    const cardHFromHeight = boardHeight / (rows + GAP_RATIO * cardAspect * (rows - 1));
+    const cardWFromHeight = cardHFromHeight * cardAspect;
 
     const cardWidth = Math.floor(Math.min(cardWFromWidth, cardWFromHeight));
     const gap = Math.round(GAP_RATIO * cardWidth);
-    const gridWidth = cfg.cols * cardWidth + (cfg.cols - 1) * gap;
+    const gridWidth = cols * cardWidth + (cols - 1) * gap;
     this.boardInnerWidth = gridWidth + 'px';
     this.gridStyle = {
       gap: `${gap}px`,
-      'grid-template-columns': `repeat(${cfg.cols}, ${cardWidth}px)`,
+      'grid-template-columns': `repeat(${cols}, ${cardWidth}px)`,
     };
   }
 
