@@ -110,9 +110,11 @@ setInterval(() => {
 
 // ── Stats DB (populated in standalone mode only) ─────────────────────────────
 
-let stmtInsertGame: Statement | null = null;
-let stmtEndGame:    Statement | null = null;
-let stmtCountGames: Statement | null = null;
+let stmtInsertSolo:  Statement | null = null;
+let stmtEndSolo:     Statement | null = null;
+let stmtInsertMulti: Statement | null = null;
+let stmtEndMulti:    Statement | null = null;
+let stmtCountGames:  Statement | null = null;
 
 function parseJsonBody(req: import('node:http').IncomingMessage, maxBytes = 1024): Promise<unknown> {
   return new Promise((resolve, reject) => {
@@ -126,24 +128,45 @@ function parseJsonBody(req: import('node:http').IncomingMessage, maxBytes = 1024
   });
 }
 
-function recordGameStart(mode: 'solo' | 'multiplayer', roomId: string | null = null): { gameId: number; startedAt: number } | null {
-  if (!stmtInsertGame) return null;
+function recordSoloGameStart(): { gameId: number; startedAt: number } | null {
+  if (!stmtInsertSolo) return null;
   try {
     const startedAt = Date.now();
-    const gameId = Number(stmtInsertGame.run(mode, roomId, startedAt).lastInsertRowid);
+    const gameId = Number(stmtInsertSolo.run(startedAt).lastInsertRowid);
     return { gameId, startedAt };
   } catch (err) {
-    log.error('stats record game start failed', { err: errMsg(err) });
+    log.error('stats record solo game start failed', { err: errMsg(err) });
     return null;
   }
 }
 
-function recordGameEnd(gameId: number, durationMs: number, score: number | null): void {
-  if (!stmtEndGame) return;
+function recordSoloGameEnd(gameId: number, durationMs: number, score: number | null): void {
+  if (!stmtEndSolo) return;
   try {
-    stmtEndGame.run(Date.now(), durationMs, score, gameId);
+    stmtEndSolo.run(Date.now(), durationMs, score, gameId);
   } catch (err) {
-    log.error('stats record game end failed', { err: errMsg(err) });
+    log.error('stats record solo game end failed', { err: errMsg(err) });
+  }
+}
+
+function recordMultiGameStart(roomId: string, playerCount: number): { gameId: number; startedAt: number } | null {
+  if (!stmtInsertMulti) return null;
+  try {
+    const startedAt = Date.now();
+    const gameId = Number(stmtInsertMulti.run(roomId, playerCount, startedAt).lastInsertRowid);
+    return { gameId, startedAt };
+  } catch (err) {
+    log.error('stats record multi game start failed', { err: errMsg(err) });
+    return null;
+  }
+}
+
+function recordMultiGameEnd(gameId: number, durationMs: number, topScore: number | null): void {
+  if (!stmtEndMulti) return;
+  try {
+    stmtEndMulti.run(Date.now(), durationMs, topScore, gameId);
+  } catch (err) {
+    log.error('stats record multi game end failed', { err: errMsg(err) });
   }
 }
 
@@ -297,7 +320,7 @@ function joinRoom(room: Room, joinerSocket: GameSocket, playerName: string): voi
     const { board, deck } = dealInitialBoard();
     st.board = board;
     st.deck = deck;
-    room.currentGame = recordGameStart('multiplayer', st.roomId);
+    room.currentGame = recordMultiGameStart(st.roomId, st.players.length);
     if (room.currentGame) {
       log.info('game started', { roomId: st.roomId, gameId: room.currentGame.gameId, playerCount: st.players.length });
     }
@@ -343,7 +366,7 @@ function evictPlayer(room: Room, playerId: PlayerId): void {
       const topScore = st.players.length > 0 ? Math.max(...st.players.map(p => p.correctSets)) : 0;
       const durationMs = Date.now() - room.currentGame.startedAt;
       log.info('game ended', { roomId: st.roomId, gameId: room.currentGame.gameId, durationMs, topScore, reason: 'all-disconnected' });
-      recordGameEnd(room.currentGame.gameId, durationMs, topScore);
+      recordMultiGameEnd(room.currentGame.gameId, durationMs, topScore);
       room.currentGame = null;
     }
   }
@@ -439,7 +462,7 @@ function applySelection(room: Room, playerId: PlayerId, cardId: string): void {
         const topScore = Math.max(...st.players.map(p => p.correctSets));
         const durationMs = Date.now() - room.currentGame.startedAt;
         log.info('game ended', { roomId: st.roomId, gameId: room.currentGame.gameId, durationMs, topScore, reason: 'no-sets-remain' });
-        recordGameEnd(room.currentGame.gameId, durationMs, topScore);
+        recordMultiGameEnd(room.currentGame.gameId, durationMs, topScore);
         room.currentGame = null;
       }
     }
@@ -466,7 +489,7 @@ function resetRoom(room: Room): void {
     const topScore = st.players.length > 0 ? Math.max(...st.players.map(p => p.correctSets)) : 0;
     const durationMs = Date.now() - room.currentGame.startedAt;
     log.info('game ended', { roomId: st.roomId, gameId: room.currentGame.gameId, durationMs, topScore, reason: 'new-game' });
-    recordGameEnd(room.currentGame.gameId, durationMs, topScore);
+    recordMultiGameEnd(room.currentGame.gameId, durationMs, topScore);
     room.currentGame = null;
   }
 
@@ -509,7 +532,7 @@ function resetRoom(room: Room): void {
   st.board = board;
   st.deck = deck;
   st.status = 'active';
-  room.currentGame = recordGameStart('multiplayer', st.roomId);
+  room.currentGame = recordMultiGameStart(st.roomId, st.players.length);
   if (room.currentGame) {
     log.info('game started', { roomId: st.roomId, gameId: room.currentGame.gameId, playerCount: st.players.length });
   }
@@ -811,18 +834,38 @@ if (isMain || process.env['WS_STANDALONE'] === '1') {
   try {
     const db = new Database(fileURLToPath(new URL('./game-stats.db', import.meta.url)));
     db.pragma('journal_mode = WAL');
-    db.exec(`CREATE TABLE IF NOT EXISTS games (
-      id          INTEGER PRIMARY KEY AUTOINCREMENT,
-      mode        TEXT    NOT NULL,
-      room_id     TEXT,
-      started_at  INTEGER NOT NULL,
-      ended_at    INTEGER,
-      duration_ms INTEGER,
-      score       INTEGER
-    )`);
-    stmtInsertGame = db.prepare(`INSERT INTO games (mode, room_id, started_at) VALUES (?, ?, ?)`);
-    stmtEndGame    = db.prepare(`UPDATE games SET ended_at=?, duration_ms=?, score=? WHERE id=?`);
-    stmtCountGames = db.prepare(`SELECT COUNT(*) as total FROM games`);
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS solo_games (
+        id          INTEGER PRIMARY KEY AUTOINCREMENT,
+        started_at  INTEGER NOT NULL,
+        ended_at    INTEGER,
+        duration_ms INTEGER,
+        score       INTEGER
+      );
+      CREATE TABLE IF NOT EXISTS multiplayer_games (
+        id           INTEGER PRIMARY KEY AUTOINCREMENT,
+        room_id      TEXT    NOT NULL,
+        player_count INTEGER,
+        started_at   INTEGER NOT NULL,
+        ended_at     INTEGER,
+        duration_ms  INTEGER,
+        top_score    INTEGER
+      )
+    `);
+    // Migrate legacy games table data if present (one-time, safe to run repeatedly)
+    try {
+      db.exec(`
+        INSERT OR IGNORE INTO solo_games (id, started_at, ended_at, duration_ms, score)
+          SELECT id, started_at, ended_at, duration_ms, score FROM games WHERE mode='solo';
+        INSERT OR IGNORE INTO multiplayer_games (id, room_id, started_at, ended_at, duration_ms, top_score)
+          SELECT id, COALESCE(room_id,''), started_at, ended_at, duration_ms, score FROM games WHERE mode='multiplayer'
+      `);
+    } catch { /* games table doesn't exist — fresh install, nothing to migrate */ }
+    stmtInsertSolo  = db.prepare(`INSERT INTO solo_games (started_at) VALUES (?)`);
+    stmtEndSolo     = db.prepare(`UPDATE solo_games SET ended_at=?, duration_ms=?, score=? WHERE id=?`);
+    stmtInsertMulti = db.prepare(`INSERT INTO multiplayer_games (room_id, player_count, started_at) VALUES (?, ?, ?)`);
+    stmtEndMulti    = db.prepare(`UPDATE multiplayer_games SET ended_at=?, duration_ms=?, top_score=? WHERE id=?`);
+    stmtCountGames  = db.prepare(`SELECT (SELECT COUNT(*) FROM solo_games) + (SELECT COUNT(*) FROM multiplayer_games) AS total`);
     log.info('stats db ready');
   } catch (err) {
     log.error('stats db init failed — game tracking disabled', { err: errMsg(err) });
@@ -883,30 +926,22 @@ if (isMain || process.env['WS_STANDALONE'] === '1') {
     }
 
     if (req.method === 'POST' && req.url === '/api/start-game') {
-      parseJsonBody(req)
-        .then(body => {
-          const { mode } = body as { mode?: string };
-          const result = recordGameStart(mode === 'multiplayer' ? 'multiplayer' : 'solo');
-          res.writeHead(200, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ gameId: result?.gameId ?? null }));
-        })
-        .catch((err: unknown) => {
-          log.warn('invalid request body', { url: req.url, err: errMsg(err) });
-          res.writeHead(400, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ error: 'invalid body' }));
-        });
+      const result = recordSoloGameStart();
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ gameId: result?.gameId ?? null }));
       return;
     }
 
     if (req.method === 'POST') {
       const endMatch = req.url?.match(/^\/api\/end-game\/(\d+)$/);
       if (endMatch) {
+        const id = Number(endMatch[1]);
         parseJsonBody(req)
           .then(body => {
             const b = body as Record<string, unknown>;
             const duration_ms = typeof b['duration_ms'] === 'number' ? b['duration_ms'] : 0;
             const score = typeof b['score'] === 'number' ? b['score'] : null;
-            recordGameEnd(Number(endMatch[1]), duration_ms, score);
+            recordSoloGameEnd(id, duration_ms, score);
             res.writeHead(200, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ ok: true }));
           })
