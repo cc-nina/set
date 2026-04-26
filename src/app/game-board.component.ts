@@ -54,6 +54,8 @@ export class GameBoardComponent implements OnInit, AfterViewInit, OnDestroy {
   /** Timeout handle for clearing setMatchIds after the match animation. */
   private setMatchTimeout: ReturnType<typeof setTimeout> | null = null;
   private negMatchTimeout: ReturnType<typeof setTimeout> | null = null;
+  private showBoardTimeout: ReturnType<typeof setTimeout> | null = null;
+  private paletteModalTimeout: ReturnType<typeof setTimeout> | null = null;
 
   /**
    * Snapshot of the board from the previous state emission.
@@ -68,8 +70,8 @@ export class GameBoardComponent implements OnInit, AfterViewInit, OnDestroy {
 
   /** Colour used for the selection border ring. Stored locally (UI-only). */
   highlightColor: string = '#000000';
-  /** 'finished' once no valid sets remain and the deck is exhausted. */
-  gameStatus: 'active' | 'finished' = 'active';
+  /** 'active' while playing; 'finished' when the game ends; 'waiting' in multiplayer before enough players join. */
+  gameStatus: 'active' | 'finished' | 'waiting' = 'active';
 
   /** Live stats shown in the toolbar while playing. */
   liveSets = 0;
@@ -336,6 +338,14 @@ export class GameBoardComponent implements OnInit, AfterViewInit, OnDestroy {
       clearTimeout(this.negMatchTimeout);
       this.negMatchTimeout = null;
     }
+    if (this.showBoardTimeout !== null) {
+      clearTimeout(this.showBoardTimeout);
+      this.showBoardTimeout = null;
+    }
+    if (this.paletteModalTimeout !== null) {
+      clearTimeout(this.paletteModalTimeout);
+      this.paletteModalTimeout = null;
+    }
   }
 
   // ── Theme helpers ─────────────────────────────────────────────────────────
@@ -463,7 +473,11 @@ export class GameBoardComponent implements OnInit, AfterViewInit, OnDestroy {
 
   openPaletteModal(): void {
     this.showPaletteModal = true;
-    setTimeout(() => this.paletteModalRef?.initPicker(), 0);
+    if (this.paletteModalTimeout !== null) clearTimeout(this.paletteModalTimeout);
+    this.paletteModalTimeout = setTimeout(() => {
+      this.paletteModalTimeout = null;
+      this.paletteModalRef?.initPicker();
+    }, 0);
   }
 
   closePaletteModal(): void {
@@ -530,7 +544,9 @@ export class GameBoardComponent implements OnInit, AfterViewInit, OnDestroy {
   // ── Private helpers ───────────────────────────────────────────────────────
 
   private scheduleShowBoard(): void {
-    setTimeout(() => {
+    if (this.showBoardTimeout !== null) clearTimeout(this.showBoardTimeout);
+    this.showBoardTimeout = setTimeout(() => {
+      this.showBoardTimeout = null;
       this.showBoard = true;
       this.cdr.markForCheck();
     }, 50);

@@ -40,8 +40,8 @@ export interface GameState {
   score: number;
   correctSets: number; // number of correctly found sets
   incorrectSelections: number; // number of incorrect selection attempts
-  /** 'active' while the game is in progress; 'finished' when no moves remain. */
-  status: 'active' | 'finished';
+  /** 'active' while playing; 'finished' when no moves remain; 'waiting' in multiplayer before enough players join. */
+  status: 'active' | 'finished' | 'waiting';
   /**
    * Card IDs of the 3 cards in the most recent incorrect selection.
    * Null when the last penalty was a timeout (no 3-card selection was made).

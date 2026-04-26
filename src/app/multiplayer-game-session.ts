@@ -34,6 +34,7 @@ import { findSet } from './game.utils';
 import { GameSession } from './game-session.interface';
 import { ColorPrefsService } from './color-prefs.service';
 import { loadMultiplayerState, saveMultiplayerState, clearMultiplayerState } from './game-state.storage';
+import { WS_ORIGIN } from './server.config';
 
 // localStorage keys for reconnection (localStorage persists across tab closes,
 // unlike sessionStorage which is cleared when the tab is closed — essential for
@@ -59,7 +60,7 @@ function roomStateToGameState(rs: RoomState, playerId: PlayerId): MultiplayerGam
     score: me?.score ?? 0,
     correctSets: me?.correctSets ?? 0,
     incorrectSelections: me?.incorrectSelections ?? 0,
-    status: rs.status === 'finished' ? 'finished' : 'active',
+    status: rs.status,
     lastNegCardIds: rs.lastNegCardIds,
     myPlayerId: playerId,
     players: rs.players,
@@ -178,9 +179,10 @@ export class MultiplayerGameSession implements GameSession, OnDestroy {
       this.ws.onmessage = null;
       this.ws.onclose = null;
       this.ws.onerror = null;
+      this.ws.close();
     }
 
-    const url = `wss://34.44.229.168.sslip.io:3000`;
+    const url = WS_ORIGIN;
 
     this.ws = new WebSocket(url);
 
@@ -336,6 +338,12 @@ export class MultiplayerGameSession implements GameSession, OnDestroy {
           this.prevConnectedMap.set(player.id, player.connected);
         }
         this.playersSubject.next(msg.state.players);
+
+        // Prune stale entries so the maps don't grow across player churn.
+        const currentIds = new Set(msg.state.players.map(p => p.id));
+        for (const id of this.prevScoreMap.keys())               { if (!currentIds.has(id)) this.prevScoreMap.delete(id); }
+        for (const id of this.prevIncorrectSelectionsMap.keys()) { if (!currentIds.has(id)) this.prevIncorrectSelectionsMap.delete(id); }
+        for (const id of this.prevConnectedMap.keys())           { if (!currentIds.has(id)) this.prevConnectedMap.delete(id); }
         break;
       }
       case 'game_event': {

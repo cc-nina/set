@@ -68,6 +68,46 @@ const RECONNECT_GRACE_MS = 5 * 60_000; // 5 minutes
  */
 const EMPTY_ROOM_TTL_MS = RECONNECT_GRACE_MS;
 
+// ── Rate limiting ────────────────────────────────────────────────────────────
+
+/** Hard cap on total simultaneous rooms — prevents unbounded Map growth. */
+const MAX_ROOMS = 500;
+/** Max new WebSocket connections a single IP may open per minute. */
+const CONN_RATE_LIMIT = 30;
+/** Max new rooms a single IP may create per minute. */
+const ROOM_CREATION_RATE_LIMIT = 10;
+const RATE_WINDOW_MS = 60_000;
+
+const connRate         = new Map<string, { count: number; resetAt: number }>();
+const roomCreationRate = new Map<string, { count: number; resetAt: number }>();
+
+/**
+ * Returns true (and refrains from incrementing) if the key has hit its limit
+ * in the current window. Returns false and bumps the counter otherwise.
+ */
+function checkRate(
+  map: Map<string, { count: number; resetAt: number }>,
+  key: string,
+  limit: number,
+): boolean {
+  const now = Date.now();
+  const entry = map.get(key);
+  if (!entry || now >= entry.resetAt) {
+    map.set(key, { count: 1, resetAt: now + RATE_WINDOW_MS });
+    return false;
+  }
+  if (entry.count >= limit) return true;
+  entry.count++;
+  return false;
+}
+
+// Prune expired entries every 5 minutes so the rate maps don't grow unbounded.
+setInterval(() => {
+  const now = Date.now();
+  for (const [k, v] of connRate)         { if (now >= v.resetAt) connRate.delete(k); }
+  for (const [k, v] of roomCreationRate) { if (now >= v.resetAt) roomCreationRate.delete(k); }
+}, 5 * 60_000).unref();
+
 // ── Stats DB (populated in standalone mode only) ─────────────────────────────
 
 let stmtInsertGame: Statement | null = null;
@@ -116,6 +156,8 @@ type GameSocket = WebSocket & {
   /** Set to true when the player voluntarily left — prevents handleClose from
    *  arming a reconnect timer for an already-evicted player. */
   intentionalClose?: boolean;
+  /** Remote IP address captured on connection — used for rate limiting. */
+  ip?: string;
 };
 
 /** Everything the server needs to know about a room. */
@@ -554,6 +596,14 @@ function handleParsedMessage(ws: GameSocket, msg: ClientMessage): void {
     }
 
     if (roomId === 'new') {
+      if (rooms.size >= MAX_ROOMS) {
+        send(ws, { type: 'error', message: 'Server is full — try again later' });
+        return;
+      }
+      if (checkRate(roomCreationRate, ws.ip ?? '', ROOM_CREATION_RATE_LIMIT)) {
+        send(ws, { type: 'error', message: 'Too many rooms created — please wait a moment' });
+        return;
+      }
       const room = createRoom(ws, playerName.trim().slice(0, 32), maxPlayers);
       const player = room.state.players[0];
       send(ws, { type: 'joined', playerId: player.id, roomId: room.state.roomId });
@@ -629,9 +679,13 @@ function handleParsedMessage(ws: GameSocket, msg: ClientMessage): void {
     broadcast(room, { type: 'room_state', state: room.state });
     broadcastEvent(room, 'call', player);
 
+    // Capture the caller's id now — ws.playerId could be mutated if the socket
+    // is reused before the timeout fires (reconnect path).
+    const lockedPlayerId = ws.playerId;
+
     // After a timeout, release the lock.
     room.callLockTimer = setTimeout(() => {
-      if (st.callerLockId !== ws.playerId) {
+      if (st.callerLockId !== lockedPlayerId) {
         return; // Lock was already released (e.g., by a successful set).
       }
       st.callerLockId = null;
@@ -722,7 +776,15 @@ function handleClose(ws: GameSocket): void {
 export function attachWebSocketServer(httpServer: HttpServer): void {
   const wss = new WebSocketServer({ server: httpServer });
 
-  wss.on('connection', (ws) => {
+  wss.on('connection', (ws, req) => {
+    const ip = req.socket.remoteAddress ?? '';
+    if (checkRate(connRate, ip, CONN_RATE_LIMIT)) {
+      log.warn('ws rate limit', { ip });
+      ws.close(1008, 'Rate limit exceeded');
+      return;
+    }
+    (ws as GameSocket).ip = ip;
+    ws.on('error', (err) => log.error('ws socket error', { err: errMsg(err) }));
     ws.on('message', (msg) => handleMessage(ws as GameSocket, msg.toString()));
     ws.on('close', () => handleClose(ws as GameSocket));
   });
@@ -738,9 +800,10 @@ const isMain =
   fileURLToPath(import.meta.url) === process.argv[1];
 
 if (isMain || process.env['WS_STANDALONE'] === '1') {
-  const PORT = Number(process.env['PORT']) || 3000;
-  const CERT_PATH = `/etc/letsencrypt/live/34.44.229.168.sslip.io/fullchain.pem`;
-  const KEY_PATH  = `/etc/letsencrypt/live/34.44.229.168.sslip.io/privkey.pem`;
+  const PORT   = Number(process.env['PORT']) || 3000;
+  const DOMAIN = process.env['DOMAIN'] ?? '';
+  const CERT_PATH = `/etc/letsencrypt/live/${DOMAIN}/fullchain.pem`;
+  const KEY_PATH  = `/etc/letsencrypt/live/${DOMAIN}/privkey.pem`;
 
   // ── Initialize SQLite stats DB ───────────────────────────────────────────
   // Wrapped in try/catch: if the DB fails to open (bad path, permissions, disk
@@ -765,16 +828,22 @@ if (isMain || process.env['WS_STANDALONE'] === '1') {
     log.error('stats db init failed — game tracking disabled', { err: errMsg(err) });
   }
 
-  // Origin allowed to call write endpoints. Defaults to the Vercel deployment;
-  // override with ALLOWED_ORIGIN env var for staging or local dev.
-  const ALLOWED_ORIGIN = process.env['ALLOWED_ORIGIN'] ?? 'https://set-bice.vercel.app';
+  // Comma-separated list of origins allowed to call write endpoints.
+  // Must be set via ALLOWED_ORIGIN env var — no hardcoded default.
+  // Example: ALLOWED_ORIGIN=https://playsetgame.vercel.app,http://localhost:4200
+  const ALLOWED_ORIGINS = new Set(
+    (process.env['ALLOWED_ORIGIN'] ?? '')
+      .split(',').map(s => s.trim()).filter(Boolean),
+  );
+  const primaryOrigin = [...ALLOWED_ORIGINS][0] ?? '';
 
   const requestHandler = (req: import('node:http').IncomingMessage, res: import('node:http').ServerResponse) => {
     const origin = req.headers['origin'] ?? '';
     const isWriteRequest = req.method === 'POST';
 
-    // Read endpoint is public; write endpoints are restricted to the known frontend origin.
-    res.setHeader('Access-Control-Allow-Origin', isWriteRequest ? ALLOWED_ORIGIN : '*');
+    // Read endpoint is public; write endpoints echo back the requesting origin
+    // only when it is in the allowed set, so the browser's CORS check passes.
+    res.setHeader('Access-Control-Allow-Origin', isWriteRequest ? (ALLOWED_ORIGINS.has(origin as string) ? origin : primaryOrigin) : '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
     res.setHeader('Vary', 'Origin');
@@ -785,10 +854,11 @@ if (isMain || process.env['WS_STANDALONE'] === '1') {
       return;
     }
 
-    // Reject write requests from unlisted origins (non-browser callers send no
-    // Origin header and are allowed through — this is not auth, just CORS hygiene).
-    if (isWriteRequest && origin && origin !== ALLOWED_ORIGIN) {
-      log.warn('cors rejected', { origin, url: req.url });
+    // Reject write requests from unlisted or absent origins.
+    // This blocks both cross-origin browser requests and non-browser callers
+    // (e.g. curl) that send no Origin header at all.
+    if (isWriteRequest && !ALLOWED_ORIGINS.has(origin as string)) {
+      log.warn('cors rejected', { origin: origin || '(none)', url: req.url });
       res.writeHead(403, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ error: 'forbidden' }));
       return;
@@ -871,6 +941,6 @@ if (isMain || process.env['WS_STANDALONE'] === '1') {
 
   httpServer.listen(PORT, '0.0.0.0', () => {
     const proto = usingTls ? 'wss' : 'ws';
-    log.info('server listening', { port: PORT, tls: usingTls, url: `${proto}://34.44.229.168.sslip.io:${PORT}` });
+    log.info('server listening', { port: PORT, tls: usingTls, url: `${proto}://${DOMAIN}:${PORT}` });
   });
 }
