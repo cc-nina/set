@@ -10,7 +10,7 @@ export interface PersistedGameState {
   score: number;
   correctSets: number;
   incorrectSelections: number;
-  status: 'active' | 'finished';
+  status: 'active' | 'finished' | 'waiting';
 }
 
 function isAttr(v: unknown): boolean {
