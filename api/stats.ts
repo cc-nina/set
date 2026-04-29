@@ -15,7 +15,7 @@ export default async function handler(): Promise<Response> {
     return new Response(data, {
       headers: {
         'Content-Type': 'application/json',
-        'Cache-Control': 's-maxage=60, stale-while-revalidate=600',
+        'Cache-Control': 's-maxage=15, stale-while-revalidate=150',
       },
     });
   } catch {
