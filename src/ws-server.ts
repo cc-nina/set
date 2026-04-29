@@ -896,17 +896,9 @@ if (isMain || process.env['WS_STANDALONE'] === '1') {
       return;
     }
 
-    // Reject write requests from unlisted or absent origins.
-    // This blocks both cross-origin browser requests and non-browser callers
-    // (e.g. curl) that send no Origin header at all.
-    if (isWriteRequest && !ALLOWED_ORIGINS.has(origin as string)) {
-      log.warn('cors rejected', { origin: origin || '(none)', url: req.url });
-      res.writeHead(403, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ error: 'forbidden' }));
-      return;
-    }
-
-    // Reject write requests that don't carry the shared API secret.
+    // Authenticate write requests via shared secret first.
+    // Server-to-server callers (e.g. Vercel proxy) carry the secret but no Origin header,
+    // so the secret check must come before the CORS origin check.
     const API_SECRET = process.env['GAME_API_SECRET'] ?? '';
     if (isWriteRequest && (req.headers['x-game-secret'] !== API_SECRET || API_SECRET === '')) {
       log.warn('secret rejected', { url: req.url });

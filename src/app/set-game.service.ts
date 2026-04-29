@@ -7,7 +7,7 @@ import { findSet } from './game.utils';
 import { GameSession } from './game-session.interface';
 import { ColorPrefsService } from './color-prefs.service';
 import { loadGameState, saveGameState } from './game-state.storage';
-import { SERVER_ORIGIN, GAME_API_SECRET } from './server.config';
+import { SERVER_ORIGIN } from './server.config';
 
 @Injectable({ providedIn: 'root' })
 export class SetGameService implements GameSession {
@@ -100,10 +100,11 @@ export class SetGameService implements GameSession {
   }
 
   private async startGameRecord(): Promise<void> {
+    const apiBase = location.hostname === 'localhost' ? SERVER_ORIGIN : '';
     try {
-      const res = await fetch(`${SERVER_ORIGIN}/api/start-game`, {
+      const res = await fetch(`${apiBase}/api/start-game`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-Game-Secret': GAME_API_SECRET },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ mode: 'solo' }),
       });
       if (!res.ok) return;
@@ -119,9 +120,10 @@ export class SetGameService implements GameSession {
     const { gameId, startedAt, token } = this.currentGame;
     this.currentGame = null;
     try { localStorage.removeItem(SetGameService.RECORD_KEY); } catch { /* non-fatal */ }
-    fetch(`${SERVER_ORIGIN}/api/end-game/${gameId}`, {
+    const apiBase = location.hostname === 'localhost' ? SERVER_ORIGIN : '';
+    fetch(`${apiBase}/api/end-game/${gameId}`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Game-Secret': GAME_API_SECRET },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ duration_ms: Date.now() - startedAt, score, token }),
     }).catch(() => {});
   }
