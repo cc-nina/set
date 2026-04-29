@@ -6,7 +6,6 @@ describe('game.service', () => {
     expect(s.board.length).toBeGreaterThanOrEqual(12);
     expect(Array.isArray(s.deck)).toBe(true);
     expect(s.selected.length).toBe(0);
-    expect(typeof s.score).toBe('number');
     expect(typeof s.correctSets).toBe('number');
     expect(typeof s.incorrectSelections).toBe('number');
   });
@@ -22,8 +21,6 @@ describe('game.service', () => {
     const s3 = selectCard(s2, fake as any);
     expect(s3.selected.length).toBe(0);
     expect(s3.incorrectSelections).toBe(s.incorrectSelections + 1);
-    // score = correctSets - incorrectSelections; can be negative
-    expect(s3.score).toBe(s3.correctSets - s3.incorrectSelections);
   });
 
   it('applySet removes cards and draws new ones when valid', () => {
@@ -33,8 +30,6 @@ describe('game.service', () => {
       const after = applySet(s, sel as any);
       expect(after.selected.length).toBe(0);
       expect(after.board.length).toBeGreaterThanOrEqual(9);
-      // score = correctSets - incorrectSelections
-      expect(after.score).toBe(after.correctSets - after.incorrectSelections);
       expect(after.correctSets).toBe(s.correctSets + 1);
     } catch (e) {
       // if the slice wasn't a set, applySet should throw — that's acceptable for this test.
@@ -48,7 +43,7 @@ describe('game.service', () => {
   const cardB = { id: 'b', number: 1 as any, color: 1 as any, shape: 1 as any, shading: 1 as any } as any;
   const cardC = { id: 'c', number: 1 as any, color: 1 as any, shape: 1 as any, shading: 1 as any } as any;
     const deck = [] as any[];
-    const state: any = { deck, board: [cardA, cardB, cardC], selected: [], score: 0, correctSets: 0, incorrectSelections: 0 };
+    const state: any = { deck, board: [cardA, cardB, cardC], selected: [], correctSets: 0, incorrectSelections: 0 };
 
     const s1 = selectCard(state, cardA);
     expect(s1.selected.length).toBe(1);
@@ -58,8 +53,6 @@ describe('game.service', () => {
     // since A,B,C form a valid set, the selection should be applied and cleared
     expect(s3.selected.length).toBe(0);
     expect(s3.correctSets).toBe(1);
-    // score = correctSets - incorrectSelections
-    expect(s3.score).toBe(1);
   });
 
   it('applySet throws if passed invalid number of cards or invalid set', () => {

@@ -73,15 +73,12 @@ describe('SetGameService – additional coverage', () => {
       const snap = service.getStateSnapshot();
       const [i, j, k] = triple;
       const validSet = [snap.board[i], snap.board[j], snap.board[k]];
-      const beforeScore = snap.score;
       const beforeCorrect = snap.correctSets;
 
       const result = service.applySet(validSet);
 
       const after = service.getStateSnapshot();
       expect(result).toBe(true);
-      // score = correctSets - incorrectSelections
-      expect(after.score).toBe(after.correctSets - after.incorrectSelections);
       expect(after.correctSets).toBe(beforeCorrect + 1);
       expect(after.selected).toEqual([]);
     });
@@ -92,10 +89,10 @@ describe('SetGameService – additional coverage', () => {
       const notASet = [snap.board[0], snap.board[1], snap.board[2]];
 
       if (!isSet(notASet[0], notASet[1], notASet[2])) {
-        const before = snap.score;
+        const beforeCorrect = snap.correctSets;
         const result = service.applySet(notASet);
         expect(result).toBe(false);
-        expect(service.getStateSnapshot().score).toBe(before);
+        expect(service.getStateSnapshot().correctSets).toBe(beforeCorrect);
       }
     });
   });

@@ -8,7 +8,6 @@ export function initGame(): GameState {
     deck,
     board,
     selected: [],
-    score: 0,
     correctSets: 0,
     incorrectSelections: 0,
     status: 'active',
@@ -16,16 +15,15 @@ export function initGame(): GameState {
 }
 
 // Select or deselect a card. If 3 cards are selected, evaluate the selection:
-//   - Valid set → apply it (cards removed, deck replenished, score updated).
-//   - Invalid set → penalise (cards stay on board, score decremented, selection
-//     cleared). lastNegCardIds is set so the animation layer knows which 3 to shake.
+//   - Valid set → apply it (cards removed, deck replenished, correctSets incremented).
+//   - Invalid set → penalise (cards stay on board, incorrectSelections incremented,
+//     selection cleared). lastNegCardIds is set so the animation layer knows which 3 to shake.
 export function selectCard(state: GameState, card: Card): GameState {
   // Shallow-copy all mutable fields to preserve immutability for callers.
   const newState: GameState = {
     deck: state.deck.slice(),
     board: state.board.slice(),
     selected: state.selected.slice(),
-    score: state.score,
     correctSets: state.correctSets,
     incorrectSelections: state.incorrectSelections,
     status: state.status,
@@ -52,7 +50,6 @@ export function selectCard(state: GameState, card: Card): GameState {
     } else {
       // Invalid selection: penalise but keep the 3 cards on the board.
       newState.incorrectSelections += 1;
-      newState.score = newState.correctSets - newState.incorrectSelections;
       newState.lastNegCardIds = newState.selected.map((c) => c.id);
       newState.selected = [];
       return newState;
@@ -88,7 +85,6 @@ export function applySet(state: GameState, selected: Card[]): GameState {
     deck,
     board,
     selected: [],
-    score: state.correctSets + 1 - state.incorrectSelections,
     correctSets: state.correctSets + 1,
     incorrectSelections: state.incorrectSelections,
     // Game ends when the deck is empty and no set remains on the board.

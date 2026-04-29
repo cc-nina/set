@@ -13,7 +13,6 @@ describe('SetGameService', () => {
     const s = service.getStateSnapshot();
     expect(s.board.length).toBeGreaterThanOrEqual(12);
     expect(s.selected.length).toBe(0);
-    expect(typeof s.score).toBe('number');
     expect(typeof s.correctSets).toBe('number');
     expect(typeof s.incorrectSelections).toBe('number');
   });
@@ -52,17 +51,14 @@ describe('SetGameService', () => {
     service.startNewGame();
     const s = service.getStateSnapshot();
     const sel = s.board.slice(0, 3);
-    const beforeScore = s.score;
+    const beforeCorrect = s.correctSets;
     const applied = service.applySet(sel as any);
     const after = service.getStateSnapshot();
-    // applySet returns boolean; after.score only increments when selected was a valid set
     expect(after.selected.length).toBe(0);
     if (applied) {
-      expect(after.score).toBe(after.correctSets - after.incorrectSelections);
-      expect(after.correctSets).toBe(s.correctSets + 1);
+      expect(after.correctSets).toBe(beforeCorrect + 1);
     } else {
-      // unchanged
-      expect(after.score).toBe(beforeScore);
+      expect(after.correctSets).toBe(beforeCorrect);
     }
   });
 });

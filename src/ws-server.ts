@@ -42,6 +42,7 @@ import type {
   ClientMessage,
   ServerMessage,
   GameEvent,
+  ErrorCode,
 } from './app/game.types.js';
 import { CALL_SET_SECONDS, PLAYER_COLORS_LIGHT } from './app/game.types.js';
 
@@ -261,7 +262,6 @@ function createRoom(creatorSocket: GameSocket, playerName: string, maxPlayers: n
     id: playerId,
     name: playerName,
     colorIndex: 0,
-    score: 0,
     correctSets: 0,
     incorrectSelections: 0,
     connected: true,
@@ -302,7 +302,6 @@ function joinRoom(room: Room, joinerSocket: GameSocket, playerName: string): voi
     id: playerId,
     name: playerName,
     colorIndex: nextColorIndex(room.state.players),
-    score: 0,
     correctSets: 0,
     incorrectSelections: 0,
     connected: true,
@@ -447,7 +446,6 @@ function applySelection(room: Room, playerId: PlayerId, cardId: string): void {
     }
 
     player.correctSets += 1;
-    player.score = player.correctSets - player.incorrectSelections;
     st.lastSetBy = playerId;
     broadcastEvent(room, 'set', player);
 
@@ -472,7 +470,6 @@ function applySelection(room: Room, playerId: PlayerId, cardId: string): void {
     st.lastNegCardIds = [a.id, b.id, c.id];
 
     player.incorrectSelections += 1;
-    player.score = player.correctSets - player.incorrectSelections;
     st.lastSetBy = null;
     broadcastEvent(room, 'neg', player);
 
@@ -513,7 +510,6 @@ function resetRoom(room: Room): void {
   clearCallLock(room);
 
   for (const p of st.players) {
-    p.score = 0;
     p.correctSets = 0;
     p.incorrectSelections = 0;
     st.selections[p.id] = [];
@@ -568,12 +564,12 @@ function handleParsedMessage(ws: GameSocket, msg: ClientMessage): void {
     }
     const room = rooms.get(msg.roomId);
     if (!room) {
-      send(ws, { type: 'error', message: `Room ${msg.roomId} not found or expired` });
+      send(ws, { type: 'error', message: `Room ${msg.roomId} not found or expired`, code: 'room_not_found' satisfies ErrorCode });
       return;
     }
     const player = room.state.players.find((p) => p.id === msg.playerId);
     if (!player) {
-      send(ws, { type: 'error', message: 'Player not found in room — join as a new player' });
+      send(ws, { type: 'error', message: 'Player not found in room — join as a new player', code: 'player_not_found' satisfies ErrorCode });
       return;
     }
 
@@ -637,15 +633,15 @@ function handleParsedMessage(ws: GameSocket, msg: ClientMessage): void {
 
     const room = rooms.get(roomId);
     if (!room) {
-      send(ws, { type: 'error', message: `Room ${roomId} not found` });
+      send(ws, { type: 'error', message: `Room ${roomId} not found`, code: 'room_not_found' satisfies ErrorCode });
       return;
     }
     if (room.state.status !== 'waiting') {
-      send(ws, { type: 'error', message: 'Room is not accepting new players' });
+      send(ws, { type: 'error', message: 'Room is not accepting new players', code: 'room_not_accepting' satisfies ErrorCode });
       return;
     }
     if (room.state.players.length >= room.state.maxPlayers) {
-      send(ws, { type: 'error', message: 'Room is full' });
+      send(ws, { type: 'error', message: 'Room is full', code: 'room_full' satisfies ErrorCode });
       return;
     }
 
@@ -714,7 +710,6 @@ function handleParsedMessage(ws: GameSocket, msg: ClientMessage): void {
       st.callerLockId = null;
       // Penalise for timeout — no specific neg cards to highlight.
       player.incorrectSelections += 1;
-      player.score = player.correctSets - player.incorrectSelections;
       st.selections[player.id] = [];
       st.lastNegCardIds = null;
 
@@ -797,7 +792,7 @@ function handleClose(ws: GameSocket): void {
 // ── Main server setup ─────────────────────────────────────────────────────────
 
 export function attachWebSocketServer(httpServer: HttpServer): void {
-  const wss = new WebSocketServer({ server: httpServer });
+  const wss = new WebSocketServer({ server: httpServer, maxPayload: 4096 });
 
   wss.on('connection', (ws, req) => {
     const ip = req.socket.remoteAddress ?? '';

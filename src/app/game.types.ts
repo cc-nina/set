@@ -37,7 +37,6 @@ export interface GameState {
   deck: Card[]; // remaining deck (top is index 0)
   board: Card[]; // visible cards on the table
   selected: Card[]; // currently selected cards (max 3)
-  score: number;
   correctSets: number; // number of correctly found sets
   incorrectSelections: number; // number of incorrect selection attempts
   /** 'active' while playing; 'finished' when no moves remain; 'waiting' in multiplayer before enough players join. */
@@ -100,7 +99,6 @@ export interface Player {
   name: string;
   /** Server-assigned colour index (0–7) into PLAYER_COLORS_LIGHT / PLAYER_COLORS_DARK. */
   colorIndex: number;
-  score: number;
   correctSets: number;
   incorrectSelections: number;
   /** False while the player's WebSocket is closed but within the reconnect window. */
@@ -172,9 +170,19 @@ export interface GameEvent {
   timestamp: number;
 }
 
+/**
+ * Machine-readable error codes for cases the client routes on.
+ * Always set alongside `message` (which remains human-readable).
+ */
+export type ErrorCode =
+  | 'room_not_found'
+  | 'player_not_found'
+  | 'room_full'
+  | 'room_not_accepting';
+
 /** Messages sent from the server to a browser client. */
 export type ServerMessage =
   | { type: 'joined';     playerId: PlayerId; roomId: string }
   | { type: 'room_state'; state: RoomState }
   | { type: 'game_event'; event: GameEvent }
-  | { type: 'error';      message: string };
+  | { type: 'error';      message: string; code?: ErrorCode };

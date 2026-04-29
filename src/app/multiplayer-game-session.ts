@@ -44,12 +44,12 @@ const SS_ROOM_ID   = 'mp_roomId';
 
 /** Empty MultiplayerGameState used as a placeholder before the server deals the board. */
 function emptyState(): MultiplayerGameState {
-  return { deck: [], board: [], selected: [], score: 0, correctSets: 0, incorrectSelections: 0, status: 'active', myPlayerId: '', players: [] };
+  return { deck: [], board: [], selected: [], correctSets: 0, incorrectSelections: 0, status: 'active', myPlayerId: '', players: [] };
 }
 
 /**
  * Map a server RoomState to the MultiplayerGameState shape that GameBoardComponent expects.
- * The local player's selection becomes `selected`; score comes from the local player entry.
+ * The local player's selection becomes `selected`; correctSets/incorrectSelections come from the local player entry.
  */
 function roomStateToGameState(rs: RoomState, playerId: PlayerId): MultiplayerGameState {
   const me = rs.players.find((p) => p.id === playerId);
@@ -57,7 +57,6 @@ function roomStateToGameState(rs: RoomState, playerId: PlayerId): MultiplayerGam
     deck: rs.deck,
     board: rs.board,
     selected: rs.selections[playerId] ?? [],
-    score: me?.score ?? 0,
     correctSets: me?.correctSets ?? 0,
     incorrectSelections: me?.incorrectSelections ?? 0,
     status: rs.status,
@@ -112,8 +111,8 @@ export class MultiplayerGameSession implements GameSession, OnDestroy {
 
   private playerId: PlayerId = '';
   private roomIdValue: string = '';
-  /** Tracks each player's previous score to detect correct sets from room_state. */
-  private prevScoreMap = new Map<PlayerId, number>();
+  /** Tracks each player's previous correctSets count to detect set-found events from room_state. */
+  private prevCorrectSetsMap = new Map<PlayerId, number>();
   /** Tracks each player's previous incorrectSelections to detect negs from room_state. */
   private prevIncorrectSelectionsMap = new Map<PlayerId, number>();
   /** Tracks each player's previous connected state to detect disconnects from room_state. */
@@ -313,13 +312,13 @@ export class MultiplayerGameSession implements GameSession, OnDestroy {
         this.callerLockIdSubject.next(msg.state.callerLockId);
         // Update the room status so the overlay transitions correctly.
         this.roomStatusSubject.next(msg.state.status);
-        // Trigger the lastSetBy banner whenever a player's score increases.
+        // Trigger the lastSetBy banner whenever a player finds a set.
         for (const player of msg.state.players) {
-          const prev = this.prevScoreMap.get(player.id) ?? 0;
-          if (player.score > prev) {
+          const prev = this.prevCorrectSetsMap.get(player.id) ?? 0;
+          if (player.correctSets > prev) {
             this.lastSetBySource.next(player.id);
           }
-          this.prevScoreMap.set(player.id, player.score);
+          this.prevCorrectSetsMap.set(player.id, player.correctSets);
         }
         // Trigger the neg animation for whichever player's incorrectSelections increased.
         // Iterating all players (not just local) ensures every client sees the shake
@@ -341,7 +340,7 @@ export class MultiplayerGameSession implements GameSession, OnDestroy {
 
         // Prune stale entries so the maps don't grow across player churn.
         const currentIds = new Set(msg.state.players.map(p => p.id));
-        for (const id of this.prevScoreMap.keys())               { if (!currentIds.has(id)) this.prevScoreMap.delete(id); }
+        for (const id of this.prevCorrectSetsMap.keys())          { if (!currentIds.has(id)) this.prevCorrectSetsMap.delete(id); }
         for (const id of this.prevIncorrectSelectionsMap.keys()) { if (!currentIds.has(id)) this.prevIncorrectSelectionsMap.delete(id); }
         for (const id of this.prevConnectedMap.keys())           { if (!currentIds.has(id)) this.prevConnectedMap.delete(id); }
         break;
@@ -357,7 +356,7 @@ export class MultiplayerGameSession implements GameSession, OnDestroy {
         // fresh room so the player isn't stuck on a blank screen.
         // User-entered invalid room code → show an error overlay instead of
         // silently creating a new room they didn't ask for.
-        if (msg.message.includes('not found') || msg.message.includes('Player not found')) {
+        if (msg.code === 'room_not_found' || msg.code === 'player_not_found') {
           if (this.isReconnectAttempt) {
             this.clearStoredSession();
             this.ws?.send(JSON.stringify({
@@ -374,7 +373,7 @@ export class MultiplayerGameSession implements GameSession, OnDestroy {
         }
         // Room is full or no longer accepting players — show a specific overlay
         // instead of the generic "Disconnected" screen.
-        if (msg.message.includes('full') || msg.message.includes('not accepting')) {
+        if (msg.code === 'room_full' || msg.code === 'room_not_accepting') {
           this.roomStatusSubject.next('room_full');
           // Stop auto-retry so we don't hammer a full room.
           this.reconnectAttempts = MultiplayerGameSession.MAX_RECONNECT_ATTEMPTS;

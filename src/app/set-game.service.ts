@@ -22,7 +22,7 @@ export class SetGameService implements GameSession {
    * Emits a single anonymous local player so consumers never need to null-check.
    */
   readonly players$: Observable<Player[]> = of([
-    { id: 'local', name: 'You', colorIndex: 0, score: 0, correctSets: 0, incorrectSelections: 0, connected: true },
+    { id: 'local', name: 'You', colorIndex: 0, correctSets: 0, incorrectSelections: 0, connected: true },
   ]);
 
   /**
@@ -180,7 +180,6 @@ export class SetGameService implements GameSession {
     const penalised: GameState = {
       ...after,
       incorrectSelections: after.incorrectSelections + 1,
-      score: after.correctSets - (after.incorrectSelections + 1),
       lastNegCardIds: null,
     };
     this.stateSubject.next(penalised);

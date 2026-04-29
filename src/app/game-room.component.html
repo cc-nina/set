@@ -74,7 +74,7 @@
                 <span *ngIf="isWinner(p, players)" class="winner-badge" aria-label="Winner">✦</span>
                 <span *ngIf="!p.connected" class="badge-offline" aria-hidden="true" title="Disconnected">●</span>
               </span>
-              <span class="score-val">{{ p.correctSets }} sets &mdash; {{ p.incorrectSelections }} negs &mdash; {{ p.score }} pts</span>
+              <span class="score-val">{{ p.correctSets }} sets &mdash; {{ p.incorrectSelections }} negs &mdash; {{ p.correctSets - p.incorrectSelections }} pts</span>
             </li>
           </ul>
         </ng-container>
@@ -129,7 +129,7 @@
           [style.--chip-color]="colorFor(p.colorIndex)"
           [title]="p.connected ? '' : p.name + ' disconnected'"
         >
-          <span class="chip-dot"></span>{{ p.name }}: {{ p.score }}
+          <span class="chip-dot"></span>{{ p.name }}: {{ p.correctSets - p.incorrectSelections }}
         </span>
       </ng-container>
     </div>

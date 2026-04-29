@@ -233,7 +233,7 @@ export class GameRoomComponent implements OnInit, OnDestroy {
 
   isWinner(player: Player, players: Player[]): boolean {
     if (players.length === 0) return false;
-    const top = Math.max(...players.map(p => p.score));
-    return top > 0 && player.score === top;
+    const top = Math.max(...players.map(p => p.correctSets - p.incorrectSelections));
+    return top > 0 && (player.correctSets - player.incorrectSelections) === top;
   }
 }

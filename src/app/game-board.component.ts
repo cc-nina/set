@@ -187,7 +187,7 @@ export class GameBoardComponent implements OnInit, AfterViewInit, OnDestroy {
       const prevNegs = this.liveNegs;
       this.liveSets = s.correctSets;
       this.liveNegs = s.incorrectSelections;
-      this.liveScore = s.score;
+      this.liveScore = s.correctSets - s.incorrectSelections;
 
       // Keep our own player id up to date so lockedByOther can compare correctly.
       if (s.myPlayerId !== undefined) this.myPlayerId = s.myPlayerId;
@@ -199,7 +199,7 @@ export class GameBoardComponent implements OnInit, AfterViewInit, OnDestroy {
       }
 
       if (s.status === 'finished') {
-        this.finalScore = s.score;
+        this.finalScore = s.correctSets - s.incorrectSelections;
         this.finalSets = s.correctSets;
         this.finalNegs = s.incorrectSelections;
       }

@@ -239,15 +239,14 @@ describe('SetGameService palette API', () => {
 
 describe('Multiplayer types structural checks', () => {
   it('Player shape is correct', () => {
-    const p = { id: 'pid-1', name: 'FunnyFish', score: 0, correctSets: 0 };
+    const p = { id: 'pid-1', name: 'FunnyFish', correctSets: 0, incorrectSelections: 0 };
     expect(p.id).toBe('pid-1');
     expect(p.name).toBe('FunnyFish');
-    expect(p.score).toBe(0);
     expect(p.correctSets).toBe(0);
   });
 
   it('RoomState with one player has status waiting', () => {
-    type P = { id: string; name: string; score: number; correctSets: number };
+    type P = { id: string; name: string; correctSets: number; incorrectSelections: number };
     const room: {
       roomId: string;
       status: 'waiting';
@@ -258,7 +257,7 @@ describe('Multiplayer types structural checks', () => {
     } = {
       roomId: 'room-abc',
       status: 'waiting',
-      players: [{ id: 'p1', name: 'FunnyFish', score: 0, correctSets: 0 }],
+      players: [{ id: 'p1', name: 'FunnyFish', correctSets: 0, incorrectSelections: 0 }],
       board: [],
       deck: [],
       selections: {},
@@ -268,8 +267,8 @@ describe('Multiplayer types structural checks', () => {
   });
 
   it('RoomState with two players can be active', () => {
-    const p1 = { id: 'p1', name: 'FunnyFish', score: 0, correctSets: 0 };
-    const p2 = { id: 'p2', name: 'Bob',   score: 0, correctSets: 0 };
+    const p1 = { id: 'p1', name: 'FunnyFish', correctSets: 0, incorrectSelections: 0 };
+    const p2 = { id: 'p2', name: 'Bob',       correctSets: 0, incorrectSelections: 0 };
     const room = {
       roomId: 'room-xyz',
       status: 'active' as const,

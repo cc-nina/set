@@ -7,7 +7,6 @@ export interface PersistedGameState {
   deck: Card[];
   board: Card[];
   selected: Card[];
-  score: number;
   correctSets: number;
   incorrectSelections: number;
   status: 'active' | 'finished' | 'waiting';
@@ -36,7 +35,6 @@ function validate(raw: unknown): raw is PersistedGameState {
   const boardLen = (r['board'] as Card[]).length;
   if (boardLen % 3 !== 0 || boardLen < 3) return false;
   if (!isCardArray(r['selected'])) return false;
-  if (typeof r['score'] !== 'number') return false;
   if (typeof r['correctSets'] !== 'number') return false;
   if (typeof r['incorrectSelections'] !== 'number') return false;
   if (r['status'] !== 'active' && r['status'] !== 'finished') return false;
@@ -59,7 +57,6 @@ function toPersistedFields(state: GameState): PersistedGameState {
     deck: state.deck,
     board: state.board,
     selected: state.selected,
-    score: state.score,
     correctSets: state.correctSets,
     incorrectSelections: state.incorrectSelections,
     status: state.status,
