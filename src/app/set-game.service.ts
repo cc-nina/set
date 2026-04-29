@@ -7,7 +7,7 @@ import { findSet } from './game.utils';
 import { GameSession } from './game-session.interface';
 import { ColorPrefsService } from './color-prefs.service';
 import { loadGameState, saveGameState } from './game-state.storage';
-import { SERVER_ORIGIN } from './server.config';
+import { SERVER_ORIGIN, GAME_API_SECRET } from './server.config';
 
 @Injectable({ providedIn: 'root' })
 export class SetGameService implements GameSession {
@@ -55,7 +55,7 @@ export class SetGameService implements GameSession {
    */
   readonly callerLockId$: Observable<PlayerId | null> = of(null);
 
-  private currentGame: { gameId: number; startedAt: number } | null = null;
+  private currentGame: { gameId: number; startedAt: number; token: string } | null = null;
   // True when a game is in progress but startGameRecord() hasn't been called yet.
   // Deferred until the first selectCard so that page loads that never reach /game
   // don't pollute solo stats.
@@ -82,9 +82,9 @@ export class SetGameService implements GameSession {
         // page refresh doesn't create a duplicate start record.
         try {
           const raw = localStorage.getItem(SetGameService.RECORD_KEY);
-          const r = raw ? JSON.parse(raw) as { gameId: number; startedAt: number } : null;
-          if (r && typeof r.gameId === 'number') {
-            this.currentGame = { gameId: r.gameId, startedAt: r.startedAt ?? Date.now() };
+          const r = raw ? JSON.parse(raw) as { gameId: number; startedAt: number; token: string } : null;
+          if (r && typeof r.gameId === 'number' && typeof r.token === 'string') {
+            this.currentGame = { gameId: r.gameId, startedAt: r.startedAt ?? Date.now(), token: r.token };
           } else {
             this.pendingInitialRecord = true;
           }
@@ -103,26 +103,26 @@ export class SetGameService implements GameSession {
     try {
       const res = await fetch(`${SERVER_ORIGIN}/api/start-game`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-Game-Secret': GAME_API_SECRET },
         body: JSON.stringify({ mode: 'solo' }),
       });
       if (!res.ok) return;
-      const { gameId } = await res.json() as { gameId: number };
-      if (typeof gameId !== 'number') return;
-      this.currentGame = { gameId, startedAt: Date.now() };
+      const { gameId, token } = await res.json() as { gameId: number; token: string };
+      if (typeof gameId !== 'number' || typeof token !== 'string') return;
+      this.currentGame = { gameId, startedAt: Date.now(), token };
       try { localStorage.setItem(SetGameService.RECORD_KEY, JSON.stringify(this.currentGame)); } catch { /* non-fatal */ }
     } catch { /* non-fatal */ }
   }
 
   private endGameRecord(score: number): void {
     if (this.currentGame === null) return;
-    const { gameId, startedAt } = this.currentGame;
+    const { gameId, startedAt, token } = this.currentGame;
     this.currentGame = null;
     try { localStorage.removeItem(SetGameService.RECORD_KEY); } catch { /* non-fatal */ }
     fetch(`${SERVER_ORIGIN}/api/end-game/${gameId}`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ duration_ms: Date.now() - startedAt, score }),
+      headers: { 'Content-Type': 'application/json', 'X-Game-Secret': GAME_API_SECRET },
+      body: JSON.stringify({ duration_ms: Date.now() - startedAt, score, token }),
     }).catch(() => {});
   }
 

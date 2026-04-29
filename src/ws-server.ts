@@ -129,22 +129,23 @@ function parseJsonBody(req: import('node:http').IncomingMessage, maxBytes = 1024
   });
 }
 
-function recordSoloGameStart(): { gameId: number; startedAt: number } | null {
+function recordSoloGameStart(): { gameId: number; startedAt: number; token: string } | null {
   if (!stmtInsertSolo) return null;
   try {
     const startedAt = Date.now();
-    const gameId = Number(stmtInsertSolo.run(startedAt).lastInsertRowid);
-    return { gameId, startedAt };
+    const token = randomId(16);
+    const gameId = Number(stmtInsertSolo.run(startedAt, token).lastInsertRowid);
+    return { gameId, startedAt, token };
   } catch (err) {
     log.error('stats record solo game start failed', { err: errMsg(err) });
     return null;
   }
 }
 
-function recordSoloGameEnd(gameId: number, durationMs: number, score: number | null): void {
+function recordSoloGameEnd(gameId: number, token: string, durationMs: number, score: number | null): void {
   if (!stmtEndSolo) return;
   try {
-    stmtEndSolo.run(Date.now(), durationMs, score, gameId);
+    stmtEndSolo.run(Date.now(), durationMs, score, gameId, token);
   } catch (err) {
     log.error('stats record solo game end failed', { err: errMsg(err) });
   }
@@ -835,7 +836,8 @@ if (isMain || process.env['WS_STANDALONE'] === '1') {
         started_at  INTEGER NOT NULL,
         ended_at    INTEGER,
         duration_ms INTEGER,
-        score       INTEGER
+        score       INTEGER,
+        token       TEXT
       );
       CREATE TABLE IF NOT EXISTS multiplayer_games (
         id           INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -847,6 +849,8 @@ if (isMain || process.env['WS_STANDALONE'] === '1') {
         top_score    INTEGER
       )
     `);
+    // Add token column to solo_games if missing (migration for existing DBs).
+    try { db.exec(`ALTER TABLE solo_games ADD COLUMN token TEXT`); } catch { /* already exists */ }
     // Migrate legacy games table data if present (one-time, safe to run repeatedly)
     try {
       db.exec(`
@@ -856,8 +860,8 @@ if (isMain || process.env['WS_STANDALONE'] === '1') {
           SELECT id, COALESCE(room_id,''), started_at, ended_at, duration_ms, score FROM games WHERE mode='multiplayer'
       `);
     } catch { /* games table doesn't exist — fresh install, nothing to migrate */ }
-    stmtInsertSolo  = db.prepare(`INSERT INTO solo_games (started_at) VALUES (?)`);
-    stmtEndSolo     = db.prepare(`UPDATE solo_games SET ended_at=?, duration_ms=?, score=? WHERE id=?`);
+    stmtInsertSolo  = db.prepare(`INSERT INTO solo_games (started_at, token) VALUES (?, ?)`);
+    stmtEndSolo     = db.prepare(`UPDATE solo_games SET ended_at=?, duration_ms=?, score=? WHERE id=? AND token=?`);
     stmtInsertMulti = db.prepare(`INSERT INTO multiplayer_games (room_id, player_count, started_at) VALUES (?, ?, ?)`);
     stmtEndMulti    = db.prepare(`UPDATE multiplayer_games SET ended_at=?, duration_ms=?, top_score=? WHERE id=?`);
     stmtCountGames  = db.prepare(`SELECT (SELECT COUNT(*) FROM solo_games) + (SELECT COUNT(*) FROM multiplayer_games) AS total`);
@@ -902,6 +906,15 @@ if (isMain || process.env['WS_STANDALONE'] === '1') {
       return;
     }
 
+    // Reject write requests that don't carry the shared API secret.
+    const API_SECRET = process.env['GAME_API_SECRET'] ?? '';
+    if (isWriteRequest && (req.headers['x-game-secret'] !== API_SECRET || API_SECRET === '')) {
+      log.warn('secret rejected', { url: req.url });
+      res.writeHead(403, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'forbidden' }));
+      return;
+    }
+
     if (req.method === 'GET' && req.url === '/api/stats') {
       if (!stmtCountGames) {
         res.writeHead(503, { 'Content-Type': 'application/json' });
@@ -923,7 +936,7 @@ if (isMain || process.env['WS_STANDALONE'] === '1') {
     if (req.method === 'POST' && req.url === '/api/start-game') {
       const result = recordSoloGameStart();
       res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ gameId: result?.gameId ?? null }));
+      res.end(JSON.stringify({ gameId: result?.gameId ?? null, token: result?.token ?? null }));
       return;
     }
 
@@ -934,9 +947,10 @@ if (isMain || process.env['WS_STANDALONE'] === '1') {
         parseJsonBody(req)
           .then(body => {
             const b = body as Record<string, unknown>;
-            const duration_ms = typeof b['duration_ms'] === 'number' ? b['duration_ms'] : 0;
-            const score = typeof b['score'] === 'number' ? b['score'] : null;
-            recordSoloGameEnd(id, duration_ms, score);
+            const token = typeof b['token'] === 'string' ? b['token'] : '';
+            const duration_ms = Math.min(Math.max(typeof b['duration_ms'] === 'number' ? b['duration_ms'] : 0, 0), 7_200_000);
+            const score = typeof b['score'] === 'number' ? Math.min(Math.max(Math.round(b['score']), 0), 100) : null;
+            recordSoloGameEnd(id, token, duration_ms, score);
             res.writeHead(200, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ ok: true }));
           })
