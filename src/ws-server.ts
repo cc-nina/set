@@ -183,6 +183,8 @@ type GameSocket = WebSocket & {
   intentionalClose?: boolean;
   /** Remote IP address captured on connection — used for rate limiting. */
   ip?: string;
+  /** Toggled by the ping/pong heartbeat to detect silently-dead connections. */
+  isAlive?: boolean;
 };
 
 /** Everything the server needs to know about a room. */
@@ -795,6 +797,23 @@ function handleClose(ws: GameSocket): void {
 export function attachWebSocketServer(httpServer: HttpServer): void {
   const wss = new WebSocketServer({ server: httpServer, maxPayload: 4096 });
 
+  // Heartbeat: ping every 30s. Any client that doesn't pong within the next
+  // interval is terminated — this clears slots held by silently-dead connections
+  // (e.g. mobile network drops with no TCP FIN) so the reconnect grace timer fires.
+  const heartbeat = setInterval(() => {
+    wss.clients.forEach((ws) => {
+      const gs = ws as GameSocket;
+      if (gs.isAlive === false) {
+        gs.terminate();
+        return;
+      }
+      gs.isAlive = false;
+      gs.ping();
+    });
+  }, 30_000).unref();
+
+  wss.on('close', () => clearInterval(heartbeat));
+
   wss.on('connection', (ws, req) => {
     const ip = req.socket.remoteAddress ?? '';
     if (checkRate(connRate, ip, CONN_RATE_LIMIT)) {
@@ -803,6 +822,8 @@ export function attachWebSocketServer(httpServer: HttpServer): void {
       return;
     }
     (ws as GameSocket).ip = ip;
+    (ws as GameSocket).isAlive = true;
+    ws.on('pong', () => { (ws as GameSocket).isAlive = true; });
     ws.on('error', (err) => log.error('ws socket error', { err: errMsg(err) }));
     ws.on('message', (msg) => handleMessage(ws as GameSocket, msg.toString()));
     ws.on('close', () => handleClose(ws as GameSocket));

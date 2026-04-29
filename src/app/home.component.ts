@@ -27,8 +27,7 @@ export class HomeComponent implements OnInit {
     private cdr: ChangeDetectorRef,
     @Inject(PLATFORM_ID) private platformId: object,
   ) {
-    // Pre-fill from localStorage if the user has played before.
-    if (typeof localStorage !== 'undefined') {
+    if (isPlatformBrowser(this.platformId)) {
       this.playerName = localStorage.getItem('playerName') ?? '';
     }
   }
@@ -65,7 +64,7 @@ export class HomeComponent implements OnInit {
   }
 
   private savePreferences(): void {
-    if (typeof localStorage === 'undefined') return;
+    if (!isPlatformBrowser(this.platformId)) return;
     const name = this.playerName.trim();
     if (name) localStorage.setItem('playerName', name);
   }
