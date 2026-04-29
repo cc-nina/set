@@ -35,7 +35,8 @@ export class HomeComponent implements OnInit {
 
   ngOnInit(): void {
     if (!isPlatformBrowser(this.platformId)) return;
-    fetch(`${SERVER_ORIGIN}/api/stats`)
+    const statsUrl = location.hostname === 'localhost' ? `${SERVER_ORIGIN}/api/stats` : '/api/stats';
+    fetch(statsUrl)
       .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
       .then((d: { totalGamesPlayed: number }) => {
         if (typeof d.totalGamesPlayed === 'number') this.gamesPlayed = d.totalGamesPlayed;
