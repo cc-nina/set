@@ -47,34 +47,10 @@
 .palette-dot-sm { width:10px; height:10px; border-radius:50%; }
 
 /* ── Game-over overlay (solo) ───────────────────────────────────── */
-.board-overlay {
-  position: fixed; inset: 0;
-  display: flex; align-items: center; justify-content: center;
-  background: rgba(0,0,0,0.55);
-  backdrop-filter: blur(4px);
-  z-index: 50;
-}
-.board-overlay-card {
-  background: var(--bg-surface); border-radius: 1rem;
-  padding: 2rem 2.5rem; text-align: center;
-  box-shadow: var(--shadow-lg);
-  width: 90%; max-width: 22rem;
-  display: flex; flex-direction: column; gap: 0.5rem;
-  transition: var(--theme-transition);
-}
-.board-overlay-title {
-  font-size: 1.5rem; font-weight: 800; margin: 0;
-  color: var(--text-primary);
-}
-.board-overlay-sub {
-  color: var(--text-secondary); margin: 0; font-size: var(--text-base);
-}
+/* Backdrop + card use shared .overlay / .overlay-card from styles.css */
 .board-overlay-score {
-  font-size: var(--text-lg); font-weight: 600; margin: 0.25rem 0 0.5rem;
+  font-size: var(--text-lg); font-weight: 600; margin: 0;
   color: var(--text-primary);
-}
-.board-overlay-actions {
-  display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap;
 }
 
 /* ── Live solo scorebar ─────────────────────────────────────────── */

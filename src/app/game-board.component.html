@@ -9,16 +9,16 @@
 ></app-palette-modal>
 
 <!-- ── Game-over overlay (solo) ──────────────────────────────────── -->
-<div *ngIf="gameStatus === 'finished'" class="board-overlay">
-  <div class="board-overlay-card">
-    <p class="board-overlay-title">Game over!</p>
-    <p class="board-overlay-sub">No more SETs left.</p>
+<div *ngIf="gameStatus === 'finished'" class="overlay">
+  <div class="overlay-card">
+    <p class="overlay-title">Game over!</p>
+    <p class="overlay-sub">No more SETs left.</p>
     <p class="board-overlay-score">
       {{ finalSets }} set{{ finalSets === 1 ? '' : 's' }} &mdash;
       {{ finalNegs }} neg{{ finalNegs === 1 ? '' : 's' }} &mdash;
       {{ finalScore }} pt{{ finalScore === 1 ? '' : 's' }}
     </p>
-    <div class="board-overlay-actions">
+    <div class="overlay-actions">
       <button class="btn btn-primary" (click)="game.startNewGame()">Play again</button>
     </div>
   </div>
