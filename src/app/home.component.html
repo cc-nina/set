@@ -29,7 +29,14 @@
       </div>
       <h2 class="mode-title">Solo</h2>
       <p class="mode-desc">Play against yourself. Find as many SETs as you can before the deck runs out.</p>
-      <span class="mode-cta">Play Solo →</span>
+      <div class="solo-card-footer">
+        <a class="how-to-play-link" href="/instructions.pdf" target="_blank" rel="noopener noreferrer"
+           aria-label="How to play (opens in new tab)"
+           (click)="$event.stopPropagation()"
+           (keydown.enter)="$event.stopPropagation()"
+           (keydown.space)="$event.stopPropagation()">How to play</a>
+        <span class="mode-cta">Play Solo →</span>
+      </div>
     </section>
 
     <!-- Multiplayer -->

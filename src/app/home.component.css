@@ -202,14 +202,33 @@
   color: var(--text-secondary);
   line-height: 1.5;
   margin: 0;
-  flex: 1;
+}
+
+.solo-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: auto;
+}
+
+.how-to-play-link {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: color-mix(in srgb, var(--text-muted) 40%, transparent);
+  transition: color 0.15s, text-decoration-color 0.15s;
+}
+
+.how-to-play-link:hover {
+  color: var(--text-secondary);
+  text-decoration-color: var(--text-secondary);
 }
 
 .mode-cta {
   font-size: var(--text-base);
   font-weight: 600;
   color: var(--accent);
-  margin-top: auto;
 }
 
 /* ── Buttons — base rules live in styles.css globally ──────────────── */
