@@ -58,6 +58,8 @@
   <!-- Card grid -->
   <div *ngIf="isBrowser && showBoard" class="grid" [ngClass]="gridClasses" [ngStyle]="gridStyle">
     <div *ngFor="let c of board; trackBy: trackCard"
+      class="card-item"
+      [class.card-item--entering]="enteringCardIds.has(c.id)"
       role="button"
       [attr.tabindex]="isCardInteractive ? '0' : '-1'"
       [attr.aria-pressed]="selectedIds.has(c.id)"

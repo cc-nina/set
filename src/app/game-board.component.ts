@@ -85,6 +85,8 @@ export class GameBoardComponent implements OnInit, AfterViewInit, OnDestroy {
 
   isBrowser = true;
   showBoard = false;
+  boardInitialized = false;
+  enteringCardIds = new Set<string>();
   orientation: 'portrait' | 'landscape' = 'portrait';
   gridClasses = 'grid-cols-3';
   /** Inline style object for the card grid — sets gap to card-width × GAP_RATIO. */
@@ -177,6 +179,12 @@ export class GameBoardComponent implements OnInit, AfterViewInit, OnDestroy {
       // animation state$ emission must not clobber the snapshot we're diffing from.
       if (this.setMatchTimeout === null) {
         this.prevBoard = this.board;
+      }
+      if (this.boardInitialized && s.board.length > this.layoutBoardSize) {
+        const prevIds = new Set(this.board.map(c => c.id));
+        this.enteringCardIds = new Set(s.board.filter(c => !prevIds.has(c.id)).map(c => c.id));
+      } else {
+        this.enteringCardIds = new Set();
       }
       this.board = s.board;
       this.lastNegCardIds = s.lastNegCardIds ?? null;
@@ -549,6 +557,7 @@ export class GameBoardComponent implements OnInit, AfterViewInit, OnDestroy {
       this.showBoardTimeout = null;
       this.showBoard = true;
       this.cdr.markForCheck();
+      setTimeout(() => { this.boardInitialized = true; this.cdr.markForCheck(); }, 0);
     }, 50);
   }
 }

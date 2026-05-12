@@ -22,6 +22,7 @@
   max-width: 56rem;
 }
 
+
 /* ── Toolbar row ────────────────────────────────────────────────── */
 .board-toolbar {
   width: 100%;
@@ -164,6 +165,20 @@
 }
 .countdown-time {
   font-size: var(--text-sm); font-weight: 700; color: var(--accent); min-width: 28px;
+}
+
+/* ── Card grid ──────────────────────────────────────────────────── */
+@keyframes cardEnter {
+  from { opacity: 0; transform: scale(0.88); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+.card-item--entering {
+  animation: cardEnter 0.2s ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card-item--entering { animation: none; }
 }
 
 /* ── Cards locked out (another player called SET) ───────────────── */
