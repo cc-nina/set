@@ -164,10 +164,10 @@ export class CardComponent {
   /** Card border stroke — driven by the active theme via CSS variable. */
   @Input() cardBorder: string = '#d1d5db';
 
-  // pattern id for striped shading
+  // Must be unique per card: duplicate ids across SVGs cause cross-SVG url(#id) resolution that silently renders as no fill.
   get patternId(): string {
-    const s = (this.color || '#DB2C05').replace('#', '');
-    return 'stripe-' + s;
+    const c = (this.color || '#DB2C05').replace('#', '');
+    return `stripe-${c}-${this.number}-${this.shape}-${this.shading}`;
   }
 
   shapePositions(): number[] {
