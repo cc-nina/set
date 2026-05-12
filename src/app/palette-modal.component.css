@@ -4,6 +4,7 @@
   background: rgba(0,0,0,0.35);
   z-index: 200;   /* above all fixed UI controls */
   display: flex; align-items: center; justify-content: center;
+  padding: 1.25rem;
   animation: fadeIn 0.15s ease;
 }
 @keyframes fadeIn { from { opacity:0 } to { opacity:1 } }
@@ -11,10 +12,10 @@
 .palette-modal {
   background: var(--bg-surface);
   border-radius: 20px;
-  padding: 28px 28px 24px;
+  padding: 20px 24px 20px;
   width: 320px;
-  max-width: calc(100vw - 2rem);
-  max-height: calc(100dvh - 2rem);
+  max-width: 100%;
+  max-height: 100%;
   overflow-y: auto;
   box-shadow: var(--shadow-modal);
   animation: slideUp 0.18s cubic-bezier(.22,1,.36,1);
@@ -25,12 +26,12 @@
   to   { opacity:1; transform:translateY(0) }
 }
 
-.modal-title    { font-size:1rem; font-weight:600; color:var(--text-primary); margin-bottom:4px; }
-.modal-subtitle { font-size:var(--text-sm); color:var(--text-secondary); margin-bottom:24px; }
+.modal-title    { font-size:1rem; font-weight:600; color:var(--text-primary); margin-bottom:6px; padding-right: 40px; }
+.modal-subtitle { font-size:var(--text-sm); color:var(--text-secondary); margin-bottom:18px; }
 .close-btn {
   position: absolute;
-  top: 16px;
-  right: 16px;
+  top: 12px;
+  right: 12px;
   width: 44px;
   height: 44px;
   border-radius: 50%;
@@ -69,7 +70,7 @@
 .swatch-col { display:flex; flex-direction:column; align-items:center; gap:8px; flex:1; }
 
 .swatch-well {
-  width:56px; height:56px; border-radius:14px;
+  width:48px; height:48px; border-radius:12px;
   border:2px solid transparent;
   cursor:pointer;
   /* Box-shadow ring is always visible regardless of swatch fill color:
@@ -98,13 +99,13 @@
 
 /* ── Custom colour picker panel ────────────────────────────────── */
 .picker-panel {
-  margin-top:20px;
-  display:flex; flex-direction:column; gap:12px;
+  margin-top:12px;
+  display:flex; flex-direction:column; gap:10px;
 }
 
 /* SV (saturation/value) canvas */
 .sv-canvas-wrap {
-  position:relative; width:100%; height:180px;
+  position:relative; width:100%; height:148px;
   border-radius:10px; overflow:hidden; cursor:crosshair;
   user-select:none; touch-action:none;
 }
@@ -163,7 +164,7 @@
 .hex-input.invalid { border-color: var(--error-border); }
 
 /* ── Presets ────────────────────────────────────────────────────── */
-.presets-section { margin-top: 16px; display: flex; flex-direction: column; gap: 14px; }
+.presets-section { margin-top: 10px; display: flex; flex-direction: column; gap: 8px; }
 
 .presets-block { display: flex; flex-direction: column; gap: 8px; }
 
@@ -204,12 +205,12 @@
 /* ── Colourblind apply button ───────────────────────────────────── */
 .cb-apply-btn {
   font-size: var(--text-sm);
-  color: var(--text-muted);
+  color: var(--text-secondary);
   background: none;
   border: 1px solid var(--border);
   border-radius: 8px;
-  padding: 6px 12px;
-  min-height: 44px;
+  padding: 5px 10px;
+  min-height: 32px;
   cursor: pointer; white-space: nowrap;
   margin-left: auto;
   transition: color 0.12s, border-color 0.12s, background 0.12s;
@@ -225,19 +226,19 @@
 
 /* ── Reset row ──────────────────────────────────────────────────── */
 .reset-row {
-  margin-top: 14px;
+  margin-top: 8px;
   display: flex;
   justify-content: center;
 }
 
 .reset-btn {
   font-size: var(--text-sm);
-  color: var(--text-muted);
+  color: var(--text-secondary);
   background: none;
   border: 1px solid var(--border);
   border-radius: 8px;
-  padding: 8px 16px;
-  min-height: 44px;
+  padding: 5px 12px;
+  min-height: 32px;
   cursor: pointer;
   transition: color 0.12s, border-color 0.12s, background 0.12s;
 }
