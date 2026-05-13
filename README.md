@@ -30,4 +30,5 @@ A full-stack implementation of the card game [SET](https://en.wikipedia.org/wiki
 **Custom canvas colour picker** — card colours are fully customisable via an HSV picker drawn on an HTML `<canvas>`, with a Euclidean RGB distance check to warn when two colours are too similar to distinguish.
 
 **Real-time multiplayer** — custom WebSocket protocol with typed messages shared between client and server. Includes a "Call SET" lock (one player claims the board for 7 seconds), reconnect grace periods, and server-side game stat recording to SQLite.
+
 ---
