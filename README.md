@@ -1,47 +1,33 @@
-# SET Game!
+# SET Game
 
-A full-stack implementation of the card game [SET](https://en.wikipedia.org/wiki/Set_(card_game)), built with Angular 21. Playable solo or in real-time multiplayer rooms, deployed on Vercel and Google Cloud.
+A full-stack implementation of the card game [SET](https://en.wikipedia.org/wiki/Set_(card_game)) — playable solo or in real-time multiplayer rooms.
+
+**[playsetgame.vercel.app](https://playsetgame.vercel.app)**
 
 ---
 
-## Tech Stack
+## Stack
 
-| Layer | Technology |
+| Layer | |
 |---|---|
-| Frontend | Angular 21 (standalone components), TypeScript, RxJS, Tailwind CSS |
-| Backend | Node.js, Express 5, `ws` (WebSockets) |
-| SSR | `@angular/ssr` + Angular Node App Engine |
-| Testing | Vitest + jsdom |
-| Hosting | Vercel (frontend) · Google Cloud VM (WebSocket server) | 
+| Frontend | Angular 21, TypeScript, Tailwind CSS |
+| Backend | Node.js, Express 5, native WebSockets (`ws`) |
+| Database | SQLite (`better-sqlite3`) |
+| Hosting | Vercel (frontend + Edge functions) · Google Cloud VM, PM2, Let's Encrypt TLS (WebSocket server) |
 
 ---
 
-## What's in it
+## How it's built
 
-**Real-time multiplayer** — custom WebSocket protocol with a typed message schema shared between client and server. Includes a "Call SET" exclusive lock: one player claims the board for 5 seconds; a miss penalises them and releases it. Disconnected players are held in their slot for 5 minutes and can rejoin seamlessly.
+**Cards rendered as SVG** — no images. Every shape (pill, diamond, squiggle) is drawn programmatically; striped shading uses an SVG `<pattern>`. Scales to any size without pixelation.
 
-**Mode-agnostic UI via dependency injection** — `GameBoardComponent` depends only on a `GameSession` interface (`state$`, `selectCard()`, `callSet()`). Angular's DI injects `SetGameService` for solo play and `MultiplayerGameSession` for multiplayer. The component has zero knowledge of which mode it's in.
+**Mode-agnostic UI** — `GameBoardComponent` depends only on a `GameSession` interface (`state$`, `selectCard()`, `callSet()`). Angular's DI injects `SetGameService` for solo play and `MultiplayerGameSession` for multiplayer. The component has zero knowledge of which mode it's in.
 
-**Immutable state machine** — all game logic lives in plain functions with no Angular or browser dependencies. `selectCard(state, card)` returns a new state object and never mutates. Easy to test in isolation and safe to run on the server.
+**Immutable state machine** — all game logic lives in pure functions with no framework dependencies. `selectCard(state, card)` returns a new state object and never mutates. The same functions run on client and server.
 
-**O(n²) set-finder** — instead of checking every triple (O(n³)), `findSet` iterates over card pairs and derives the unique completing card mathematically from the ID encoding, then does a hash-map lookup. On a 12-card board: ~66 checks instead of ~220.
+**O(n²) set-finder** — instead of checking every triple (O(n³), ~220 checks on a 12-card board), `findSet` iterates over pairs. For any two cards the unique completing third is mathematically determined from the attribute encoding (`thirdAttr(a, b) = a === b ? a : 6 - a - b`), then looked up by ID in a hash map. ~66 checks instead of ~220.
 
-**Custom HSV colour picker** — card colours and selection highlight are fully customisable via a colour picker drawn on an HTML `<canvas>`. Includes a Euclidean RGB distance check to warn when two card colours are too similar to distinguish.
+**Custom canvas colour picker** — card colours are fully customisable via an HSV picker drawn on an HTML `<canvas>`, with a Euclidean RGB distance check to warn when two colours are too similar to distinguish.
 
-**Server-Side Rendering** — Angular SSR pre-renders HTML on the server before sending it to the browser. Browser-only APIs (`window`, `localStorage`) are guarded with `isPlatformBrowser` throughout.
-
+**Real-time multiplayer** — custom WebSocket protocol with typed messages shared between client and server. Includes a "Call SET" lock (one player claims the board for 7 seconds), reconnect grace periods, and server-side game stat recording to SQLite.
 ---
-
-## Running Locally
-
-```powershell
-npm install
-npm start          # dev server at http://localhost:4200
-npm test           # unit tests (Vitest)
-```
-
-```powershell
-npm run build
-npm run serve:ssr:set-game   # production SSR server at http://localhost:4000
-```
-
